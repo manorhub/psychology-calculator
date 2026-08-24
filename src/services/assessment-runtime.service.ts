@@ -82,10 +82,33 @@ export class AssessmentRuntimeService extends BaseService {
       )
     ]);
 
-    const questions: RuntimeQuestion[] = questionsRaw.map((q) => ({
-      ...q,
-      options: optionsRaw.filter((o) => o.question_id === q.id)
-    }));
+    const standardLikertOptions = [
+      { text: 'Strongly Disagree', value: '1', order: 1 },
+      { text: 'Disagree', value: '2', order: 2 },
+      { text: 'Neutral', value: '3', order: 3 },
+      { text: 'Agree', value: '4', order: 4 },
+      { text: 'Strongly Agree', value: '5', order: 5 }
+    ];
+
+    const questions: RuntimeQuestion[] = questionsRaw.map((q) => {
+      let opts = optionsRaw.filter((o) => o.question_id === q.id);
+      if (q.question_type === 'likert' && opts.length < 5) {
+        opts = standardLikertOptions.map((lo) => ({
+          id: `opt_${q.id}_${lo.order}`,
+          question_id: q.id,
+          option_text: lo.text,
+          option_value: lo.value,
+          display_order: lo.order,
+          status: 'active' as const,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+      }
+      return {
+        ...q,
+        options: opts
+      };
+    });
 
     return {
       assessment,
