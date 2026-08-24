@@ -53,3 +53,60 @@
   transform: translateY(-2px);
   box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
 }
+
+/* Print stylesheets for perfect PDF/Print page flow */
+@media print {
+  @page {
+    margin: 1.2cm;
+    size: auto;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Prevent elements from being sliced across page breaks */
+  .break-inside-avoid,
+  .print-break-inside-avoid,
+  .card,
+  article,
+  section,
+  [class*="rounded-2xl"],
+  [class*="rounded-3xl"],
+  [class*="rounded-xl"],
+  table,
+  tr,
+  figure,
+  blockquote,
+  .grid > div {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Prevent headings from being separated from following content */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Hide navigation, buttons, footers, interactive elements in print */
+  header,
+  nav,
+  footer,
+  button,
+  .no-print,
+  [onclick*="window.print"],
+  a[href^="javascript:"],
+  .actions-row {
+    display: none !important;
+  }
+
+  /* Ensure card borders and backgrounds remain visible when printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

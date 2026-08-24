@@ -13,7 +13,7 @@ const { title, subtitle, class: className = '', id, hoverEffect = false, ...rest
 const hoverClasses = hoverEffect ? 'hover:shadow-md hover:border-slate-300 transition-all' : '';
 ---
 
-<div id={id} class={`bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden ${hoverClasses} ${className}`} {...rest}>
+<div id={id} class={`bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden break-inside-avoid page-break-inside-avoid print:break-inside-avoid ${hoverClasses} ${className}`} {...rest}>
   {(title || subtitle) && (
     <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
       {title && <h3 class="font-bold text-lg text-slate-900 tracking-tight">{title}</h3>}

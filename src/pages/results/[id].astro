@@ -368,3 +368,44 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
   });
 </script>
 
+<style is:global>
+  @media print {
+    @page {
+      margin: 1.2cm;
+      size: auto;
+    }
+
+    body {
+      background: #ffffff !important;
+      color: #0f172a !important;
+    }
+
+    /* Prevent cards, dimensions, and sections from breaking across page breaks */
+    .card,
+    [class*="rounded-2xl"],
+    [class*="rounded-3xl"],
+    [class*="rounded-xl"],
+    .break-inside-avoid,
+    section,
+    article,
+    .grid > div {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    /* Prevent headings from being separated from content */
+    h1, h2, h3, h4, h5, h6 {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+
+    .no-print,
+    header,
+    nav,
+    footer,
+    button {
+      display: none !important;
+    }
+  }
+</style>
+

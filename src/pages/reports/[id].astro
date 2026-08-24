@@ -198,7 +198,7 @@ const { content, assessmentName, primaryArchetype, generatedAt, disclaimer } = r
     </div>
 
     <!-- Actions -->
-    <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
       <a
         href={`/results/${reportData.attemptId}`}
         class="text-xs font-semibold text-teal-700 hover:text-teal-800"
@@ -216,3 +216,45 @@ const { content, assessmentName, primaryArchetype, generatedAt, disclaimer } = r
     </div>
   </div>
 </BaseLayout>
+
+<style is:global>
+  @media print {
+    @page {
+      margin: 1.2cm;
+      size: auto;
+    }
+
+    body {
+      background: #ffffff !important;
+      color: #0f172a !important;
+    }
+
+    /* Prevent cards, domain insight boxes, and sections from splitting across page breaks */
+    .card,
+    [class*="rounded-2xl"],
+    [class*="rounded-3xl"],
+    [class*="rounded-xl"],
+    .break-inside-avoid,
+    section,
+    article,
+    .grid > div {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    /* Prevent headings from being separated from their content */
+    h1, h2, h3, h4, h5, h6 {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+
+    .no-print,
+    header,
+    nav,
+    footer,
+    button {
+      display: none !important;
+    }
+  }
+</style>
+

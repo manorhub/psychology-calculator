@@ -406,9 +406,11 @@ export class PdfDocumentBuilder {
       if (!sec.content || sec.content.trim() === '') continue;
 
       const lines = this.wrapText(sec.content, this.regularFont, 10, this.contentWidth);
-      const reqHeight = 25 + lines.length * 15;
+      const reqHeight = (sec.title ? 25 : 0) + lines.length * 14;
 
-      this.ensureSpace(Math.min(reqHeight, 150));
+      // Ensure at least the title + 3 lines fit together without orphaned headings
+      const minStartHeight = sec.title ? 65 : 40;
+      this.ensureSpace(Math.min(reqHeight, minStartHeight));
 
       if (sec.title) {
         this.currentPage.drawText(sec.title, {
