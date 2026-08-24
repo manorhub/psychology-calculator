@@ -29,7 +29,16 @@ const { user } = Astro.props;
   </div>
 
   <!-- Header Right Actions -->
-  <div class="flex items-center gap-4">
+  <div class="flex items-center gap-3 sm:gap-4">
+    <!-- User Dashboard Link -->
+    <a
+      href="/dashboard"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all shadow-2xs"
+    >
+      <span>📊</span>
+      <span>User Dashboard</span>
+    </a>
+
     <!-- Visit Live Site -->
     <a
       href="/"

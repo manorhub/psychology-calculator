@@ -27,14 +27,26 @@ const user = Astro.locals.user;
   description={assessment.short_description}
 >
   <div class="max-w-4xl mx-auto py-10 sm:py-16 px-4 sm:px-6 space-y-10">
-    <!-- Breadcrumbs -->
-    <nav class="flex items-center gap-2 text-xs text-slate-500">
-      <a href="/" class="hover:text-teal-700">Home</a>
-      <span>/</span>
-      <span class="hover:text-teal-700">{category?.name || 'Assessments'}</span>
-      <span>/</span>
-      <span class="text-slate-900 font-semibold">{assessment.name}</span>
-    </nav>
+    <!-- Breadcrumb & Back Actions -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <nav class="flex items-center gap-2 text-xs text-slate-500">
+        <a href="/" class="hover:text-teal-700">Home</a>
+        <span>/</span>
+        <a href="/assessments" class="hover:text-teal-700">Assessments</a>
+        <span>/</span>
+        <span class="text-slate-900 font-semibold truncate max-w-[180px] sm:max-w-xs">{assessment.name}</span>
+      </nav>
+
+      {user && (
+        <a
+          href="/dashboard"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
+        >
+          <span>📊</span>
+          <span>Back to Dashboard</span>
+        </a>
+      )}
+    </div>
 
     <!-- Assessment Hero Card -->
     <div class="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-10 shadow-sm space-y-6">

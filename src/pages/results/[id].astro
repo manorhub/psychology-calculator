@@ -54,7 +54,44 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
     <meta name="robots" content="noindex, nofollow" />
   </Fragment>
 
-  <div class="max-w-4xl mx-auto py-10 sm:py-16 px-4 sm:px-6 space-y-12">
+  <div class="max-w-4xl mx-auto py-8 sm:py-12 px-4 sm:px-6 space-y-10">
+    <!-- Top Action & Navigation Bar -->
+    <div class="flex flex-wrap items-center justify-between gap-3 no-print">
+      <div class="flex flex-wrap items-center gap-2">
+        {currentUser ? (
+          <a
+            href="/dashboard"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
+          >
+            <span>📊</span>
+            <span>Back to Dashboard</span>
+          </a>
+        ) : (
+          <a
+            href="/assessments"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
+          >
+            <span>📝</span>
+            <span>Browse Tests</span>
+          </a>
+        )}
+        <a
+          href={`/assessments/${snapshot.assessmentSlug}/take`}
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
+        >
+          <span>🔄</span>
+          <span>Retake Test</span>
+        </a>
+      </div>
+      <a
+        href="/assessments"
+        class="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1"
+      >
+        <span>Explore All Tests</span>
+        <span>→</span>
+      </a>
+    </div>
+
     <!-- Shared View Notice Banner -->
     {isSharedView && (
       <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-center justify-between">
@@ -294,17 +331,36 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
     </div>
 
     <!-- Bottom Actions -->
-    <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <a
-        href={`/assessments/${snapshot.assessmentSlug}`}
-        class="text-xs font-semibold text-teal-700 hover:text-teal-800"
-      >
-        ← Retake Assessment
-      </a>
+    <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
+      <div class="flex flex-wrap items-center gap-3">
+        {currentUser ? (
+          <a
+            href="/dashboard"
+            class="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs transition-all"
+          >
+            <span>📊</span>
+            <span>Back to Dashboard</span>
+          </a>
+        ) : (
+          <a
+            href="/assessments"
+            class="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs transition-all"
+          >
+            <span>📝</span>
+            <span>Browse More Assessments</span>
+          </a>
+        )}
+        <a
+          href={`/assessments/${snapshot.assessmentSlug}/take`}
+          class="text-xs font-semibold text-slate-600 hover:text-slate-900"
+        >
+          ← Retake Assessment
+        </a>
+      </div>
 
       <a
-        href="/"
-        class="inline-flex items-center justify-center px-6 py-3 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm transition-all"
+        href="/assessments"
+        class="inline-flex items-center justify-center px-5 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-sm transition-all"
       >
         Explore All Assessments →
       </a>
