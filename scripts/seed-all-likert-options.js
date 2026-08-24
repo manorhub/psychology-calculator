@@ -5,20 +5,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// All Likert questions across all assessments
+// All Likert questions across the 7 newly added assessments
 const questionList = [
-  // Big Five (asm_big_five)
-  { id: 'q_bf_1', asm: 'asm_big_five', dim: 'dim_openness' },
-  { id: 'q_bf_2', asm: 'asm_big_five', dim: 'dim_openness' },
-  { id: 'q_bf_3', asm: 'asm_big_five', dim: 'dim_conscientiousness' },
-  { id: 'q_bf_4', asm: 'asm_big_five', dim: 'dim_conscientiousness' },
-  { id: 'q_bf_5', asm: 'asm_big_five', dim: 'dim_extraversion' },
-  { id: 'q_bf_6', asm: 'asm_big_five', dim: 'dim_extraversion' },
-  { id: 'q_bf_7', asm: 'asm_big_five', dim: 'dim_agreeableness' },
-  { id: 'q_bf_8', asm: 'asm_big_five', dim: 'dim_agreeableness' },
-  { id: 'q_bf_9', asm: 'asm_big_five', dim: 'dim_neuroticism' },
-  { id: 'q_bf_10', asm: 'asm_big_five', dim: 'dim_neuroticism' },
-
   // Attachment Style (asm_attachment)
   { id: 'q_att_1', asm: 'asm_attachment', dim: 'dim_att_secure' },
   { id: 'q_att_2', asm: 'asm_attachment', dim: 'dim_att_secure' },

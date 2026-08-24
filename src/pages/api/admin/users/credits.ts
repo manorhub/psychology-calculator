@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const newBalance = await adminService.adjustUserCredits(
       data.userId,
       data.amount,
-      data.reason,
+      data.reason || 'Admin credit adjustment',
       adminUser.id
     );
 
