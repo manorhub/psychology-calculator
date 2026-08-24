@@ -51,17 +51,35 @@ const user = Astro.locals.user;
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         {user ? (
-          <a
-            href="/account"
-            class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-          >
-            <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">
-              {user.profile.displayName ? user.profile.displayName.substring(0, 1).toUpperCase() : 'U'}
-            </span>
-            <span class="max-w-[120px] truncate">{user.profile.displayName || 'Account'}</span>
-          </a>
+          <div class="flex items-center gap-2">
+            <a
+              href="/dashboard"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all shadow-2xs"
+            >
+              <span>📊</span>
+              <span>Dashboard</span>
+            </a>
+            {user.role === 'admin' && (
+              <a
+                href="/admin"
+                class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-colors"
+              >
+                <span>⚙️</span>
+                <span>Admin</span>
+              </a>
+            )}
+            <a
+              href="/dashboard/profile"
+              class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+            >
+              <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
+                {user.profile.displayName ? user.profile.displayName.substring(0, 1).toUpperCase() : 'U'}
+              </span>
+              <span class="max-w-[100px] truncate">{user.profile.displayName || 'Profile'}</span>
+            </a>
+          </div>
         ) : (
           config.features.enableUserAccounts && (
             <a
@@ -105,13 +123,45 @@ const user = Astro.locals.user;
       </a>
     ))}
     {user ? (
-      <div class="pt-2 border-t border-slate-100">
+      <div class="pt-2 border-t border-slate-100 space-y-1">
         <a
-          href="/account"
-          class="block px-3.5 py-2.5 text-base font-medium text-teal-700 hover:bg-teal-50 rounded-xl"
+          href="/dashboard"
+          class="block px-3.5 py-2.5 text-base font-bold text-teal-700 hover:bg-teal-50 rounded-xl"
         >
-          My Account ({user.profile.displayName || user.email})
+          📊 User Dashboard
         </a>
+        <a
+          href="/dashboard/assessments"
+          class="block px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl"
+        >
+          📝 My Assessments
+        </a>
+        <a
+          href="/dashboard/results"
+          class="block px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl"
+        >
+          🎯 My Results & History
+        </a>
+        <a
+          href="/dashboard/reports"
+          class="block px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl"
+        >
+          ✨ AI Reports
+        </a>
+        <a
+          href="/dashboard/profile"
+          class="block px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl"
+        >
+          👤 Profile & Settings
+        </a>
+        {user.role === 'admin' && (
+          <a
+            href="/admin"
+            class="block px-3.5 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50 rounded-xl"
+          >
+            ⚙️ Admin Control Center
+          </a>
+        )}
       </div>
     ) : (
       config.features.enableUserAccounts && (

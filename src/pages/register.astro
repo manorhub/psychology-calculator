@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button.astro';
 import Alert from '@/components/ui/Alert.astro';
 
 if (Astro.locals.user) {
-  return Astro.redirect('/account');
+  return Astro.redirect('/dashboard');
 }
 
 const redirectParam = Astro.url.searchParams.get('redirect') || '';

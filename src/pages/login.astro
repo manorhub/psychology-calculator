@@ -5,14 +5,14 @@ import Input from '@/components/ui/Input.astro';
 import Button from '@/components/ui/Button.astro';
 import Alert from '@/components/ui/Alert.astro';
 
-// If already logged in, redirect to account
+// If already logged in, redirect to dashboard
 if (Astro.locals.user) {
-  return Astro.redirect('/account');
+  return Astro.redirect('/dashboard');
 }
 
 const errorParam = Astro.url.searchParams.get('error');
 const verifiedParam = Astro.url.searchParams.get('verified');
-const redirectParam = Astro.url.searchParams.get('redirect') || '/account';
+const redirectParam = Astro.url.searchParams.get('redirect') || '/dashboard';
 
 let bannerMessage = '';
 let bannerVariant: 'info' | 'success' | 'danger' = 'info';
@@ -168,7 +168,7 @@ if (verifiedParam === 'true') {
       }
 
       // Successful login -> Redirect
-      window.location.href = redirectParam || '/account';
+      window.location.href = redirectParam || '/dashboard';
     } catch {
       if (errorMessage) {
         errorMessage.textContent = 'A network error occurred. Please try again.';

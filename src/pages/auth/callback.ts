@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ url, cookies, locals, clientAddress }) => 
 
     return new Response(null, {
       status: 302,
-      headers: { Location: '/account' }
+      headers: { Location: '/dashboard' }
     });
   } catch (err) {
     logger.error('Google OAuth callback error', undefined, err instanceof Error ? err : new Error(String(err)));
