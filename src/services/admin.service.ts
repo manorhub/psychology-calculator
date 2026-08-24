@@ -35,6 +35,7 @@ export interface AdminUserListItem {
   displayName: string | null;
   role: UserRole;
   status: UserStatus;
+  emailVerified: boolean;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -152,6 +153,7 @@ export class AdminService extends BaseService {
       this.db,
       `SELECT
          u.id, u.email, u.role, u.status, u.created_at as createdAt, u.last_login_at as lastLoginAt,
+         (u.email_verified_at IS NOT NULL) as emailVerified,
          p.display_name as displayName
        FROM users u
        LEFT JOIN profiles p ON u.id = p.user_id
@@ -267,6 +269,45 @@ export class AdminService extends BaseService {
       entityType: 'user',
       entityId: userId,
       details: { previousRole: user.role, newRole: role, email: user.email }
+    });
+  }
+
+  /**
+   * Manually sets or toggles user email verification status by administrator
+   */
+  public async setUserVerification(userId: string, isVerified: boolean, actorId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not available');
+
+    const user = await fetchFirst<UserRow>(this.db, 'SELECT id, email, status, email_verified_at FROM users WHERE id = ?', [userId]);
+    if (!user) throw new NotFoundError('User not found');
+
+    if (isVerified) {
+      await this.db
+        .prepare(`UPDATE users SET 
+          email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP),
+          status = CASE WHEN status = 'pending_verification' THEN 'active' ELSE status END,
+          updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`)
+        .bind(userId)
+        .run();
+    } else {
+      await this.db
+        .prepare(`UPDATE users SET 
+          email_verified_at = NULL,
+          status = CASE WHEN status = 'active' THEN 'pending_verification' ELSE status END,
+          updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`)
+        .bind(userId)
+        .run();
+    }
+
+    await this.auditService.record({
+      actorId,
+      actorRole: 'admin',
+      action: isVerified ? 'user_manual_verified' : 'user_manual_unverified',
+      entityType: 'user',
+      entityId: userId,
+      details: { targetEmail: user.email, isVerified }
     });
   }
 

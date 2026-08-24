@@ -194,6 +194,45 @@ const isSelf = currentAdminId === user.id;
               </div>
             </div>
 
+            <!-- Manual Email Verification Action -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-xs font-bold text-slate-900">Email Verification Status</h4>
+                  {user.email_verified_at ? (
+                    <Badge variant="success" size="sm">✓ VERIFIED</Badge>
+                  ) : (
+                    <Badge variant="warning" size="sm">UNVERIFIED</Badge>
+                  )}
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  {user.email_verified_at
+                    ? `Verified on ${new Date(user.email_verified_at).toLocaleString()}`
+                    : 'User has not confirmed their email address. Admins can manually verify to grant immediate access.'}
+                </p>
+              </div>
+
+              <div>
+                {user.email_verified_at ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    id="unverify-email-btn"
+                  >
+                    Revoke Verification
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    id="verify-email-btn"
+                  >
+                    ✓ Mark as Verified
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {isSelf && (
               <p class="text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
                 ⚠️ You cannot suspend or change the role of your own administrator account.
@@ -258,6 +297,22 @@ const isSelf = currentAdminId === user.id;
       '/api/admin/users/role',
       { userId, role: 'user' },
       'Demote this administrator to standard user?'
+    );
+  });
+
+  document.getElementById('verify-email-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/verify',
+      { userId, isVerified: true },
+      'Manually mark this user as verified? They will immediately be able to log in without clicking an email link.'
+    );
+  });
+
+  document.getElementById('unverify-email-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/verify',
+      { userId, isVerified: false },
+      'Revoke email verification for this user?'
     );
   });
 </script>

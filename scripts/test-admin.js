@@ -214,7 +214,20 @@ async function runAdminTests() {
     /cannot suspend their own account/,
     'Admin self-suspension prevented'
   );
-  console.log('✔ Admin user actions: Suspend, reactivate, and role elevation verified with self-protection');
+  // Test manual email verification
+  await adminService.setUserVerification('usr_bob', true, 'admin_999');
+  const bobVerified = sqlite.prepare("SELECT email_verified_at, status FROM users WHERE id = 'usr_bob'").get();
+  assert.ok(bobVerified.email_verified_at !== null, 'Bob email should be verified');
+
+  // Test revoking verification
+  await adminService.setUserVerification('usr_bob', false, 'admin_999');
+  const bobUnverified = sqlite.prepare("SELECT email_verified_at FROM users WHERE id = 'usr_bob'").get();
+  assert.strictEqual(bobUnverified.email_verified_at, null, 'Bob email verification should be revoked');
+
+  // Re-verify Bob
+  await adminService.setUserVerification('usr_bob', true, 'admin_999');
+
+  console.log('✔ Admin user actions: Suspend, reactivate, manual email verification, and role elevation verified with self-protection');
 
   console.log('\n--- 6. Testing Dynamic Settings & Persistence ---');
   await adminService.updateSettings(

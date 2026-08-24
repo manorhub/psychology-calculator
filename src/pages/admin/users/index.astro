@@ -82,6 +82,7 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
               <th class="py-3.5 px-4 sm:px-6">User</th>
               <th class="py-3.5 px-4">Role</th>
               <th class="py-3.5 px-4">Status</th>
+              <th class="py-3.5 px-4">Verified</th>
               <th class="py-3.5 px-4">Joined Date</th>
               <th class="py-3.5 px-4">Last Login</th>
               <th class="py-3.5 px-4 text-right">Action</th>
@@ -90,7 +91,7 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
           <tbody class="divide-y divide-slate-100">
             {result.items.length === 0 ? (
               <tr>
-                <td colspan="6" class="p-8 text-center text-slate-500">
+                <td colspan="7" class="p-8 text-center text-slate-500">
                   No users found matching the selected criteria.
                 </td>
               </tr>
@@ -127,6 +128,22 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
                       {user.status.replace('_', ' ').toUpperCase()}
                     </Badge>
                   </td>
+                  <td class="py-3.5 px-4">
+                    {user.emailVerified ? (
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ✓ Yes
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        class="quick-verify-btn inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-amber-200 transition-all cursor-pointer"
+                        data-user-id={user.id}
+                        title="Click to manually verify this user"
+                      >
+                        ⚡ Verify Now
+                      </button>
+                    )}
+                  </td>
                   <td class="py-3.5 px-4 text-slate-600">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
@@ -158,3 +175,29 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
     </Card>
   </div>
 </AdminLayout>
+
+<script>
+  document.querySelectorAll('.quick-verify-btn').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const userId = (btn as HTMLElement).dataset.userId;
+      if (!userId || !confirm('Manually mark this user as verified? They will immediately be able to log in without clicking an email link.')) return;
+
+      try {
+        const res = await fetch('/api/admin/users/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, isVerified: true })
+        });
+        const data = (await res.json()) as any;
+        if (res.ok && data.success) {
+          window.location.reload();
+        } else {
+          alert(data.error?.message || 'Verification failed');
+        }
+      } catch {
+        alert('Network error during verification');
+      }
+    });
+  });
+</script>
