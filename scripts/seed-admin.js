@@ -1,33 +1,22 @@
 import { hashPassword } from '../src/lib/crypto.ts';
-import { execSync } from 'node:child_process';
 
-async function seedAdmin() {
-  const email = 'admin@psychologycalculator.com';
-  const password = 'Admin@123456';
-  const passwordHash = await hashPassword(password);
-  const userId = 'usr_admin_master';
+async function main() {
+  const password = process.argv[2] || 'Admin@123456';
+  const email = process.argv[3] || 'admin@psychologycalculator.com';
+  const hash = await hashPassword(password);
+  console.log(`Generated PBKDF2 hash for ${email} (${password}):\n${hash}\n`);
 
-  const sql = `
-    INSERT INTO users (id, email, password_hash, auth_provider, role, status, created_at, updated_at)
-    VALUES ('${userId}', '${email}', '${passwordHash}', 'email', 'admin', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT(email) DO UPDATE SET
-      password_hash = '${passwordHash}',
-      role = 'admin',
-      status = 'active';
+  const sql = `INSERT OR REPLACE INTO users (id, email, password_hash, role, status, email_verified_at, created_at, updated_at)
+VALUES ('admin_master_1', '${email}', '${hash}', 'admin', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-    INSERT INTO profiles (user_id, display_name, created_at, updated_at)
-    VALUES ('${userId}', 'System Administrator', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT(user_id) DO UPDATE SET display_name = 'System Administrator';
-  `;
+INSERT OR REPLACE INTO profiles (user_id, display_name, timezone, locale, created_at, updated_at)
+VALUES ('admin_master_1', 'Super Admin', 'UTC', 'en', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-  console.log('Seeding admin user into local D1 database...');
-  execSync(`npx wrangler d1 execute DB --local --yes --command="${sql.replace(/\n/g, ' ')}"`, {
-    stdio: 'inherit'
-  });
+INSERT OR REPLACE INTO credit_balances (user_id, balance, updated_at)
+VALUES ('admin_master_1', 9999, CURRENT_TIMESTAMP);
+`;
 
-  console.log('\nAdmin credentials configured successfully:');
-  console.log('Email:', email);
-  console.log('Password:', password);
+  console.log('SQL to execute:\n' + sql);
 }
 
-seedAdmin().catch(console.error);
+main().catch(console.error);

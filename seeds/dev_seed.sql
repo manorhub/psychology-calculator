@@ -229,3 +229,13 @@ INSERT OR IGNORE INTO ai_configurations (id, provider, model, is_enabled, priori
 
 INSERT OR IGNORE INTO ai_prompts (id, name, slug, purpose, prompt_template, version, status) VALUES
 ('prompt_assessment_synthesis', 'Assessment Narrative Synthesis', 'assessment-synthesis', 'assessment_interpretation', 'Analyze the following score profile for assessment "{{assessment_name}}":\n\nDimensions & Scores:\n{{dimension_scores}}\n\nProvide:\n1. Core Behavioral Narrative\n2. Key Interpersonal Dynamics\n3. High-Leverage Growth Pathway\n\nMaintain an encouraging, evidence-based tone.', 1, 'active');
+
+-- 15. Master Admin User
+INSERT OR REPLACE INTO users (id, email, password_hash, role, status, email_verified_at, created_at, updated_at) VALUES
+('admin_master_1', 'admin@psychologycalculator.com', 'pbkdf2:100000:b92cfc0949a548df302655d6e434f8ae:25ff57c2da66ab41d988b4d0c320b0cfb8f211d3b0de2450c130b71de14f761b', 'admin', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT OR REPLACE INTO profiles (user_id, display_name, timezone, locale, created_at, updated_at) VALUES
+('admin_master_1', 'Super Admin', 'UTC', 'en', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT OR REPLACE INTO credit_balances (user_id, balance, updated_at) VALUES
+('admin_master_1', 9999, CURRENT_TIMESTAMP);
