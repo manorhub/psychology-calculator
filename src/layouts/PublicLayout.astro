@@ -1,0 +1,37 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '@/components/layout/Header.astro';
+import Footer from '@/components/layout/Footer.astro';
+import { ConfigService } from '@/services/config.service';
+import { getD1Database } from '@/lib/db/client';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  noindex?: boolean;
+}
+
+const { title, description, canonicalUrl, ogImage, noindex } = Astro.props;
+
+// Resolve dynamic configuration from D1 (or fallback defaults)
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const configService = new ConfigService(db);
+const siteConfig = await configService.getSiteConfig();
+---
+
+<BaseLayout
+  title={title}
+  description={description || siteConfig.siteDescription}
+  canonicalUrl={canonicalUrl}
+  ogImage={ogImage}
+  noindex={noindex}
+>
+  <Header config={siteConfig} />
+  <main class="flex-1">
+    <slot />
+  </main>
+  <Footer config={siteConfig} />
+</BaseLayout>

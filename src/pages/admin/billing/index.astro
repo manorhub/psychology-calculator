@@ -1,0 +1,289 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import Input from '@/components/ui/Input.astro';
+import { SubscriptionService } from '@/services/billing/subscription.service';
+import { executeQuery } from '@/lib/db/query';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const subService = new SubscriptionService(db);
+
+const subscriptions = await subService.getAllSubscriptions(50);
+const transactions = await subService.getAllTransactions(50);
+
+const settingRows = db ? await executeQuery<{ key: string; value: string }>(db, 'SELECT key, value FROM site_settings') : [];
+const settings: Record<string, string> = {};
+for (const s of settingRows) {
+  settings[s.key] = s.value;
+}
+
+const activeSubsCount = subscriptions.filter((s) => s.status === 'active' || s.status === 'on_trial').length;
+const totalRevenue = transactions.filter((t) => t.status === 'paid').reduce((sum, t) => sum + (t.amount || 0), 0);
+---
+
+<AdminLayout title="Monetization & Billing — Admin Control">
+  <div class="space-y-8 max-w-6xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Lemon Squeezy Monetization Control
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Merchant of Record subscription architecture, dynamic pricing, and webhook operations
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <a
+          href="/admin/billing/plans"
+          class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all"
+        >
+          🏷️ Manage Plans
+        </a>
+        <a
+          href="/admin/billing/transactions"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+        >
+          💳 Invoices
+        </a>
+        <a
+          href="/admin/billing/webhooks"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+        >
+          ⚡ Webhook Logs
+        </a>
+      </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Active Pro Members</span>
+        <div class="text-3xl font-black text-indigo-600">{activeSubsCount}</div>
+        <span class="text-[10px] text-slate-400">Total active / trialing subscriptions</span>
+      </Card>
+
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Recorded Revenue</span>
+        <div class="text-3xl font-black text-emerald-600">
+          ${totalRevenue.toFixed(2)} {settings.lemon_squeezy_currency || 'USD'}
+        </div>
+        <span class="text-[10px] text-slate-400">Gross paid transaction volume</span>
+      </Card>
+
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Payment Gateway</span>
+        <div class="text-lg font-black text-slate-800 flex items-center gap-2">
+          <span>🍋 Lemon Squeezy</span>
+          <Badge variant={settings.lemon_squeezy_enabled !== 'false' ? 'success' : 'default'} size="sm">
+            {settings.lemon_squeezy_enabled !== 'false' ? 'Active' : 'Disabled'}
+          </Badge>
+        </div>
+        <span class="text-[10px] text-slate-400 font-mono">Mode: {settings.lemon_squeezy_mode || 'test'}</span>
+      </Card>
+    </div>
+
+    <!-- Status Message -->
+    <div id="status-msg" class="hidden p-4 rounded-xl text-xs font-semibold"></div>
+
+    <!-- Gateway Configuration Form -->
+    <form id="billing-settings-form" class="space-y-6">
+      <Card class="p-6 sm:p-8 space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">
+            Lemon Squeezy API & Webhook Credentials
+          </h2>
+          <span class="text-[10px] text-slate-400">Never exposed to client-side code</span>
+        </div>
+
+        <div class="space-y-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="lemon_squeezy_enabled"
+              name="lemon_squeezy_enabled"
+              checked={settings.lemon_squeezy_enabled !== 'false'}
+              class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+            />
+            <div>
+              <div class="text-xs font-bold text-slate-900">Enable Lemon Squeezy Gateway</div>
+              <div class="text-[11px] text-slate-500">Master switch allowing paid checkouts across the application</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <Input
+            id="lemon_squeezy_store_id"
+            name="lemon_squeezy_store_id"
+            label="Lemon Squeezy Store ID"
+            value={settings.lemon_squeezy_store_id || ''}
+            placeholder="e.g. 12345"
+            required
+          />
+
+          <Input
+            id="lemon_squeezy_currency"
+            name="lemon_squeezy_currency"
+            label="Primary Currency"
+            value={settings.lemon_squeezy_currency || 'USD'}
+            placeholder="USD"
+            required
+          />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Input
+              id="lemon_squeezy_api_key"
+              name="lemon_squeezy_api_key"
+              label="API Key"
+              type="password"
+              value={settings.lemon_squeezy_api_key || ''}
+              placeholder="eyJhbGciOi..."
+            />
+            <span class="text-[10px] text-slate-400 mt-1 block">
+              {settings.lemon_squeezy_api_key ? '✓ Configured securely on server' : 'Not configured'}
+            </span>
+          </div>
+
+          <div>
+            <Input
+              id="lemon_squeezy_webhook_secret"
+              name="lemon_squeezy_webhook_secret"
+              label="Webhook Signing Secret"
+              type="password"
+              value={settings.lemon_squeezy_webhook_secret || ''}
+              placeholder="HMAC secret from Lemon Squeezy webhook settings"
+            />
+            <span class="text-[10px] text-slate-400 mt-1 block">
+              Webhook URL: <code class="font-mono text-indigo-600">/api/webhooks/lemon-squeezy</code>
+            </span>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="lemon_squeezy_mode" class="text-xs font-semibold text-slate-700">Environment Mode</label>
+          <select
+            id="lemon_squeezy_mode"
+            name="lemon_squeezy_mode"
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="test" selected={settings.lemon_squeezy_mode === 'test'}>Test Mode (Sandbox)</option>
+            <option value="live" selected={settings.lemon_squeezy_mode === 'live'}>Live Mode (Production)</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <Button type="submit" variant="primary" id="save-btn">
+            Save Gateway Settings
+          </Button>
+        </div>
+      </Card>
+    </form>
+
+    <!-- Recent Subscriptions Preview -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Recent User Subscriptions</h2>
+        <a href="/admin/billing/transactions" class="text-xs text-indigo-600 hover:underline font-bold">
+          View All Transactions →
+        </a>
+      </div>
+
+      {subscriptions.length === 0 ? (
+        <div class="p-8 text-center text-slate-400 text-xs">
+          No subscriptions synced yet.
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-3">User</th>
+                <th class="px-4 py-3">Plan</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Period End</th>
+                <th class="px-4 py-3">Created</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {subscriptions.slice(0, 5).map((sub) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-4 py-3">
+                    <div class="font-medium text-slate-900">{sub.user_name || 'User'}</div>
+                    <div class="text-[10px] text-slate-400">{sub.user_email}</div>
+                  </td>
+                  <td class="px-4 py-3 font-semibold text-slate-800">
+                    {sub.plan_name || sub.plan_id}
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge variant={sub.status === 'active' ? 'success' : 'default'} size="sm">
+                      {sub.status}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3 text-slate-500 font-mono text-[11px]">
+                    {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td class="px-4 py-3 text-slate-400 text-[10px]">
+                    {new Date(sub.created_at).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+
+  <script>
+    const form = document.getElementById('billing-settings-form') as HTMLFormElement;
+    const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+    const statusMsg = document.getElementById('status-msg') as HTMLDivElement;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      statusMsg.className = 'hidden';
+
+      const formData = new FormData(form);
+      const settingsPayload = {
+        lemon_squeezy_enabled: formData.get('lemon_squeezy_enabled') ? 'true' : 'false',
+        lemon_squeezy_store_id: formData.get('lemon_squeezy_store_id') as string,
+        lemon_squeezy_currency: formData.get('lemon_squeezy_currency') as string,
+        lemon_squeezy_api_key: formData.get('lemon_squeezy_api_key') as string,
+        lemon_squeezy_webhook_secret: formData.get('lemon_squeezy_webhook_secret') as string,
+        lemon_squeezy_mode: formData.get('lemon_squeezy_mode') as string
+      };
+
+      try {
+        const res = await fetch('/api/v1/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings: settingsPayload })
+        });
+
+        const data = (await res.json()) as any;
+        if (!res.ok) throw new Error(data.error?.message || 'Failed to save settings');
+
+        statusMsg.textContent = '✓ Lemon Squeezy configuration updated successfully!';
+        statusMsg.className = 'p-4 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+      } catch (err: any) {
+        statusMsg.textContent = `❌ ${err.message || 'Error updating settings'}`;
+        statusMsg.className = 'p-4 rounded-xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 block';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Gateway Settings';
+      }
+    });
+  </script>
+</AdminLayout>

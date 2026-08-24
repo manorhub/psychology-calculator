@@ -1,0 +1,96 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { DashboardService } from '@/services/dashboard.service';
+
+const currentUser = Astro.locals.user;
+if (!currentUser) return Astro.redirect('/login?redirect=/dashboard/credits');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const dashboardService = new DashboardService(db);
+
+const { balance, transactions } = await dashboardService.getCreditHistory(currentUser.id, 50);
+---
+
+<DashboardLayout title="Credits & Usage" description="Manage your AI credits balance and review transaction history">
+  <div class="space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">AI Credits & Usage</h1>
+        <p class="text-xs text-slate-500 mt-1">
+          Credits are used to generate in-depth AI psychological narrative reports and synthesis.
+        </p>
+      </div>
+    </div>
+
+    <!-- Balance Banner -->
+    <div class="p-8 bg-gradient-to-br from-teal-900 via-slate-900 to-indigo-950 text-white rounded-3xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <div class="space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-teal-300">Available AI Credits</span>
+        <div class="text-4xl sm:text-5xl font-black text-white font-mono flex items-center gap-2">
+          <span>💎</span> {balance} <span class="text-xs font-normal text-teal-200 uppercase">Credits</span>
+        </div>
+        <p class="text-xs text-teal-100 max-w-md">
+          Generating a comprehensive AI synthesis for any completed assessment uses 5 credits.
+        </p>
+      </div>
+
+      <div class="flex-shrink-0 p-4 bg-white/10 backdrop-blur-xs border border-white/20 rounded-2xl text-xs space-y-1">
+        <span class="text-teal-200 font-bold block">Need more credits?</span>
+        <span class="text-slate-300 text-[11px] block">Subscription plans & credit packs coming soon in Phase 11.</span>
+      </div>
+    </div>
+
+    <!-- Transaction Ledger -->
+    <div class="space-y-4">
+      <h2 class="text-lg font-bold text-slate-900">Credit Activity History</h2>
+
+      {transactions.length === 0 ? (
+        <Card class="p-8 text-center space-y-2">
+          <div class="text-2xl">📋</div>
+          <h3 class="text-xs font-bold text-slate-700">No credit activity recorded yet.</h3>
+          <p class="text-[11px] text-slate-400">Transactions will appear here when credits are granted or spent.</p>
+        </Card>
+      ) : (
+        <Card class="p-0 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-4">Date</th>
+                  <th class="p-4">Activity / Description</th>
+                  <th class="p-4">Type</th>
+                  <th class="p-4 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {transactions.map((tx) => (
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="p-4 font-mono text-[11px] text-slate-400">
+                      {new Date(tx.createdAt).toLocaleDateString()} {new Date(tx.createdAt).toLocaleTimeString()}
+                    </td>
+                    <td class="p-4 font-semibold text-slate-900">
+                      {tx.metadata?.description || tx.source.replace(/_/g, ' ')}
+                    </td>
+                    <td class="p-4">
+                      <Badge variant={tx.amount > 0 ? 'success' : 'default'} size="sm">
+                        {tx.transactionType.replace(/_/g, ' ')}
+                      </Badge>
+                    </td>
+                    <td class={`p-4 text-right font-mono font-bold ${tx.amount > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  </div>
+</DashboardLayout>

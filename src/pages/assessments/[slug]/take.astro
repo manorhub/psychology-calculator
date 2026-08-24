@@ -1,0 +1,309 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AssessmentRuntimeService } from '@/services/assessment-runtime.service';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const runtimeService = new AssessmentRuntimeService(db);
+
+const assessmentData = await runtimeService.getPublishedAssessmentBySlug(slug);
+if (!assessmentData) {
+  return new Response('Assessment Not Found or not published', { status: 404 });
+}
+
+const { assessment, questions } = assessmentData;
+---
+
+<BaseLayout title={`Taking: ${assessment.name}`} description="Assessment in progress">
+  <!-- Minimalist Runner Shell -->
+  <div class="min-h-screen bg-slate-50 flex flex-col justify-between">
+    <!-- Top Progress Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+      <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <a href={`/assessments/${assessment.slug}`} class="text-xs text-slate-400 hover:text-slate-700 font-semibold">
+            ✕ Exit
+          </a>
+          <span class="text-slate-300">|</span>
+          <span class="text-xs font-bold text-slate-900 truncate max-w-[200px] sm:max-w-xs">{assessment.name}</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span id="progress-text" class="text-xs font-mono font-bold text-teal-700">0%</span>
+          <div class="w-28 sm:w-40 bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+            <div id="progress-bar" class="bg-teal-600 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Question Stepper Area -->
+    <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-8 sm:py-12 flex flex-col justify-center">
+      <div id="questions-deck" class="space-y-6">
+        {questions.map((q, idx) => (
+          <div
+            class={`question-slide space-y-6 ${idx === 0 ? '' : 'hidden'}`}
+            data-q-index={idx}
+            data-q-id={q.id}
+            data-required={q.required}
+          >
+            <!-- Step Counter -->
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Question {idx + 1} of {questions.length}</span>
+              {q.required === 1 && (
+                <span class="text-rose-500 text-[11px] font-semibold">* Required</span>
+              )}
+            </div>
+
+            <!-- Question Prompt -->
+            <div class="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6">
+              <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug tracking-tight">
+                {q.question_text}
+              </h2>
+
+              <!-- Options Grid / List -->
+              <div class="space-y-3 options-container">
+                {q.options.map((opt) => (
+                  <label
+                    class="option-label flex items-center justify-between p-4 rounded-2xl border-2 border-slate-200 hover:border-teal-500 hover:bg-teal-50/30 cursor-pointer transition-all text-xs sm:text-sm font-semibold text-slate-800"
+                  >
+                    <div class="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name={`q_${q.id}`}
+                        value={opt.id}
+                        data-option-val={opt.option_value}
+                        class="w-4 h-4 text-teal-600 border-slate-300 focus:ring-teal-500"
+                      />
+                      <span>{opt.option_text}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Navigation Actions Bar -->
+      <div class="mt-8 flex items-center justify-between gap-4">
+        <button
+          type="button"
+          id="prev-btn"
+          class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          disabled
+        >
+          ← Previous
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="next-btn"
+            class="px-6 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
+          >
+            Next →
+          </button>
+
+          <button
+            type="button"
+            id="submit-btn"
+            class="hidden px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
+          >
+            Complete & View Results ✓
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Security Notice -->
+    <footer class="py-4 text-center text-[11px] text-slate-400">
+      Psychology Calculator • Deterministic Scoring Engine • Secure & Encrypted
+    </footer>
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ totalCount: questions.length, assessmentId: assessment.id, slug: assessment.slug }}>
+  // Extract or verify attemptId from URL query or session storage
+  const urlParams = new URLSearchParams(window.location.search);
+  let attemptId = urlParams.get('attemptId') || sessionStorage.getItem('active_attempt_id');
+
+  let currentIndex = 0;
+  const slides = document.querySelectorAll('.question-slide');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const submitBtn = document.getElementById('submit-btn');
+  const progressBar = document.getElementById('progress-bar');
+  const progressText = document.getElementById('progress-text');
+
+  // Answers Map: questionId -> optionId
+  const answersMap = new Map();
+
+  async function initAttempt() {
+    if (!attemptId) {
+      // Auto-start attempt if not present
+      try {
+        const res = await fetch(`/api/v1/assessments/${assessmentId}/start`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.data?.attemptId) {
+          attemptId = data.data.attemptId;
+          sessionStorage.setItem('active_attempt_id', attemptId);
+        }
+      } catch (err) {
+        console.error('Failed to init attempt', err);
+      }
+    }
+
+    // Load any existing answers if resuming
+    if (attemptId) {
+      try {
+        const res = await fetch(`/api/v1/attempts/${attemptId}`);
+        const data = await res.json();
+        if (data.success && data.data?.answers) {
+          data.data.answers.forEach((ans) => {
+            answersMap.set(ans.question_id, ans.option_id);
+            // Check radio button in DOM
+            const radio = document.querySelector(`input[name="q_${ans.question_id}"][value="${ans.option_id}"]`);
+            if (radio) {
+              radio.checked = true;
+              radio.closest('.option-label')?.classList.add('border-teal-600', 'bg-teal-50/50');
+            }
+          });
+          updateProgress();
+        }
+      } catch {}
+    }
+  }
+
+  function updateProgress() {
+    const answered = answersMap.size;
+    const pct = Math.round((answered / totalCount) * 100);
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (progressText) progressText.innerText = `${pct}%`;
+  }
+
+  function showSlide(index) {
+    slides.forEach((slide, idx) => {
+      slide.classList.toggle('hidden', idx !== index);
+    });
+
+    currentIndex = index;
+    prevBtn.disabled = index === 0;
+
+    const isLast = index === totalCount - 1;
+    if (nextBtn) nextBtn.classList.toggle('hidden', isLast);
+    if (submitBtn) submitBtn.classList.toggle('hidden', !isLast);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Handle Option Selection
+  document.querySelectorAll('.option-label input[type="radio"]').forEach((radio) => {
+    radio.addEventListener('change', async (e) => {
+      const target = e.target;
+      const optionId = target.value;
+      const slide = target.closest('.question-slide');
+      const questionId = slide.getAttribute('data-q-id');
+
+      // Style active radio label
+      slide.querySelectorAll('.option-label').forEach((lbl) => {
+        lbl.classList.remove('border-teal-600', 'bg-teal-50/50');
+      });
+      target.closest('.option-label')?.classList.add('border-teal-600', 'bg-teal-50/50');
+
+      answersMap.set(questionId, optionId);
+      updateProgress();
+
+      // Persist answer to backend in real time
+      if (attemptId) {
+        try {
+          await fetch(`/api/v1/attempts/${attemptId}/answers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionId, optionId })
+          });
+        } catch (err) {
+          console.error('Failed to sync answer', err);
+        }
+      }
+
+      // Auto-advance to next question smoothly after short delay
+      if (currentIndex < totalCount - 1) {
+        setTimeout(() => {
+          showSlide(currentIndex + 1);
+        }, 220);
+      }
+    });
+  });
+
+  prevBtn?.addEventListener('click', () => {
+    if (currentIndex > 0) showSlide(currentIndex - 1);
+  });
+
+  nextBtn?.addEventListener('click', () => {
+    const currentSlide = slides[currentIndex];
+    const qId = currentSlide.getAttribute('data-q-id');
+    const isRequired = currentSlide.getAttribute('data-required') === '1';
+
+    if (isRequired && !answersMap.has(qId)) {
+      alert('Please select an answer to continue.');
+      return;
+    }
+
+    if (currentIndex < totalCount - 1) {
+      showSlide(currentIndex + 1);
+    }
+  });
+
+  // Submit Final Answers and Calculate Scores
+  submitBtn?.addEventListener('click', async () => {
+    const currentSlide = slides[currentIndex];
+    const qId = currentSlide.getAttribute('data-q-id');
+    const isRequired = currentSlide.getAttribute('data-required') === '1';
+
+    if (isRequired && !answersMap.has(qId)) {
+      alert('Please answer the current question before completing.');
+      return;
+    }
+
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.innerText = 'Calculating scores...';
+
+    try {
+      const res = await fetch(`/api/v1/attempts/${attemptId}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.error?.message || 'Failed to finalize assessment.');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.innerText = 'Complete & View Results ✓';
+        return;
+      }
+
+      // Redirect to Result View
+      window.location.href = `/results/${attemptId}`;
+    } catch {
+      alert('A network error occurred while finalizing. Please try again.');
+      submitBtn.removeAttribute('disabled');
+      submitBtn.innerText = 'Complete & View Results ✓';
+    }
+  });
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' && currentIndex < totalCount - 1) {
+      nextBtn.click();
+    } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+      prevBtn.click();
+    }
+  });
+
+  initAttempt();
+</script>

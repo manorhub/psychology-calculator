@@ -1,0 +1,133 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AnalyticsService } from '@/services/analytics/analytics.service';
+import type { AnalyticsRange } from '@/types/database';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const analyticsService = new AnalyticsService(db);
+
+const url = new URL(Astro.request.url);
+const range = (url.searchParams.get('range') as AnalyticsRange) || '30d';
+
+const data = await analyticsService.getRevenueAnalytics(range);
+
+const ranges: { key: AnalyticsRange; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 Days' },
+  { key: '30d', label: 'Last 30 Days' },
+  { key: '90d', label: 'Last 90 Days' },
+  { key: 'this_year', label: 'This Year' },
+  { key: 'all', label: 'All Time' }
+];
+---
+
+<AdminLayout title="Revenue & Subscription Analytics">
+  <div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/analytics" class="text-xs font-semibold text-indigo-600 hover:underline">Analytics</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Revenue & Subscriptions</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Revenue & Subscription Analytics</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Lemon Squeezy synced financial records, active subscriber distributions, and churn metrics.
+        </p>
+      </div>
+
+      <!-- Date Range Selector -->
+      <div class="flex items-center gap-2 flex-wrap">
+        {ranges.map((r) => (
+          <a
+            href={`/admin/analytics/revenue?range=${r.key}`}
+            class={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              range === r.key
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {r.label}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Gross Revenue</span>
+        <div class="text-2xl font-black text-emerald-700 font-mono">
+          ${data.grossRevenue.toFixed(2)}
+        </div>
+        <span class="text-xs text-slate-500 font-semibold">{data.recentOrdersCount} paid transactions</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Subscribers</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.activeSubscriptions}</div>
+        <span class="text-xs text-indigo-600 font-semibold">Pro tier access active</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Cancellations</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.cancelledSubscriptions}</div>
+        <span class="text-xs text-slate-500 font-semibold">{data.expiredSubscriptions} expired</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Churn Rate</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.churnRate}%</div>
+        <span class="text-xs text-slate-500 font-semibold">Cancelled / Total subscribers</span>
+      </Card>
+    </div>
+
+    <!-- Plan Distribution & Payment Gateway Table -->
+    <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Subscription Plan Distribution</h3>
+          <p class="text-xs text-slate-500">Active membership breakdown by tier</p>
+        </div>
+        <a
+          href={`/api/v1/admin/analytics/export?type=revenue&range=${range}`}
+          class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
+        >
+          ⬇️ Export CSV
+        </a>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+            <tr>
+              <th class="p-3">Plan Tier</th>
+              <th class="p-3">Active Subscribers</th>
+              <th class="p-3">Status</th>
+              <th class="p-3 text-right">Revenue Generated</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            {data.planBreakdown.map((p) => (
+              <tr>
+                <td class="p-3 font-bold text-slate-900">{p.planName}</td>
+                <td class="p-3 font-mono font-semibold">{p.activeCount}</td>
+                <td class="p-3">
+                  <Badge variant="success" size="sm">Active</Badge>
+                </td>
+                <td class="p-3 text-right font-mono font-bold text-emerald-700">${p.revenue.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

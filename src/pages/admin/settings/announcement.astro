@@ -1,0 +1,141 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { getD1Database } from '@/lib/db/client';
+import { SettingsService } from '@/services/settings/settings.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const settingsService = new SettingsService(db);
+
+const announcement = await settingsService.getGroup('announcement');
+---
+
+<AdminLayout title="Announcement Bar Settings">
+  <div class="space-y-8 max-w-3xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/settings" class="text-xs font-semibold text-indigo-600 hover:underline">Settings</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Announcement</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Global Announcement Banner</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Broadcast promotions, new assessments, or updates at the top of every public page.
+        </p>
+      </div>
+    </div>
+
+    <!-- Announcement Form -->
+    <form id="announcement-form" class="space-y-6">
+      <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-5">
+        <label class="flex items-center gap-3 cursor-pointer pb-4 border-b border-slate-100">
+          <input
+            type="checkbox"
+            name="announcement_enabled"
+            checked={announcement.announcement_enabled === true}
+            class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+          />
+          <div>
+            <span class="text-xs font-bold text-slate-900">Enable Announcement Banner</span>
+            <p class="text-xs text-slate-500">When checked, the banner will render above the header</p>
+          </div>
+        </label>
+
+        <div class="space-y-3">
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Announcement Message</label>
+            <input
+              type="text"
+              name="announcement_message"
+              value={announcement.announcement_message || '✨ Explore our new Emotional Intelligence and Attachment Style assessments!'}
+              class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 font-medium"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700">Button / Link Text</label>
+              <input
+                type="text"
+                name="announcement_link_text"
+                value={announcement.announcement_link_text || 'Take Test'}
+                class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700">Button / Link Destination</label>
+              <input
+                type="text"
+                name="announcement_link_url"
+                value={announcement.announcement_link_url || '/assessments'}
+                class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 font-mono"
+              />
+            </div>
+          </div>
+
+          <label class="flex items-center gap-3 cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              name="announcement_dismissible"
+              checked={announcement.announcement_dismissible !== false}
+              class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            <div>
+              <span class="text-xs font-bold text-slate-900">Allow Visitor Dismissal (Close Button)</span>
+              <p class="text-xs text-slate-500">Saves dismissal in session storage to avoid annoyance</p>
+            </div>
+          </label>
+        </div>
+      </Card>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="submit"
+          class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+        >
+          Save Announcement Settings
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('announcement-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        group: 'announcement',
+        settings: {
+          announcement_enabled: formData.has('announcement_enabled'),
+          announcement_message: formData.get('announcement_message'),
+          announcement_link_text: formData.get('announcement_link_text'),
+          announcement_link_url: formData.get('announcement_link_url'),
+          announcement_dismissible: formData.has('announcement_dismissible')
+        }
+      };
+
+      try {
+        const res = await fetch('/api/v1/admin/settings/group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('Announcement settings saved successfully!');
+        } else {
+          alert('Failed to save settings: ' + (json.error?.message || 'Error'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    });
+  </script>
+</AdminLayout>

@@ -1,0 +1,128 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+
+export const prerender = false;
+---
+
+<AdminLayout title="Configuration Backup & Migration">
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin" class="text-xs font-semibold text-indigo-600 hover:underline">Control Center</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Backup & Restore</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Configuration Export & Migration</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Export sanitized platform configuration JSON or safely restore verified backups.
+        </p>
+      </div>
+    </div>
+
+    <!-- Export & Import Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Export -->
+      <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">📥</span>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Export Platform Config</h3>
+            <p class="text-xs text-slate-500">Download sanitized settings & legal markdown</p>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Generates an RFC-compliant JSON payload containing all site settings, feature switches, and legal documents.
+          <strong>Secrets (passwords, API keys, webhook secrets) are strictly excluded.</strong>
+        </p>
+
+        <div class="pt-2">
+          <a
+            href="/api/v1/admin/settings/export"
+            download
+            class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+          >
+            <span>Download Config JSON (Clean)</span>
+            <span>⬇</span>
+          </a>
+        </div>
+      </Card>
+
+      <!-- Import -->
+      <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">📤</span>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Import & Restore Config</h3>
+            <p class="text-xs text-slate-500">Restore settings from a verified JSON backup</p>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Upload an exported JSON configuration file. Schema validation verifies all keys before applying updates to D1.
+        </p>
+
+        <div class="pt-2 space-y-3">
+          <input
+            type="file"
+            id="config-file-input"
+            accept=".json,application/json"
+            class="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+          />
+
+          <button
+            type="button"
+            id="apply-import-btn"
+            class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+          >
+            Apply Config Import
+          </button>
+        </div>
+      </Card>
+    </div>
+  </div>
+
+  <script is:inline>
+    const fileInput = document.getElementById('config-file-input');
+    const importBtn = document.getElementById('apply-import-btn');
+
+    importBtn?.addEventListener('click', async () => {
+      if (!fileInput.files || !fileInput.files[0]) {
+        alert('Please choose a JSON configuration file first.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async (event) => {
+        try {
+          const json = JSON.parse(event.target.result);
+          if (!confirm(`Are you sure you want to apply configuration from "${file.name}"?`)) {
+            return;
+          }
+
+          const res = await fetch('/api/v1/admin/settings/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(json)
+          });
+          const responseJson = await res.json();
+          if (responseJson.success) {
+            alert(`Import successful! ${responseJson.data.importedCount} settings restored.`);
+            window.location.reload();
+          } else {
+            alert('Import error: ' + (responseJson.error?.message || 'Invalid payload'));
+          }
+        } catch (err) {
+          alert('JSON parsing error: ' + err.message);
+        }
+      };
+
+      reader.readAsText(file);
+    });
+  </script>
+</AdminLayout>

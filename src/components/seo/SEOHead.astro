@@ -1,0 +1,91 @@
+---
+import { SeoService } from '@/services/seo/seo.service';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+}
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const seoService = new SeoService(db);
+const seoSettings = await seoService.getSeoSettings();
+
+const {
+  title,
+  description = seoSettings.defaultDescription,
+  canonicalUrl = `${seoSettings.canonicalDomain}${Astro.url.pathname === '/' ? '' : Astro.url.pathname}`,
+  ogImage = seoSettings.defaultOgImage,
+  ogType = 'website',
+  noindex = false
+} = Astro.props;
+
+const formattedTitle = title
+  ? (title === seoSettings.siteTitle ? title : seoService.formatTitle(title, seoSettings.titleTemplate))
+  : seoSettings.siteTitle;
+
+const fullOgImage = ogImage.startsWith('http')
+  ? ogImage
+  : `${seoSettings.canonicalDomain}${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
+---
+
+<!-- Primary Meta Tags -->
+<title>{formattedTitle}</title>
+<meta name="title" content={formattedTitle} />
+<meta name="description" content={description} />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="utf-8" />
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Robots Indexation Directives -->
+{noindex ? (
+  <meta name="robots" content="noindex, nofollow" />
+) : (
+  <meta name="robots" content={seoSettings.defaultRobots} />
+)}
+
+<!-- Search Engine Verifications -->
+{seoSettings.gscVerification && (
+  <meta name="google-site-verification" content={seoSettings.gscVerification} />
+)}
+{seoSettings.bingVerification && (
+  <meta name="msvalidate.01" content={seoSettings.bingVerification} />
+)}
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content={ogType} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:title" content={formattedTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={fullOgImage} />
+<meta property="og:site_name" content={seoSettings.orgName} />
+
+<!-- Twitter / X Card -->
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content={canonicalUrl} />
+<meta property="twitter:title" content={formattedTitle} />
+<meta property="twitter:description" content={description} />
+<meta property="twitter:image" content={fullOgImage} />
+{seoSettings.twitterHandle && (
+  <meta name="twitter:site" content={seoSettings.twitterHandle} />
+)}
+
+<!-- Theme & Favicon -->
+<meta name="theme-color" content="#4f46e5" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+<!-- Google Analytics 4 (Conditional) -->
+{seoSettings.ga4MeasurementId && (
+  <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${seoSettings.ga4MeasurementId}`}></script>
+  <script is:inline define:vars={{ gaId: seoSettings.ga4MeasurementId }}>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', gaId, { anonymize_ip: true });
+  </script>
+)}

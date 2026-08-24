@@ -1,0 +1,27 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+---
+
+<AdminLayout title="Generated Reports" description="Manage user psychological evaluation reports and PDF exports">
+  <div class="space-y-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Report Log & Generation</h1>
+          <Badge variant="info" size="sm">Phase 5 Target</Badge>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Audit, regenerate, and inspect user psychometric evaluation reports</p>
+      </div>
+    </div>
+
+    <Card class="p-8 text-center space-y-3">
+      <div class="text-3xl">📈</div>
+      <h3 class="text-lg font-bold text-slate-900">Psychological Report Hub</h3>
+      <p class="text-xs text-slate-500 max-w-md mx-auto">
+        Report auditing, PDF generation triggers, and R2 artifact explorer will be established in <strong>Phase 5: AI & Report Generation</strong>.
+      </p>
+    </Card>
+  </div>
+</AdminLayout>

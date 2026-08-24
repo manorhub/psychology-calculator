@@ -1,0 +1,55 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Alert from '@/components/ui/Alert.astro';
+import Button from '@/components/ui/Button.astro';
+import { ADMIN_NAVIGATION } from '@/config/admin-nav';
+
+const { slug } = Astro.params;
+const currentPath = `/admin/${slug || ''}`;
+
+// Find current section metadata
+const allItems = ADMIN_NAVIGATION.flatMap((group) => group.items);
+const currentItem = allItems.find((item) => item.href === currentPath) || {
+  label: slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Module',
+  description: 'Admin feature section',
+  phase: 'Future Phase',
+  href: currentPath
+};
+---
+
+<AdminLayout title={currentItem.label} description={currentItem.description}>
+  <div class="space-y-6 max-w-4xl">
+    <Alert variant="info" title={`Module Provisioned (${currentItem.phase})`}>
+      This administrative module is registered in the architecture and mapped to route <code class="font-mono text-xs">{currentItem.href}</code>. Its database schemas and service handlers will be activated during {currentItem.phase}.
+    </Alert>
+
+    <Card title="Module Architecture & Readiness">
+      <div class="space-y-4 text-sm text-slate-600">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <span class="font-medium text-slate-700">Target Phase</span>
+          <Badge variant="default" size="sm">{currentItem.phase}</Badge>
+        </div>
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <span class="font-medium text-slate-700">Data Source</span>
+          <span class="font-mono text-xs text-slate-500">Cloudflare D1 (Prepared)</span>
+        </div>
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <span class="font-medium text-slate-700">Service Abstraction</span>
+          <span class="font-mono text-xs text-emerald-600">Ready</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="font-medium text-slate-700">Permissions</span>
+          <span class="font-mono text-xs text-slate-500">admin:access</span>
+        </div>
+      </div>
+
+      <div slot="footer" class="w-full flex items-center justify-between">
+        <Button href="/admin" variant="outline" size="sm">
+          &larr; Back to Dashboard
+        </Button>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

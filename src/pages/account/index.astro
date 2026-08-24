@@ -1,0 +1,241 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import Input from '@/components/ui/Input.astro';
+import Alert from '@/components/ui/Alert.astro';
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/login?redirect=/account');
+}
+---
+
+<PublicLayout title="Account Settings" description="Manage your MindMetrics profile and security">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Account & Security</h1>
+        <p class="text-sm text-slate-500 mt-1">Manage your personal profile, credentials, and privacy settings</p>
+      </div>
+
+      <Button variant="outline" size="sm" id="logout-btn">
+        <span slot="prefix">⎋</span>
+        Sign Out
+      </Button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Left Column: Profile Card -->
+      <div class="md:col-span-1 space-y-6">
+        <Card class="text-center p-6 space-y-4">
+          <div class="w-20 h-20 rounded-full bg-slate-900 text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
+            {user.profile.displayName ? user.profile.displayName.substring(0, 2).toUpperCase() : 'ME'}
+          </div>
+
+          <div>
+            <h3 class="font-bold text-slate-900 text-lg">{user.profile.displayName || 'Member'}</h3>
+            <p class="text-xs text-slate-500">{user.email}</p>
+          </div>
+
+          <div class="flex items-center justify-center gap-2 pt-2 border-t border-slate-100">
+            <Badge variant={user.emailVerified ? 'success' : 'warning'} size="sm">
+              {user.emailVerified ? 'Verified' : 'Unverified'}
+            </Badge>
+            <Badge variant="default" size="sm">
+              {user.role.toUpperCase()}
+            </Badge>
+          </div>
+        </Card>
+      </div>
+
+      <!-- Right Column: Security & Settings -->
+      <div class="md:col-span-2 space-y-6">
+        <!-- Change Password Section -->
+        <Card title="Change Password" subtitle="Ensure your account is using a secure, unique password">
+          <div id="password-alert" class="hidden mb-4">
+            <Alert variant="info" title="Password Status">
+              <span id="password-msg"></span>
+            </Alert>
+          </div>
+
+          <form id="change-password-form" class="space-y-4">
+            <Input
+              id="currentPassword"
+              name="currentPassword"
+              type="password"
+              label="Current Password"
+              placeholder="••••••••"
+              required={true}
+              autocomplete="current-password"
+            />
+
+            <Input
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              label="New Password"
+              placeholder="At least 8 characters"
+              required={true}
+              autocomplete="new-password"
+              hint="Must be at least 8 characters with numbers or symbols"
+            />
+
+            <Input
+              id="confirmNewPassword"
+              name="confirmNewPassword"
+              type="password"
+              label="Confirm New Password"
+              placeholder="••••••••"
+              required={true}
+              autocomplete="new-password"
+            />
+
+            <div class="pt-2 flex justify-end">
+              <Button type="submit" variant="primary" size="sm" id="change-pwd-btn">
+                Update Password
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        <!-- Danger Zone: Account Deletion -->
+        <Card title="Danger Zone" subtitle="Permanently deactivate and delete your account" class="border-rose-200">
+          <div class="space-y-4">
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Once you delete your account, your profile data will be permanently cleared and active sessions will be terminated immediately.
+            </p>
+
+            <div id="delete-alert" class="hidden">
+              <Alert variant="danger" title="Deletion Error">
+                <span id="delete-msg"></span>
+              </Alert>
+            </div>
+
+            <form id="delete-account-form" class="space-y-3 pt-2">
+              <Input
+                id="passwordConfirmation"
+                name="passwordConfirmation"
+                type="password"
+                label="Confirm Password to Delete"
+                placeholder="Enter password to confirm"
+                required={true}
+              />
+
+              <div class="flex justify-end">
+                <Button type="submit" variant="danger" size="sm" id="delete-account-btn">
+                  Delete Account
+                </Button>
+              </div>
+            </form>
+          </div>
+        </Card>
+      </div>
+    </div>
+  </div>
+</PublicLayout>
+
+<script>
+  // Logout handler
+  const logoutBtn = document.getElementById('logout-btn');
+  logoutBtn?.addEventListener('click', async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    } catch {
+      window.location.href = '/login';
+    }
+  });
+
+  // Change password handler
+  const pwdForm = document.getElementById('change-password-form') as HTMLFormElement | null;
+  const pwdAlert = document.getElementById('password-alert');
+  const pwdMsg = document.getElementById('password-msg');
+  const pwdBtn = document.getElementById('change-pwd-btn');
+
+  pwdForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    pwdAlert?.classList.add('hidden');
+
+    const formData = new FormData(pwdForm);
+    const currentPassword = String(formData.get('currentPassword') || '');
+    const newPassword = String(formData.get('newPassword') || '');
+    const confirmNewPassword = String(formData.get('confirmNewPassword') || '');
+
+    if (newPassword !== confirmNewPassword) {
+      if (pwdMsg) pwdMsg.textContent = 'New passwords do not match.';
+      pwdAlert?.classList.remove('hidden');
+      return;
+    }
+
+    pwdBtn?.setAttribute('disabled', 'true');
+
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data: any = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (pwdMsg) pwdMsg.textContent = data.error?.message || 'Password update failed.';
+        pwdAlert?.classList.remove('hidden');
+        pwdBtn?.removeAttribute('disabled');
+        return;
+      }
+
+      pwdForm.reset();
+      if (pwdMsg) pwdMsg.textContent = 'Password changed successfully!';
+      pwdAlert?.classList.remove('hidden');
+      pwdBtn?.removeAttribute('disabled');
+    } catch {
+      if (pwdMsg) pwdMsg.textContent = 'A network error occurred.';
+      pwdAlert?.classList.remove('hidden');
+      pwdBtn?.removeAttribute('disabled');
+    }
+  });
+
+  // Delete account handler
+  const deleteForm = document.getElementById('delete-account-form') as HTMLFormElement | null;
+  const deleteAlert = document.getElementById('delete-alert');
+  const deleteMsg = document.getElementById('delete-msg');
+  const deleteBtn = document.getElementById('delete-account-btn');
+
+  deleteForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
+      return;
+    }
+
+    deleteAlert?.classList.add('hidden');
+    deleteBtn?.setAttribute('disabled', 'true');
+
+    const formData = new FormData(deleteForm);
+    const passwordConfirmation = String(formData.get('passwordConfirmation') || '');
+
+    try {
+      const res = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passwordConfirmation })
+      });
+      const data: any = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (deleteMsg) deleteMsg.textContent = data.error?.message || 'Account deletion failed.';
+        deleteAlert?.classList.remove('hidden');
+        deleteBtn?.removeAttribute('disabled');
+        return;
+      }
+
+      window.location.href = '/';
+    } catch {
+      if (deleteMsg) deleteMsg.textContent = 'A network error occurred.';
+      deleteAlert?.classList.remove('hidden');
+      deleteBtn?.removeAttribute('disabled');
+    }
+  });
+</script>

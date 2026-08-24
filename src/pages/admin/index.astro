@@ -1,0 +1,211 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import StatCard from '@/components/admin/StatCard.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AnalyticsService } from '@/services/analytics/analytics.service';
+import { SystemHealthService } from '@/services/system/system-health.service';
+import { SettingsService } from '@/services/settings/settings.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const analyticsService = new AnalyticsService(db);
+const healthService = new SystemHealthService(db);
+const settingsService = new SettingsService(db);
+
+const [overview, health, isMaint, isAnnounce] = await Promise.all([
+  analyticsService.getOverviewMetrics('30d'),
+  healthService.getOverallHealth(env?.BUCKET),
+  settingsService.get('maintenance_mode', false),
+  settingsService.get('announcement_enabled', false)
+]);
+---
+
+<AdminLayout title="Admin Control Center">
+  <div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          Admin Control Center
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Central operational hub for Psychology Calculator (psychologycalculator.com)
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        <a
+          href="/admin/analytics"
+          class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
+        >
+          📊 Deep BI Analytics
+        </a>
+        <a
+          href="/admin/settings"
+          class="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+        >
+          ⚙️ Global Settings
+        </a>
+      </div>
+    </div>
+
+    <!-- System Status & Alert Badges -->
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Runtime Health:</span>
+        <Badge variant={health.status === 'healthy' ? 'success' : health.status === 'degraded' ? 'warning' : 'danger'} size="sm">
+          {health.status.toUpperCase()}
+        </Badge>
+      </div>
+
+      {isMaint && (
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
+          <span>⚠️ Maintenance Mode Active</span>
+          <a href="/admin/settings/maintenance" class="underline ml-1">Settings →</a>
+        </div>
+      )}
+
+      {isAnnounce && (
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-800">
+          <span>📢 Announcement Banner Active</span>
+          <a href="/admin/settings/announcement" class="underline ml-1">Settings →</a>
+        </div>
+      )}
+    </div>
+
+    <!-- Live Telemetry KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <StatCard
+        title="Total Registered"
+        value={overview.totalUsers.toLocaleString()}
+        icon="👥"
+        subtitle={`+${overview.newUsers} in last 30 days`}
+      />
+      <StatCard
+        title="Assessment Starts"
+        value={overview.assessmentStarts.toLocaleString()}
+        icon="📝"
+        subtitle={`${overview.completionRate}% completion rate`}
+      />
+      <StatCard
+        title="AI Reports"
+        value={overview.aiReportsGenerated.toLocaleString()}
+        icon="✨"
+        subtitle={`Est. Cost: $${overview.estimatedAiCost}`}
+      />
+      <StatCard
+        title="Gross Revenue"
+        value={`$${overview.grossRevenue.toFixed(2)}`}
+        icon="💳"
+        subtitle={`${overview.activeSubscriptions} active Pro subscribers`}
+      />
+    </div>
+
+    <!-- Quick Control Center Navigation Grid -->
+    <div>
+      <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">Management Modules</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Settings & Branding -->
+        <Card class="p-5 border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-2xs space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">⚙️</span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">General & Branding</h3>
+              <p class="text-xs text-slate-500">Site name, theme colors, logos, timezone</p>
+            </div>
+          </div>
+          <div class="pt-2 flex items-center gap-2">
+            <a href="/admin/settings" class="text-xs font-bold text-indigo-600 hover:underline">General →</a>
+            <span class="text-slate-300">•</span>
+            <a href="/admin/settings/branding" class="text-xs font-bold text-indigo-600 hover:underline">Branding →</a>
+          </div>
+        </Card>
+
+        <!-- Homepage & Navigation -->
+        <Card class="p-5 border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-2xs space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🏠</span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Homepage & Menus</h3>
+              <p class="text-xs text-slate-500">Hero copy, CTAs, header & footer links</p>
+            </div>
+          </div>
+          <div class="pt-2 flex items-center gap-2">
+            <a href="/admin/settings/homepage" class="text-xs font-bold text-indigo-600 hover:underline">Hero & Sections →</a>
+            <span class="text-slate-300">•</span>
+            <a href="/admin/settings/navigation" class="text-xs font-bold text-indigo-600 hover:underline">Navigation →</a>
+          </div>
+        </Card>
+
+        <!-- Feature Flags -->
+        <Card class="p-5 border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-2xs space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🚩</span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Feature Flags</h3>
+              <p class="text-xs text-slate-500">Runtime switches for AI, PDF, blog, billing</p>
+            </div>
+          </div>
+          <div class="pt-2">
+            <a href="/admin/settings/features" class="text-xs font-bold text-indigo-600 hover:underline">Manage Flags →</a>
+          </div>
+        </Card>
+
+        <!-- AI & Billing -->
+        <Card class="p-5 border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-2xs space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🤖</span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">AI & Monetization</h3>
+              <p class="text-xs text-slate-500">LLM configs, prompts, Lemon Squeezy plans</p>
+            </div>
+          </div>
+          <div class="pt-2 flex items-center gap-2">
+            <a href="/admin/ai" class="text-xs font-bold text-indigo-600 hover:underline">AI Config →</a>
+            <span class="text-slate-300">•</span>
+            <a href="/admin/billing" class="text-xs font-bold text-indigo-600 hover:underline">Billing Plans →</a>
+          </div>
+        </Card>
+
+        <!-- SEO & Legal Content -->
+        <Card class="p-5 border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-2xs space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🔍</span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">SEO & Legal Pages</h3>
+              <p class="text-xs text-slate-500">Robots.txt, llms.txt, Privacy, Terms, Disclaimer</p>
+            </div>
+          </div>
+          <div class="pt-2 flex items-center gap-2">
+            <a href="/admin/seo/robots" class="text-xs font-bold text-indigo-600 hover:underline">Robots.txt →</a>
+            <span class="text-slate-300">•</span>
+            <a href="/admin/content/legal" class="text-xs font-bold text-indigo-600 hover:underline">Legal CMS →</a>
+          </div>
+        </Card>
+
+        <!-- System & Diagnostics -->
+        <Card class="p-5 border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-2xs space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🛡️</span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">System & Backup</h3>
+              <p class="text-xs text-slate-500">Connectivity health, audit ledger, JSON backup</p>
+            </div>
+          </div>
+          <div class="pt-2 flex items-center gap-2">
+            <a href="/admin/system/health" class="text-xs font-bold text-indigo-600 hover:underline">Health →</a>
+            <span class="text-slate-300">•</span>
+            <a href="/admin/system/activity" class="text-xs font-bold text-indigo-600 hover:underline">Audit →</a>
+            <span class="text-slate-300">•</span>
+            <a href="/admin/system/backup" class="text-xs font-bold text-indigo-600 hover:underline">Backup →</a>
+          </div>
+        </Card>
+      </div>
+    </div>
+  </div>
+</AdminLayout>

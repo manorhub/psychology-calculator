@@ -1,0 +1,186 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { CmsService } from '@/services/content/cms.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const cmsService = new CmsService(db);
+const categories = await cmsService.getBlogCategories();
+---
+
+<AdminLayout title="Blog Categories">
+  <div class="space-y-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/content" class="text-xs font-semibold text-indigo-600 hover:underline">CMS</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Categories</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Blog Categories</h1>
+      </div>
+
+      <button
+        onclick="openNewCategoryModal()"
+        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm inline-flex items-center gap-1.5"
+      >
+        ➕ Create Category
+      </button>
+    </div>
+
+    <!-- Categories Table -->
+    <Card class="border-slate-200 bg-white overflow-hidden shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+            <tr>
+              <th class="p-3.5">Category Name</th>
+              <th class="p-3.5">Slug</th>
+              <th class="p-3.5">Description</th>
+              <th class="p-3.5">Order</th>
+              <th class="p-3.5">Status</th>
+              <th class="p-3.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            {categories.map((c) => (
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="p-3.5 font-bold text-slate-900">{c.name}</td>
+                <td class="p-3.5 font-mono text-slate-500">/blog?category={c.slug}</td>
+                <td class="p-3.5 text-slate-600 max-w-sm truncate">{c.description || '—'}</td>
+                <td class="p-3.5 font-mono text-slate-500">{c.display_order}</td>
+                <td class="p-3.5">
+                  <Badge variant={c.status === 'active' ? 'success' : 'default'} size="sm">
+                    {c.status}
+                  </Badge>
+                </td>
+                <td class="p-3.5 text-right space-x-3">
+                  <a href={`/blog?category=${c.slug}`} target="_blank" class="text-indigo-600 hover:underline font-bold">
+                    View
+                  </a>
+                  <button
+                    onclick={`editCategory(${JSON.stringify(c).replace(/"/g, '&quot;')})`}
+                    class="text-slate-600 hover:underline font-bold"
+                  >
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+
+    <!-- Category Modal -->
+    <div id="cat-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 id="modal-title" class="text-base font-bold text-slate-900">Edit Category</h3>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+        </div>
+
+        <form id="cat-form" class="space-y-4">
+          <input type="hidden" id="cat-id" name="id" />
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Name</label>
+            <input type="text" id="cat-name" name="name" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Slug (Optional)</label>
+            <input type="text" id="cat-slug" name="slug" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Description</label>
+            <textarea id="cat-desc" name="description" rows="3" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Order</label>
+              <input type="number" id="cat-order" name="display_order" value="0" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Status</label>
+              <select id="cat-status" name="status" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">
+              Cancel
+            </button>
+            <Button type="submit" variant="primary" size="md">
+              Save Category
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    const modal = document.getElementById('cat-modal');
+    const form = document.getElementById('cat-form');
+
+    function openNewCategoryModal() {
+      document.getElementById('modal-title').textContent = 'Create Category';
+      form.reset();
+      document.getElementById('cat-id').value = '';
+      modal.classList.remove('hidden');
+    }
+
+    function editCategory(cat) {
+      document.getElementById('modal-title').textContent = `Edit Category: ${cat.name}`;
+      document.getElementById('cat-id').value = cat.id;
+      document.getElementById('cat-name').value = cat.name;
+      document.getElementById('cat-slug').value = cat.slug;
+      document.getElementById('cat-desc').value = cat.description || '';
+      document.getElementById('cat-order').value = cat.display_order;
+      document.getElementById('cat-status').value = cat.status;
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+    }
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        payload.display_order = parseInt(payload.display_order || '0', 10);
+
+        try {
+          const res = await fetch('/api/v1/admin/content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entity: 'category', data: payload })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            window.location.reload();
+          } else {
+            alert(data.message || 'Failed to save category');
+          }
+        } catch {
+          alert('Network error saving category');
+        }
+      });
+    }
+  </script>
+</AdminLayout>

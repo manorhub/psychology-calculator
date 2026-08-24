@@ -1,0 +1,66 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { SystemHealthService } from '@/services/system/system-health.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const healthService = new SystemHealthService(db);
+
+const { checks, status } = await healthService.getOverallHealth(env?.BUCKET);
+---
+
+<AdminLayout title="System Diagnostics & Health">
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin" class="text-xs font-semibold text-indigo-600 hover:underline">Control Center</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">System Health</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Infrastructure Health & Diagnostics</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Live connectivity verification across Cloudflare D1, R2, SMTP, AI providers, and Lemon Squeezy.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold text-slate-500">Overall Status:</span>
+        <Badge variant={status === 'healthy' ? 'success' : status === 'degraded' ? 'warning' : 'danger'} size="md">
+          {status.toUpperCase()}
+        </Badge>
+      </div>
+    </div>
+
+    <!-- Health Checks List -->
+    <div class="space-y-4">
+      {checks.map((c) => (
+        <Card class="p-5 border-slate-200 bg-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-bold text-slate-900">{c.service}</h3>
+              <Badge variant={c.status === 'healthy' ? 'success' : c.status === 'degraded' ? 'warning' : 'danger'} size="sm">
+                {c.status.toUpperCase()}
+              </Badge>
+            </div>
+            <p class="text-xs text-slate-600">{c.message}</p>
+          </div>
+
+          <div class="text-right whitespace-nowrap">
+            {c.latencyMs > 0 ? (
+              <span class="text-xs font-mono font-bold text-slate-700">{c.latencyMs}ms</span>
+            ) : (
+              <span class="text-xs font-mono text-slate-400">—</span>
+            )}
+          </div>
+        </Card>
+      ))}
+    </div>
+  </div>
+</AdminLayout>

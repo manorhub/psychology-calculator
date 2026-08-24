@@ -1,0 +1,24 @@
+---
+interface Props {
+  text?: string;
+  size?: 'sm' | 'md' | 'lg';
+  class?: string;
+}
+
+const { text = 'Loading...', size = 'md', class: className = '' } = Astro.props;
+
+const sizeStyles = {
+  sm: 'h-4 w-4 border-2',
+  md: 'h-8 w-8 border-3',
+  lg: 'h-12 w-12 border-4'
+};
+---
+
+<div class={`flex flex-col items-center justify-center p-8 space-y-3 ${className}`} role="status">
+  <div
+    class={`animate-spin rounded-full border-teal-600 border-t-transparent ${sizeStyles[size]}`}
+    aria-hidden="true"
+  ></div>
+  {text && <p class="text-sm font-medium text-slate-500">{text}</p>}
+  <span class="sr-only">{text}</span>
+</div>

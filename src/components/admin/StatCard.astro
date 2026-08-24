@@ -1,0 +1,37 @@
+---
+interface Props {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon?: string;
+  change?: string;
+  isPositive?: boolean;
+}
+
+const { title, value, subtitle, icon, change, isPositive } = Astro.props;
+---
+
+<div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-4">
+  <div class="flex items-center justify-between">
+    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</span>
+    {icon && (
+      <span class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-lg">
+        {icon}
+      </span>
+    )}
+  </div>
+
+  <div>
+    <div class="text-3xl font-extrabold text-slate-900 tracking-tight">{value}</div>
+    {(subtitle || change) && (
+      <div class="flex items-center gap-2 mt-1.5 text-xs">
+        {change && (
+          <span class={`font-semibold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {change}
+          </span>
+        )}
+        {subtitle && <span class="text-slate-500">{subtitle}</span>}
+      </div>
+    )}
+  </div>
+</div>

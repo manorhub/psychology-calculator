@@ -1,0 +1,59 @@
+---
+import type { ButtonVariant, ButtonSize } from '@/types/ui';
+
+interface Props {
+  type?: 'button' | 'submit' | 'reset';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  href?: string;
+  disabled?: boolean;
+  class?: string;
+  id?: string;
+  [key: string]: unknown;
+}
+
+const {
+  type = 'button',
+  variant = 'primary',
+  size = 'md',
+  href,
+  disabled = false,
+  class: className = '',
+  id,
+  ...rest
+} = Astro.props;
+
+const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-150 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
+
+const variantStyles: Record<ButtonVariant, string> = {
+  primary: 'bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 focus-visible:ring-slate-900 shadow-sm',
+  secondary: 'bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 focus-visible:ring-teal-600 shadow-sm',
+  outline: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400 focus-visible:ring-slate-500',
+  ghost: 'text-slate-700 hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-slate-500',
+  danger: 'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 focus-visible:ring-rose-600'
+};
+
+const sizeStyles: Record<ButtonSize, string> = {
+  sm: 'text-xs px-3 py-1.5 gap-1.5',
+  md: 'text-sm px-4 py-2.5 gap-2',
+  lg: 'text-base px-6 py-3.5 gap-2.5 font-semibold'
+};
+
+const classes = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`;
+---
+
+{
+  href ? (
+    <a href={href} class={classes} id={id} {...rest}>
+      <slot name="prefix" />
+      <slot />
+      <slot name="suffix" />
+    </a>
+  ) : (
+    <button type={type} disabled={disabled} class={classes} id={id} {...rest}>
+      <slot name="prefix" />
+      <slot />
+      <slot name="suffix" />
+    </button>
+  )
+}

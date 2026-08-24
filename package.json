@@ -1,0 +1,50 @@
+{
+  "name": "psychology-saas",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "tsc --noEmit",
+    "db:setup": "node scripts/apply-local-d1.js",
+    "test:db": "tsx scripts/test-db.js",
+    "test:auth": "tsx scripts/test-auth.js",
+    "test:admin": "tsx scripts/test-admin.js",
+    "test:assessment": "tsx scripts/test-assessment-builder.js",
+    "test:engine": "tsx scripts/test-assessment-engine.js",
+    "test:result": "tsx scripts/test-result-engine.js",
+    "test:initial": "tsx scripts/test-initial-assessments.js",
+    "test:ai": "tsx scripts/test-ai-engine.js",
+    "test:dashboard": "tsx scripts/test-user-dashboard.js",
+    "test:pdf": "tsx scripts/test-pdf-engine.js",
+    "test:billing": "tsx scripts/test-billing-engine.js",
+    "test:seo": "tsx scripts/test-seo-engine.js",
+    "test:cms": "tsx scripts/test-cms-engine.js",
+    "test:notifications": "tsx scripts/test-notification-engine.js",
+    "test:analytics": "tsx scripts/test-analytics-engine.js",
+    "test:control-center": "tsx scripts/test-control-center.js",
+    "test:launch": "tsx scripts/test-production-launch.js",
+    "test:growth": "tsx scripts/test-growth-engine.js",
+    "test:guest": "tsx scripts/test-guest-access.js",
+    "test:all": "npm run test:db && npm run test:auth && npm run test:admin && npm run test:assessment && npm run test:engine && npm run test:result && npm run test:initial && npm run test:ai && npm run test:dashboard && npm run test:pdf && npm run test:billing && npm run test:seo && npm run test:cms && npm run test:notifications && npm run test:analytics && npm run test:control-center && npm run test:launch && npm run test:growth && npm run test:guest"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/cloudflare": "^12.2.3",
+    "@lucide/astro": "^1.33.0",
+    "@tailwindcss/vite": "^4.0.9",
+    "astro": "^5.3.0",
+    "pdf-lib": "^1.17.1",
+    "tailwindcss": "^4.0.9",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.109.2"
+  }
+}

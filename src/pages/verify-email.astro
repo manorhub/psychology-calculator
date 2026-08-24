@@ -1,0 +1,145 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Button from '@/components/ui/Button.astro';
+import Alert from '@/components/ui/Alert.astro';
+
+const token = Astro.url.searchParams.get('token') || '';
+const email = Astro.url.searchParams.get('email') || '';
+const registered = Astro.url.searchParams.get('registered') === 'true';
+---
+
+<PublicLayout title="Email Verification" description="Verify your MindMetrics email address">
+  <div class="min-h-[75vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-6">
+      <!-- Token Verification in Progress / Complete Mode -->
+      {token && (
+        <Card class="p-6 sm:p-8 text-center space-y-4" id="token-card">
+          <div id="verifying-spinner" class="py-6 space-y-4">
+            <div class="animate-spin rounded-full h-10 w-10 border-3 border-teal-600 border-t-transparent mx-auto"></div>
+            <h2 class="text-xl font-bold text-slate-900">Verifying your email...</h2>
+            <p class="text-sm text-slate-500">Please wait while we activate your account.</p>
+          </div>
+
+          <div id="verify-success" class="hidden py-4 space-y-4">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-xl font-bold">
+              ✓
+            </div>
+            <h2 class="text-xl font-bold text-slate-900">Email Verified!</h2>
+            <p class="text-sm text-slate-600">Your account is fully activated. You can now sign in.</p>
+            <Button href="/login?verified=true" variant="primary" size="md" class="w-full">
+              Proceed to Sign In
+            </Button>
+          </div>
+
+          <div id="verify-error" class="hidden py-4 space-y-4">
+            <Alert variant="danger" title="Verification Failed">
+              <span id="verify-error-msg">This verification link is invalid or has expired.</span>
+            </Alert>
+            <Button href="/login" variant="outline" size="md" class="w-full">
+              Back to Sign In
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <!-- Just Registered: Check Inbox Mode -->
+      {!token && (
+        <Card class="p-6 sm:p-8 text-center space-y-6">
+          <div class="w-14 h-14 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto text-2xl shadow-sm border border-teal-100">
+            ✉
+          </div>
+
+          <div class="space-y-2">
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">
+              {registered ? 'Check your email' : 'Verify your email address'}
+            </h1>
+            <p class="text-sm text-slate-600 leading-relaxed">
+              We sent a verification link to <span class="font-semibold text-slate-900">{email || 'your email address'}</span>. Click the link in the message to activate your account.
+            </p>
+          </div>
+
+          <div id="resend-success-alert" class="hidden">
+            <Alert variant="success" title="Link Resent">
+              A fresh verification link has been sent to your email.
+            </Alert>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 space-y-3">
+            <p class="text-xs text-slate-500">Didn't receive the email? Check your spam folder or resend.</p>
+            <form id="resend-form" class="space-y-3">
+              <input type="hidden" name="email" value={email} />
+              <Button type="submit" variant="outline" size="sm" class="w-full" id="resend-btn">
+                Resend Verification Email
+              </Button>
+            </form>
+          </div>
+
+          <div slot="footer" class="w-full text-center text-xs text-slate-500">
+            Already verified?{' '}
+            <a href="/login" class="font-semibold text-teal-700 hover:text-teal-800">
+              Sign in
+            </a>
+          </div>
+        </Card>
+      )}
+    </div>
+  </div>
+</PublicLayout>
+
+<script is:inline define:vars={{ token }}>
+  // Auto-verify when token is present
+  if (token) {
+    const verifyingSpinner = document.getElementById('verifying-spinner');
+    const verifySuccess = document.getElementById('verify-success');
+    const verifyError = document.getElementById('verify-error');
+    const verifyErrorMsg = document.getElementById('verify-error-msg');
+
+    fetch('/api/auth/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, action: 'verify' })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        verifyingSpinner?.classList.add('hidden');
+        if (data.success) {
+          verifySuccess?.classList.remove('hidden');
+        } else {
+          if (verifyErrorMsg && data.error?.message) {
+            verifyErrorMsg.textContent = data.error.message;
+          }
+          verifyError?.classList.remove('hidden');
+        }
+      })
+      .catch(() => {
+        verifyingSpinner?.classList.add('hidden');
+        verifyError?.classList.remove('hidden');
+      });
+  }
+
+  // Resend form handler
+  const resendForm = document.getElementById('resend-form');
+  const resendBtn = document.getElementById('resend-btn');
+  const resendSuccess = document.getElementById('resend-success-alert');
+
+  resendForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resendBtn?.setAttribute('disabled', 'true');
+
+    const formData = new FormData(resendForm);
+    const email = formData.get('email');
+
+    try {
+      await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, action: 'resend' })
+      });
+      resendSuccess?.classList.remove('hidden');
+      resendBtn?.removeAttribute('disabled');
+    } catch {
+      resendBtn?.removeAttribute('disabled');
+    }
+  });
+</script>

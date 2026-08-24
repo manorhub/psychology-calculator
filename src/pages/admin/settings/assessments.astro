@@ -1,0 +1,202 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Input from '@/components/ui/Input.astro';
+import Button from '@/components/ui/Button.astro';
+import Alert from '@/components/ui/Alert.astro';
+import { getD1Database } from '@/lib/db/client';
+import { SettingsService } from '@/services/settings/settings.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const settingsService = new SettingsService(db);
+
+const groupSettings = await settingsService.getGroup('assessments');
+---
+
+<AdminLayout title="Assessment & Guest Settings">
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/settings" class="text-xs font-semibold text-indigo-600 hover:underline">Settings</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Assessments & Guest Access</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Assessment & Guest Access Controls</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Configure public guest access policies, result retention windows, AI report gating, and rate limiting.
+        </p>
+      </div>
+
+      <div class="flex gap-2">
+        <Button href="/admin/assessments" variant="outline" size="sm">
+          📋 Manage Assessments
+        </Button>
+      </div>
+    </div>
+
+    <div id="save-alert" class="hidden">
+      <Alert variant="success" title="Settings Saved">
+        Assessment and guest access settings updated successfully.
+      </Alert>
+    </div>
+
+    <form id="assessment-settings-form" class="space-y-6">
+      <!-- Public & Guest Access Policy -->
+      <Card title="Public & Guest Access Policy" subtitle="Manage anonymous guest testing and instant scoring">
+        <div class="space-y-5">
+          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <div>
+              <div class="text-sm font-bold text-slate-900">Enable Guest Assessments</div>
+              <div class="text-xs text-slate-500">Allow unauthenticated visitors to start, answer, and complete free psychometric tests without logging in.</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="guest_assessments_enabled"
+                value="true"
+                checked={groupSettings.guest_assessments_enabled === 'true'}
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <div>
+              <div class="text-sm font-bold text-slate-900">Enable Instant Guest Results</div>
+              <div class="text-xs text-slate-500">Immediately display the basic dimensional score and psychometric archetype upon guest test completion.</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="guest_results_enabled"
+                value="true"
+                checked={groupSettings.guest_results_enabled === 'true'}
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+            </label>
+          </div>
+        </div>
+      </Card>
+
+      <!-- Retention & Quotas -->
+      <Card title="Data Retention & Security Quotas" subtitle="Configure guest data lifespan and anti-abuse protection">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            id="guest_result_retention_days"
+            name="guest_result_retention_days"
+            type="number"
+            label="Guest Result Retention (Days)"
+            value={groupSettings.guest_result_retention_days || '7'}
+            hint="Days before unclaimed guest results expire (user-linked results are kept permanently)"
+            required={true}
+          />
+
+          <Input
+            id="guest_rate_limit"
+            name="guest_rate_limit"
+            type="number"
+            label="Guest Rate Limit (Req/15min)"
+            value={groupSettings.guest_rate_limit || '60'}
+            hint="Max questions/attempt operations allowed per IP in a 15-minute window"
+            required={true}
+          />
+        </div>
+      </Card>
+
+      <!-- Feature Gating & Account Conversion -->
+      <Card title="Feature Gating & Account Requirements" subtitle="Control requirements for advanced synthesis and exports">
+        <div class="space-y-5">
+          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <div>
+              <div class="text-sm font-bold text-slate-900">Require Login for AI Reports</div>
+              <div class="text-xs text-slate-500">Require users to create an account before synthesizing personalized AI narrative reports.</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="login_required_for_ai_reports"
+                value="true"
+                checked={groupSettings.login_required_for_ai_reports !== 'false'}
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <div>
+              <div class="text-sm font-bold text-slate-900">Require Login for Basic Result PDF Export</div>
+              <div class="text-xs text-slate-500">Require account login to download basic summary results as PDF documents.</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="login_required_for_pdf"
+                value="true"
+                checked={groupSettings.login_required_for_pdf === 'true'}
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+            </label>
+          </div>
+        </div>
+      </Card>
+
+      <div class="flex justify-end pt-4">
+        <Button type="submit" variant="primary" size="md" id="save-btn">
+          Save Assessment Settings
+        </Button>
+      </div>
+    </form>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById('assessment-settings-form') as HTMLFormElement | null;
+  const saveAlert = document.getElementById('save-alert');
+  const saveBtn = document.getElementById('save-btn');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    saveBtn?.setAttribute('disabled', 'true');
+
+    const formData = new FormData(form);
+    const settings: Record<string, string> = {
+      guest_assessments_enabled: formData.get('guest_assessments_enabled') ? 'true' : 'false',
+      guest_results_enabled: formData.get('guest_results_enabled') ? 'true' : 'false',
+      guest_result_retention_days: String(formData.get('guest_result_retention_days') || '7'),
+      guest_rate_limit: String(formData.get('guest_rate_limit') || '60'),
+      login_required_for_ai_reports: formData.get('login_required_for_ai_reports') ? 'true' : 'false',
+      login_required_for_pdf: formData.get('login_required_for_pdf') ? 'true' : 'false',
+      guest_ai_reports_enabled: 'false'
+    };
+
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings })
+      });
+
+      const data = (await res.json()) as any;
+      if (res.ok && data.success) {
+        saveAlert?.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => saveAlert?.classList.add('hidden'), 4000);
+      } else {
+        alert(data.error?.message || 'Failed to update settings');
+      }
+    } catch {
+      alert('Network error saving settings');
+    } finally {
+      saveBtn?.removeAttribute('disabled');
+    }
+  });
+</script>

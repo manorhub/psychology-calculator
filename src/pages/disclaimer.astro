@@ -1,0 +1,35 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Alert from '@/components/ui/Alert.astro';
+import { ConfigService } from '@/services/config.service';
+import { ContentService } from '@/services/content.service';
+import { getD1Database } from '@/lib/db/client';
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const configService = new ConfigService(db);
+const config = await configService.getSiteConfig();
+
+const contentService = new ContentService(db);
+const page = await contentService.getPageBySlug('disclaimer');
+---
+
+<PublicLayout title={page?.seo_title || page?.title || "Psychological Disclaimer"}>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-6">
+    <Alert variant="warning" title="Important Medical & Health Notice">
+      {config.disclaimerText}
+    </Alert>
+
+    <Card title={page?.title || "Detailed Disclaimer & Educational Purpose"}>
+      <div class="prose prose-slate max-w-none space-y-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+        {page?.content || (
+          `The assessments, psychometric models, reports, and AI-generated insights presented on MindMetrics are intended strictly for educational, informational, and self-reflection purposes.
+
+Not Clinical Diagnosis
+Nothing contained on this website should be construed as medical, psychiatric, or clinical psychological advice, diagnosis, or treatment. If you are experiencing psychological distress or a mental health emergency, please consult a licensed mental health professional or contact an emergency crisis hotline immediately.`
+        )}
+      </div>
+    </Card>
+  </div>
+</PublicLayout>

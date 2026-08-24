@@ -1,0 +1,281 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { SubscriptionService } from '@/services/billing/subscription.service';
+import { LemonSqueezyService } from '@/services/billing/lemon-squeezy.service';
+import { executeQuery } from '@/lib/db/query';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login?redirect=/dashboard/subscription');
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const settings = db
+  ? await executeQuery<{ key: string; value: string }>(
+      db,
+      'SELECT key, value FROM site_settings WHERE key IN (?, ?)',
+      ['lemon_squeezy_api_key', 'lemon_squeezy_store_id']
+    )
+  : [];
+
+const configMap: Record<string, string> = {};
+for (const s of settings) {
+  configMap[s.key] = s.value;
+}
+
+const lsService = new LemonSqueezyService({
+  apiKey: configMap.lemon_squeezy_api_key,
+  storeId: configMap.lemon_squeezy_store_id
+});
+
+const subscriptionService = new SubscriptionService(db, lsService);
+const summary = await subscriptionService.getUserSubscriptionSummary(user.id);
+const payments = await subscriptionService.getUserPayments(user.id, 20);
+---
+
+<DashboardLayout title="Subscription & Billing — Psychology Calculator">
+  <div class="space-y-8 max-w-5xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Subscription & Billing
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Manage your psychological assessment plan, entitlements, and payment history
+        </p>
+      </div>
+
+      <a
+        href="/pricing"
+        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all text-center"
+      >
+        ✨ Explore All Plans
+      </a>
+    </div>
+
+    <!-- Status Message Container -->
+    <div id="sub-msg" class="hidden p-4 rounded-xl text-xs font-semibold"></div>
+
+    <!-- Current Plan Overview Card -->
+    <Card class="p-6 sm:p-8 space-y-6 border-indigo-100 bg-gradient-to-br from-white via-indigo-50/20 to-white">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+        <div class="space-y-1">
+          <span class="text-xs font-bold uppercase tracking-wider text-indigo-700">Current Membership</span>
+          <div class="flex items-center gap-3">
+            <h2 class="text-2xl font-black text-slate-900">{summary.planName}</h2>
+            <Badge
+              variant={summary.isPremium ? 'success' : 'default'}
+              size="md"
+            >
+              {summary.status.toUpperCase()}
+            </Badge>
+          </div>
+        </div>
+
+        <div class="text-left sm:text-right space-y-0.5">
+          <div class="text-2xl font-black text-slate-900">
+            ${summary.price} <span class="text-xs font-semibold text-slate-500">/ {summary.billingInterval}</span>
+          </div>
+          {summary.currentPeriodEnd && (
+            <div class="text-xs text-slate-500">
+              {summary.cancelAtPeriodEnd ? 'Expires on: ' : 'Renews on: '}
+              <span class="font-bold text-slate-700">
+                {new Date(summary.currentPeriodEnd).toLocaleDateString('en-US', { dateStyle: 'medium' })}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {summary.cancelAtPeriodEnd && (
+        <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center justify-between gap-4">
+          <div>
+            <strong>Cancellation Scheduled:</strong> Your Pro benefits remain active until the end of your billing cycle on{' '}
+            {summary.currentPeriodEnd ? new Date(summary.currentPeriodEnd).toLocaleDateString() : 'period end'}.
+          </div>
+          <a href="/pricing" class="font-bold underline shrink-0">Renew Membership</a>
+        </div>
+      )}
+
+      <!-- Feature Matrix of Current Plan -->
+      <div class="space-y-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Plan Entitlements:</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+          <div class="p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-2">
+            <span class={summary.entitlements.basic_assessments ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+              {summary.entitlements.basic_assessments ? '✓' : '✗'}
+            </span>
+            <span class="text-slate-700">Core Assessments</span>
+          </div>
+
+          <div class="p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-2">
+            <span class={summary.entitlements.premium_assessments ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+              {summary.entitlements.premium_assessments ? '✓' : '✗'}
+            </span>
+            <span class="text-slate-700">Premium Psychometrics</span>
+          </div>
+
+          <div class="p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-2">
+            <span class={summary.entitlements.premium_ai_reports ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+              {summary.entitlements.premium_ai_reports ? '✓' : '✗'}
+            </span>
+            <span class="text-slate-700">In-Depth AI Synthesis</span>
+          </div>
+
+          <div class="p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-2">
+            <span class={summary.entitlements.premium_pdf_exports ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+              {summary.entitlements.premium_pdf_exports ? '✓' : '✗'}
+            </span>
+            <span class="text-slate-700">Export Detailed PDFs</span>
+          </div>
+
+          <div class="p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-2">
+            <span class={summary.entitlements.priority_support ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+              {summary.entitlements.priority_support ? '✓' : '✗'}
+            </span>
+            <span class="text-slate-700">Priority Support</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          {summary.customerPortalUrl && (
+            <a
+              href={summary.customerPortalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+            >
+              ⚙️ Manage via Lemon Squeezy
+            </a>
+          )}
+          <a
+            href="/pricing"
+            class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all"
+          >
+            {summary.isPremium ? 'Change Plan' : 'Upgrade to Pro'}
+          </a>
+        </div>
+
+        {summary.isPremium && !summary.cancelAtPeriodEnd && (
+          <button
+            type="button"
+            id="cancel-sub-btn"
+            class="px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+          >
+            Cancel Subscription
+          </button>
+        )}
+      </div>
+    </Card>
+
+    <!-- Payment & Invoice History -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Invoices & Payment History</h2>
+        <span class="text-xs text-slate-500">{payments.length} transactions</span>
+      </div>
+
+      {payments.length === 0 ? (
+        <div class="p-10 text-center text-slate-400 text-xs">
+          No billing transactions recorded yet.
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Order Ref</th>
+                <th class="px-4 py-3">Amount</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 text-right">Receipt</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {payments.map((p) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-4 py-3 font-mono text-[11px] text-slate-500">
+                    {new Date(p.created_at).toLocaleDateString()}
+                  </td>
+                  <td class="px-4 py-3 font-mono text-[11px] text-slate-800">
+                    {p.lemon_squeezy_order_id || 'Order'}
+                  </td>
+                  <td class="px-4 py-3 font-bold text-slate-900">
+                    ${p.amount.toFixed(2)} {p.currency}
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge variant={p.status === 'paid' ? 'success' : 'danger'} size="sm">
+                      {p.status}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    {p.receipt_url ? (
+                      <a
+                        href={p.receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-indigo-600 hover:underline font-bold"
+                      >
+                        Receipt ↗
+                      </a>
+                    ) : (
+                      <span class="text-slate-300">-</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+
+  <script>
+    const cancelBtn = document.getElementById('cancel-sub-btn');
+    const msgContainer = document.getElementById('sub-msg');
+
+    cancelBtn?.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to cancel your Pro membership? You will retain access until the end of your current paid billing period.')) {
+        return;
+      }
+
+      cancelBtn.setAttribute('disabled', 'true');
+      cancelBtn.textContent = 'Cancelling...';
+
+      try {
+        const res = await fetch('/api/v1/billing/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = (await res.json()) as any;
+        if (!res.ok) throw new Error(data.error?.message || 'Cancellation request failed');
+
+        if (msgContainer) {
+          msgContainer.textContent = '✓ Subscription scheduled for cancellation at the end of your billing cycle. Reloading...';
+          msgContainer.className = 'p-4 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+        }
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } catch (err: any) {
+        if (msgContainer) {
+          msgContainer.textContent = `❌ ${err.message || 'Failed to cancel subscription'}`;
+          msgContainer.className = 'p-4 rounded-xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 block';
+        }
+        cancelBtn.removeAttribute('disabled');
+        cancelBtn.textContent = 'Cancel Subscription';
+      }
+    });
+  </script>
+</DashboardLayout>

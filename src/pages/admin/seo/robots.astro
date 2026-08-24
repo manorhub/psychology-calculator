@@ -1,0 +1,103 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { getD1Database } from '@/lib/db/client';
+import { SettingsService } from '@/services/settings/settings.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const settingsService = new SettingsService(db);
+
+const robotsDirectives = await settingsService.get(
+  'robots_custom_directives',
+  'User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /api/\nDisallow: /reset-password\n\nSitemap: https://psychologycalculator.com/sitemap.xml'
+);
+---
+
+<AdminLayout title="Robots.txt Editor">
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/seo" class="text-xs font-semibold text-indigo-600 hover:underline">SEO</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Robots.txt</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Robots.txt Directives Editor</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Control search engine crawler behavior and indexing rules dynamically.
+        </p>
+      </div>
+
+      <div>
+        <a
+          href="/robots.txt"
+          target="_blank"
+          class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
+        >
+          View Live /robots.txt ↗
+        </a>
+      </div>
+    </div>
+
+    <!-- Robots Form -->
+    <form id="robots-form" class="space-y-6">
+      <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-4">
+        <div class="border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-bold text-slate-900">Custom Directives</h3>
+          <p class="text-xs text-slate-500">Edit rules for Googlebot, Bingbot, and other crawlers</p>
+        </div>
+
+        <div class="space-y-1.5">
+          <textarea
+            name="robots_custom_directives"
+            rows="10"
+            class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+          >{robotsDirectives}</textarea>
+        </div>
+      </Card>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="submit"
+          class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+        >
+          Save Robots.txt Directives
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('robots-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        group: 'seo',
+        settings: {
+          robots_custom_directives: formData.get('robots_custom_directives')
+        }
+      };
+
+      try {
+        const res = await fetch('/api/v1/admin/settings/group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('Robots.txt directives saved successfully!');
+        } else {
+          alert('Failed to save directives: ' + (json.error?.message || 'Error'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    });
+  </script>
+</AdminLayout>

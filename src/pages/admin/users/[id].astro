@@ -1,0 +1,263 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import Alert from '@/components/ui/Alert.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AdminService } from '@/services/admin.service';
+
+const { id } = Astro.params;
+if (!id) {
+  return Astro.redirect('/admin/users');
+}
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const adminService = new AdminService(db);
+
+const userDetail = await adminService.getUserDetail(id);
+if (!userDetail) {
+  return Astro.redirect('/admin/users');
+}
+
+const { user, profile, attemptCount, reportCount, activeSubscription } = userDetail;
+const currentAdminId = Astro.locals.user?.id;
+const isSelf = currentAdminId === user.id;
+---
+
+<AdminLayout title={`User: ${user.email}`} description="Manage user account, security status, and roles">
+  <div class="max-w-5xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <a href="/admin/users" class="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1 mb-1">
+          ← Back to User Directory
+        </a>
+        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <span>{profile?.display_name || user.email}</span>
+          <Badge
+            variant={
+              user.status === 'active'
+                ? 'success'
+                : user.status === 'suspended'
+                ? 'danger'
+                : 'warning'
+            }
+            size="sm"
+          >
+            {user.status.toUpperCase()}
+          </Badge>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Status Alert Container -->
+    <div id="action-alert" class="hidden">
+      <Alert variant="info" title="Status Update">
+        <span id="action-msg"></span>
+      </Alert>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Left Column: User Profile Overview -->
+      <div class="md:col-span-1 space-y-6">
+        <Card class="p-6 text-center space-y-4">
+          <div class="w-20 h-20 rounded-full bg-slate-900 text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
+            {profile?.display_name ? profile.display_name.substring(0, 2).toUpperCase() : 'U'}
+          </div>
+
+          <div>
+            <h3 class="font-bold text-slate-900 text-lg">{profile?.display_name || 'No Name Set'}</h3>
+            <p class="text-xs text-slate-500 font-mono">{user.email}</p>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 space-y-2 text-left text-xs text-slate-600">
+            <div class="flex justify-between">
+              <span class="text-slate-400">User ID:</span>
+              <span class="font-mono text-[10px] truncate max-w-[120px]">{user.id}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Role:</span>
+              <span class="font-semibold text-slate-900">{user.role.toUpperCase()}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Email Verified:</span>
+              <span class="font-semibold">{user.email_verified_at ? 'Yes' : 'No'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Timezone:</span>
+              <span>{profile?.timezone || 'UTC'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Joined:</span>
+              <span>{new Date(user.created_at).toLocaleDateString()}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Last Login:</span>
+              <span>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'Never'}</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <!-- Right 2 Columns: Activity Stats & Admin Actions -->
+      <div class="md:col-span-2 space-y-6">
+        <!-- Activity & Engagement Stats -->
+        <Card title="Activity & Subscription">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center">
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="text-2xl font-extrabold text-slate-900">{attemptCount}</div>
+              <div class="text-xs text-slate-500 mt-1">Assessment Attempts</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="text-2xl font-extrabold text-slate-900">{reportCount}</div>
+              <div class="text-xs text-slate-500 mt-1">Generated Reports</div>
+            </div>
+            <div class="col-span-2 sm:col-span-1 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="text-xs font-bold text-slate-900">
+                {activeSubscription ? activeSubscription.planName : 'Free Tier'}
+              </div>
+              <div class="text-[11px] text-slate-500 mt-1">
+                {activeSubscription ? `Status: ${activeSubscription.status}` : 'No active plan'}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <!-- Administrative Controls -->
+        <Card title="Administrative Actions" subtitle="Perform role updates and account security actions">
+          <div class="space-y-6">
+            <!-- Role Elevation / Demotion -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <h4 class="text-xs font-bold text-slate-900">Account Role</h4>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Current role is <strong>{user.role}</strong>. Admins have access to the `/admin` portal.
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                {user.role === 'user' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    id="elevate-role-btn"
+                    disabled={isSelf}
+                  >
+                    Promote to Admin
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    id="demote-role-btn"
+                    disabled={isSelf}
+                  >
+                    Demote to User
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <!-- Suspension / Reactivation -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <h4 class="text-xs font-bold text-slate-900">Account Access & Suspension</h4>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  {user.status === 'suspended'
+                    ? 'This account is suspended and cannot log in.'
+                    : 'Suspending this user will immediately invalidate all their active sessions.'}
+                </p>
+              </div>
+
+              <div>
+                {user.status === 'suspended' ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    id="reactivate-btn"
+                    disabled={isSelf}
+                  >
+                    Reactivate Account
+                  </Button>
+                ) : (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    id="suspend-btn"
+                    disabled={isSelf}
+                  >
+                    Suspend Account
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {isSelf && (
+              <p class="text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                ⚠️ You cannot suspend or change the role of your own administrator account.
+              </p>
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script is:inline define:vars={{ userId: user.id }}>
+  async function executeUserAction(endpoint, payload, confirmMsg) {
+    if (confirmMsg && !confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.error?.message || 'Action failed.');
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert('A network error occurred.');
+    }
+  }
+
+  document.getElementById('suspend-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/status',
+      { userId, status: 'suspended' },
+      'Are you sure you want to suspend this user? All their active sessions will be terminated.'
+    );
+  });
+
+  document.getElementById('reactivate-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/status',
+      { userId, status: 'active' },
+      'Reactivate this user account?'
+    );
+  });
+
+  document.getElementById('elevate-role-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/role',
+      { userId, role: 'admin' },
+      'Promote this user to Administrator? They will have full access to system controls.'
+    );
+  });
+
+  document.getElementById('demote-role-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/role',
+      { userId, role: 'user' },
+      'Demote this administrator to standard user?'
+    );
+  });
+</script>

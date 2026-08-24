@@ -1,0 +1,105 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { SubscriptionService } from '@/services/billing/subscription.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const subService = new SubscriptionService(db);
+const transactions = await subService.getAllTransactions(100);
+---
+
+<AdminLayout title="Billing Transactions — Admin Control">
+  <div class="space-y-8 max-w-6xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Payment Transactions & Invoice Ledger
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Lemon Squeezy order transactions and customer receipt audit trail
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/billing"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+        >
+          ← Billing Overview
+        </a>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Recorded Transactions ({transactions.length})</h2>
+      </div>
+
+      {transactions.length === 0 ? (
+        <div class="p-12 text-center text-slate-400 text-xs">
+          No payment transactions recorded in D1 ledger yet.
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-3">User</th>
+                <th class="px-4 py-3">Order ID</th>
+                <th class="px-4 py-3">Amount</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3 text-right">Receipt</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {transactions.map((tx) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-4 py-3">
+                    <div class="font-medium text-slate-900">{tx.user_name || 'User'}</div>
+                    <div class="text-[10px] text-slate-400">{tx.user_email || 'No email'}</div>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-[11px] text-slate-700">
+                    {tx.lemon_squeezy_order_id || tx.id}
+                  </td>
+                  <td class="px-4 py-3 font-bold text-slate-900">
+                    ${tx.amount.toFixed(2)} {tx.currency}
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge variant={tx.status === 'paid' ? 'success' : tx.status === 'refunded' ? 'warning' : 'danger'} size="sm">
+                      {tx.status}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3 text-slate-400 text-[10px]">
+                    {new Date(tx.created_at).toLocaleString()}
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    {tx.receipt_url ? (
+                      <a
+                        href={tx.receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-indigo-600 hover:underline font-bold"
+                      >
+                        Receipt ↗
+                      </a>
+                    ) : (
+                      <span class="text-slate-300">-</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+</AdminLayout>

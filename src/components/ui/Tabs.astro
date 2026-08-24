@@ -1,0 +1,43 @@
+---
+import type { TabItem } from '@/types/ui';
+
+interface Props {
+  items: TabItem[];
+  activeId?: string;
+  class?: string;
+}
+
+const { items, activeId, class: className = '' } = Astro.props;
+const currentActive = activeId || items[0]?.id;
+---
+
+<div class={`border-b border-slate-200 ${className}`}>
+  <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+    {items.map((tab) => {
+      const isActive = (tab.id === currentActive) || tab.active;
+      return (
+        <a
+          href={`#${tab.id}`}
+          data-tab-target={tab.id}
+          class={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+            isActive
+              ? 'border-teal-600 text-teal-700 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
+          aria-current={isActive ? 'page' : undefined}
+        >
+          {tab.label}
+          {tab.badge && (
+            <span
+              class={`text-xs px-2 py-0.5 rounded-full ${
+                isActive ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {tab.badge}
+            </span>
+          )}
+        </a>
+      );
+    })}
+  </nav>
+</div>

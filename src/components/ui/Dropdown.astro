@@ -1,0 +1,39 @@
+---
+interface Props {
+  label: string;
+  align?: 'left' | 'right';
+  class?: string;
+}
+
+const { label, align = 'left', class: className = '' } = Astro.props;
+---
+
+<details class={`relative inline-block text-left dropdown-root ${className}`}>
+  <summary class="inline-flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 cursor-pointer list-none">
+    <span>{label}</span>
+    <svg class="w-4 h-4 text-slate-500 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </summary>
+
+  <div
+    class={`absolute z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg ${
+      align === 'right' ? 'right-0' : 'left-0'
+    }`}
+  >
+    <slot />
+  </div>
+</details>
+
+<style>
+  /* Remove default summary marker */
+  details > summary {
+    list-style: none;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details[open] > summary svg {
+    transform: rotate(180deg);
+  }
+</style>

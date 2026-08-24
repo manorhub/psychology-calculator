@@ -1,0 +1,169 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { getD1Database } from '@/lib/db/client';
+import { SettingsService } from '@/services/settings/settings.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const settingsService = new SettingsService(db);
+
+const branding = await settingsService.getGroup('branding');
+---
+
+<AdminLayout title="Branding & Theme Settings">
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/settings" class="text-xs font-semibold text-indigo-600 hover:underline">Settings</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Branding & Theme</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Branding & Theme Customization</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Control logos, color palettes, and default UI themes for Psychology Calculator.
+        </p>
+      </div>
+    </div>
+
+    <!-- Branding Form -->
+    <form id="branding-form" class="space-y-6">
+      <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-6">
+        <div class="border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-bold text-slate-900">Brand Assets & Icons</h3>
+          <p class="text-xs text-slate-500">Asset URLs for header logos and browser favicons</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Logo Image URL</label>
+            <input
+              type="text"
+              name="logo_url"
+              value={branding.logo_url || '/images/logo.svg'}
+              class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 font-mono"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Browser Favicon URL</label>
+            <input
+              type="text"
+              name="favicon_url"
+              value={branding.favicon_url || '/favicon.svg'}
+              class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 font-mono"
+            />
+          </div>
+        </div>
+      </Card>
+
+      <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-6">
+        <div class="border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-bold text-slate-900">Color Palette & Theme Mode</h3>
+          <p class="text-xs text-slate-500">Primary and accent color hex codes applied to buttons and charts</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Primary Color (Brand)</label>
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                name="primary_color"
+                value={branding.primary_color || '#4F46E5'}
+                class="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0"
+              />
+              <span class="text-xs font-mono text-slate-600">{branding.primary_color || '#4F46E5'}</span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Secondary Color (Success/Badges)</label>
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                name="secondary_color"
+                value={branding.secondary_color || '#0D9488'}
+                class="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0"
+              />
+              <span class="text-xs font-mono text-slate-600">{branding.secondary_color || '#0D9488'}</span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Accent Color (Highlights)</label>
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                name="accent_color"
+                value={branding.accent_color || '#F59E0B'}
+                class="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0"
+              />
+              <span class="text-xs font-mono text-slate-600">{branding.accent_color || '#F59E0B'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1.5 pt-2">
+          <label class="text-xs font-bold text-slate-700">Default UI Theme Mode</label>
+          <select
+            name="theme_mode"
+            class="w-full max-w-xs px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 font-semibold"
+          >
+            <option value="system" selected={branding.theme_mode === 'system'}>System Preference (Auto)</option>
+            <option value="light" selected={branding.theme_mode === 'light'}>Light Mode Always</option>
+            <option value="dark" selected={branding.theme_mode === 'dark'}>Dark Mode Always</option>
+          </select>
+        </div>
+      </Card>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="submit"
+          class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+        >
+          Save Branding Changes
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('branding-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        group: 'branding',
+        settings: {
+          logo_url: formData.get('logo_url'),
+          favicon_url: formData.get('favicon_url'),
+          primary_color: formData.get('primary_color'),
+          secondary_color: formData.get('secondary_color'),
+          accent_color: formData.get('accent_color'),
+          theme_mode: formData.get('theme_mode')
+        }
+      };
+
+      try {
+        const res = await fetch('/api/v1/admin/settings/group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('Branding settings saved successfully!');
+        } else {
+          alert('Failed to save settings: ' + (json.error?.message || 'Error'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    });
+  </script>
+</AdminLayout>

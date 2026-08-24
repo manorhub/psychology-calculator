@@ -1,0 +1,80 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import SEOHead from '@/components/seo/SEOHead.astro';
+import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
+import Card from '@/components/ui/Card.astro';
+import { CmsService } from '@/services/content/cms.service';
+import { SeoService } from '@/services/seo/seo.service';
+import { InternalLinkService } from '@/services/seo/internal-link.service';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/');
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const cmsService = new CmsService(db);
+const seoService = new SeoService(db);
+const linkService = new InternalLinkService(db);
+
+const page = await cmsService.getPageBySlug(slug);
+if (!page) {
+  return Astro.redirect('/404');
+}
+
+const pageMeta = await seoService.getPageMetadata({
+  pageType: 'page',
+  path: `/p/${page.slug}`,
+  rawTitle: page.seo_title || `${page.title} | Psychology Calculator`,
+  defaultDescription: page.seo_description || `Information and guidelines regarding ${page.title} on Psychology Calculator.`
+});
+
+const breadcrumbItems = linkService.getBreadcrumbs([
+  { name: page.title, path: `/p/${page.slug}` }
+]);
+
+// Simple Markdown rendering for legal/informational pages
+function renderPageContent(content: string): string {
+  return content
+    .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold text-slate-900 mt-8 mb-4 tracking-tight">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-black text-slate-900 mt-8 mb-4 tracking-tight">$1</h1>')
+    .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-bold text-slate-900">$1</strong>')
+    .replace(/\n\n/gim, '</p><p class="text-base text-slate-700 leading-relaxed mb-4">');
+}
+
+const renderedHtml = `<p class="text-base text-slate-700 leading-relaxed mb-4">${renderPageContent(page.content)}</p>`;
+---
+
+<BaseLayout>
+  <SEOHead
+    slot="head"
+    title={pageMeta.title}
+    description={pageMeta.description}
+    canonicalUrl={pageMeta.canonicalUrl}
+    noindex={pageMeta.noindex}
+    ogType="website"
+  />
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-8">
+      <Breadcrumbs items={breadcrumbItems} />
+    </div>
+
+    <Card class="p-8 sm:p-12 border-slate-200 bg-white">
+      <h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-8 pb-4 border-b border-slate-100">
+        {page.title}
+      </h1>
+
+      <div class="prose prose-slate max-w-none">
+        <div set:html={renderedHtml} />
+      </div>
+
+      <div class="mt-12 pt-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+        <span>Psychology Calculator • Continuous Psychometrics</span>
+        <a href="/contact" class="text-indigo-600 font-semibold hover:underline">Contact Support →</a>
+      </div>
+    </Card>
+  </div>
+</BaseLayout>

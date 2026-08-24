@@ -1,0 +1,185 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
+import StructuredData from '@/components/seo/StructuredData.astro';
+import { SeoService } from '@/services/seo/seo.service';
+import { InternalLinkService } from '@/services/seo/internal-link.service';
+import { executeQuery, fetchFirst } from '@/lib/db/query';
+import type { AssessmentCategoryRow, AssessmentRow, FaqRow } from '@/types/database';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/assessments');
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const category = db
+  ? await fetchFirst<AssessmentCategoryRow>(
+      db,
+      'SELECT * FROM assessment_categories WHERE slug = ? AND status = \'active\'',
+      [slug]
+    )
+  : null;
+
+if (!category) {
+  return Astro.redirect('/404');
+}
+
+// Published assessments in this category
+const assessments = db
+  ? await executeQuery<AssessmentRow>(
+      db,
+      `SELECT * FROM assessments WHERE category_id = ? AND status = 'published' ORDER BY display_order ASC, popularity_score DESC`,
+      [category.id]
+    )
+  : [];
+
+// FAQs for this category
+const faqs = db
+  ? await executeQuery<FaqRow>(
+      db,
+      `SELECT * FROM faqs WHERE (category = ? OR entity_id = ?) AND status = 'active' ORDER BY display_order ASC`,
+      [category.slug, category.id]
+    )
+  : [];
+
+const seoService = new SeoService(db);
+const linkService = new InternalLinkService(db);
+
+const relatedCategories = await linkService.getRelatedCategories(category.id, 4);
+
+const breadcrumbItems = linkService.getBreadcrumbs([
+  { name: 'Assessments', path: '/assessments' },
+  { name: category.name, path: `/categories/${category.slug}` }
+]);
+
+const pageMetadata = await seoService.getPageMetadata({
+  pageType: 'category',
+  entityId: category.id,
+  path: `/categories/${category.slug}`,
+  rawTitle: `${category.name} Psychology Tests & Assessments`,
+  defaultDescription: category.description || `Explore standardized ${category.name} psychometric evaluations and AI personality reports.`
+});
+
+const faqSchema = faqs.length > 0 ? seoService.generateStructuredData('FAQPage', { faqs }) : null;
+---
+
+<BaseLayout
+  title={pageMetadata.rawTitle}
+  description={pageMetadata.description}
+  canonicalUrl={pageMetadata.canonicalUrl}
+>
+  <div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-12">
+    <!-- Breadcrumbs -->
+    <Breadcrumbs items={breadcrumbItems} />
+
+    <!-- Category Header Hero -->
+    <div class="space-y-4 max-w-3xl">
+      <Badge variant="info" size="md">Psychometric Category</Badge>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {category.name} <span class="text-indigo-600">Assessments</span>
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        {category.description || 'Scientifically grounded psychological instruments designed for deep self-understanding and behavioral insight.'}
+      </p>
+    </div>
+
+    <!-- Assessments Grid -->
+    <div class="space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-500">
+          Available Standardized Assessments ({assessments.length})
+        </h2>
+      </div>
+
+      {assessments.length === 0 ? (
+        <Card class="p-12 text-center text-slate-400 text-xs">
+          No published assessments in this category yet. Check back soon!
+        </Card>
+      ) : (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {assessments.map((asm) => (
+            <Card class="p-6 flex flex-col justify-between hover:shadow-md transition-shadow border-slate-200 bg-white">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <Badge variant={asm.access_type === 'premium' ? 'warning' : 'success'} size="sm">
+                    {asm.access_type === 'premium' ? 'Pro Assessment' : 'Free Assessment'}
+                  </Badge>
+                  {asm.estimated_minutes && (
+                    <span class="text-[11px] text-slate-400 font-medium">
+                      ⏱️ ~{asm.estimated_minutes} mins
+                    </span>
+                  )}
+                </div>
+
+                <h3 class="text-lg font-bold text-slate-900 leading-snug">
+                  <a href={`/assessments/${asm.slug}`} class="hover:text-indigo-600 transition-colors">
+                    {asm.name}
+                  </a>
+                </h3>
+
+                <p class="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                  {asm.short_description}
+                </p>
+              </div>
+
+              <div class="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[11px] font-mono text-slate-400">
+                  {asm.question_count ? `${asm.question_count} Questions` : 'Standardized'}
+                </span>
+                <a
+                  href={`/assessments/${asm.slug}`}
+                  class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors"
+                >
+                  Start Test →
+                </a>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- Category FAQs -->
+    {faqs.length > 0 && (
+      <div class="space-y-6 pt-6 border-t border-slate-200">
+        <div class="space-y-1">
+          <h2 class="text-2xl font-bold text-slate-900">Frequently Asked Questions</h2>
+          <p class="text-xs text-slate-500">Key scientific and methodology details regarding {category.name.toLowerCase()} evaluations</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {faqs.map((faq) => (
+            <Card class="p-5 space-y-2">
+              <h3 class="text-xs font-bold text-slate-900">{faq.question}</h3>
+              <p class="text-xs text-slate-600 leading-relaxed">{faq.answer}</p>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Related Categories Internal Linking -->
+    {relatedCategories.length > 0 && (
+      <div class="space-y-4 pt-6 border-t border-slate-200">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Explore Other Domains:</h2>
+        <div class="flex flex-wrap gap-2">
+          {relatedCategories.map((rc) => (
+            <a
+              href={rc.url}
+              class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+            >
+              {rc.title} →
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+
+  {faqSchema && <StructuredData schema={faqSchema} />}
+</BaseLayout>

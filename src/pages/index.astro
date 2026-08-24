@@ -1,0 +1,264 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Button from '@/components/ui/Button.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Alert from '@/components/ui/Alert.astro';
+import { ConfigService } from '@/services/config.service';
+import { AssessmentService } from '@/services/assessment.service';
+import { ContentService } from '@/services/content.service';
+import { getD1Database } from '@/lib/db/client';
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+// 1. Dynamic Config
+const configService = new ConfigService(db);
+const config = await configService.getSiteConfig();
+
+// 2. Dynamic Categories & Featured Assessments
+const assessmentService = new AssessmentService(db);
+const categories = await assessmentService.getCategories();
+let featuredAssessments = await assessmentService.getFeaturedAssessments();
+
+// Fallback preview cards if DB is not seeded yet
+if (featuredAssessments.length === 0) {
+  featuredAssessments = [
+    {
+      id: 'asm_big_five',
+      category_id: 'cat_personality',
+      category_name: 'Personality',
+      name: 'Big Five (OCEAN) Personality',
+      slug: 'big-five-personality',
+      short_description: 'Measures Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism using empirically validated scoring.',
+      long_description: null,
+      instructions: null,
+      estimated_minutes: 10,
+      question_count: 50,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 1,
+      version: 1,
+      disclaimer: null,
+      published_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_attachment',
+      category_id: 'cat_relationships',
+      category_name: 'Relationships',
+      name: 'Adult Attachment Style',
+      slug: 'adult-attachment-style',
+      short_description: 'Identifies relational patterns across Secure, Anxious-Preoccupied, Dismissive-Avoidant, and Fearful-Avoidant styles.',
+      long_description: null,
+      instructions: null,
+      estimated_minutes: 8,
+      question_count: 36,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 2,
+      version: 1,
+      disclaimer: null,
+      published_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_eq',
+      category_id: 'cat_eq',
+      category_name: 'Emotional Intelligence',
+      name: 'Emotional Intelligence (EQ)',
+      slug: 'emotional-intelligence-eq',
+      short_description: 'Evaluates self-awareness, emotional regulation, empathy, and social agility across everyday interactions.',
+      long_description: null,
+      instructions: null,
+      estimated_minutes: 10,
+      question_count: 40,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 3,
+      version: 1,
+      disclaimer: null,
+      published_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
+}
+
+// 3. Dynamic FAQs
+const contentService = new ContentService(db);
+const faqs = await contentService.getFaqs({ entityType: 'global' });
+---
+
+<PublicLayout title="Home">
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden wellness-gradient py-20 sm:py-28 border-b border-slate-200/60">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl mx-auto text-center space-y-6">
+        <div class="inline-flex items-center gap-2">
+          <Badge variant="info" size="md">
+            <span slot="prefix">✦</span>
+            Evidence-Based Psychological Metrics
+          </Badge>
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight text-balance leading-tight">
+          Understand Yourself with <span class="text-teal-700">Scientific Clarity</span>
+        </h1>
+
+        <p class="text-lg sm:text-xl text-slate-600 leading-relaxed text-balance">
+          {config.siteTagline}
+        </p>
+
+        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Button href={config.primaryCtaLink} variant="primary" size="lg" class="w-full sm:w-auto shadow-md shadow-slate-900/10">
+            {config.primaryCtaText}
+            <span slot="suffix">&rarr;</span>
+          </Button>
+          <Button href="#how-it-works" variant="outline" size="lg" class="w-full sm:w-auto">
+            Explore Methodology
+          </Button>
+        </div>
+
+        <!-- Trust Indicators -->
+        <div class="pt-8 grid grid-cols-3 gap-4 border-t border-slate-200/60 max-w-xl mx-auto text-center">
+          <div>
+            <div class="text-xl sm:text-2xl font-bold text-slate-900">100%</div>
+            <div class="text-xs text-slate-500 font-medium mt-0.5">Privacy First</div>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-bold text-teal-700">Edge SSR</div>
+            <div class="text-xs text-slate-500 font-medium mt-0.5">Cloudflare Native</div>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-bold text-slate-900">Dynamic D1</div>
+            <div class="text-xs text-slate-500 font-medium mt-0.5">Database Driven</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dynamic Assessments Catalog Section -->
+  <section id="assessments" class="py-16 sm:py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center max-w-2xl mx-auto space-y-3">
+        <Badge variant="default" size="sm">Assessment Catalog</Badge>
+        <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
+          Validated Psychological Assessments
+        </h2>
+        <p class="text-slate-600 text-sm sm:text-base">
+          Explore validated instruments designed with psychological rigor for deep personal, relational, and emotional insight.
+        </p>
+      </div>
+
+      <!-- Categories Pills -->
+      {categories.length > 0 && (
+        <div class="flex items-center justify-center flex-wrap gap-2 pt-2 pb-4">
+          <Badge variant="info" size="md" class="cursor-pointer">All Categories</Badge>
+          {categories.map((cat) => (
+            <span class="px-3 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer">
+              {cat.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <!-- Dynamic Assessment Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {featuredAssessments.map((assessment) => (
+          <Card hoverEffect={true} class="flex flex-col justify-between">
+            <div slot="header" class="flex items-center justify-between">
+              <Badge variant="info" size="sm">
+                {assessment.category_name || 'Psychology'}
+              </Badge>
+              <Badge variant={assessment.access_type === 'free' ? 'success' : 'warning'} size="sm">
+                {assessment.access_type.toUpperCase()}
+              </Badge>
+            </div>
+            <div class="space-y-2 my-2">
+              <h3 class="text-lg font-bold text-slate-900 leading-snug">{assessment.name}</h3>
+              <p class="text-sm text-slate-600 leading-relaxed">
+                {assessment.short_description}
+              </p>
+            </div>
+            <div slot="footer" class="w-full flex items-center justify-between text-xs text-slate-500">
+              <span>{assessment.question_count} Questions</span>
+              <span class="text-teal-700 font-semibold">{assessment.estimated_minutes} mins</span>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section id="how-it-works" class="py-16 sm:py-24 bg-slate-50 border-t border-slate-200/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center max-w-2xl mx-auto space-y-3">
+        <Badge variant="info" size="sm">How It Works</Badge>
+        <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
+          From Question Items to Deep Insight
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 card-shadow space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-base border border-teal-100">
+            1
+          </div>
+          <h3 class="text-base font-bold text-slate-900">Take Assessment</h3>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Answer scientifically structured items on a frictionless, mobile-optimized assessment runner.
+          </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 card-shadow space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-base border border-teal-100">
+            2
+          </div>
+          <h3 class="text-base font-bold text-slate-900">Deterministic Scoring</h3>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Our Cloudflare Worker scoring engine calculates normalized dimension metrics with instant accuracy.
+          </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 card-shadow space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-base border border-teal-100">
+            3
+          </div>
+          <h3 class="text-base font-bold text-slate-900">AI Deep Dive</h3>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Receive personalized synthesis reports, growth pathways, and relationship insights powered by LLMs.
+          </p>
+        </div>
+      </div>
+
+      <!-- Dynamic FAQs if available -->
+      {faqs.length > 0 && (
+        <div class="pt-8 max-w-3xl mx-auto space-y-4">
+          <h3 class="text-xl font-bold text-slate-900 text-center mb-6">Frequently Asked Questions</h3>
+          <div class="space-y-3">
+            {faqs.map((faq) => (
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 card-shadow space-y-2">
+                <h4 class="font-semibold text-slate-900 text-sm">{faq.question}</h4>
+                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div class="max-w-3xl mx-auto pt-6">
+        <Alert variant="info" title="Psychological Disclaimer">
+          {config.disclaimerText}
+        </Alert>
+      </div>
+    </div>
+  </section>
+</PublicLayout>

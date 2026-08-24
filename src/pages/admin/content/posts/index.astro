@@ -1,0 +1,263 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { BlogService } from '@/services/content/blog.service';
+import { CmsService } from '@/services/content/cms.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const blogService = new BlogService(db);
+const cmsService = new CmsService(db);
+
+const url = new URL(Astro.request.url);
+const search = url.searchParams.get('q') || undefined;
+const status = url.searchParams.get('status') || undefined;
+const categoryId = url.searchParams.get('category') || undefined;
+const page = parseInt(url.searchParams.get('page') || '1', 10);
+
+const [postsResult, categories] = await Promise.all([
+  blogService.getAdminPosts({ search, status, categoryId, page, limit: 15 }),
+  cmsService.getBlogCategories()
+]);
+---
+
+<AdminLayout title="Blog Posts">
+  <div class="space-y-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/content" class="text-xs font-semibold text-indigo-600 hover:underline">CMS</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Articles</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Blog Articles</h1>
+      </div>
+
+      <a
+        href="/admin/content/posts/new"
+        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm inline-flex items-center gap-1.5"
+      >
+        ✏️ Create Article
+      </a>
+    </div>
+
+    <!-- Filters Bar -->
+    <Card class="p-4 border-slate-200 bg-white shadow-sm">
+      <form method="GET" action="/admin/content/posts" class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[200px]">
+          <input
+            type="text"
+            name="q"
+            value={search || ''}
+            placeholder="Search by title or slug..."
+            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+          />
+        </div>
+
+        <div>
+          <select
+            name="status"
+            class="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+          >
+            <option value="all">All Statuses</option>
+            <option value="published" selected={status === 'published'}>Published</option>
+            <option value="draft" selected={status === 'draft'}>Draft</option>
+            <option value="scheduled" selected={status === 'scheduled'}>Scheduled</option>
+            <option value="archived" selected={status === 'archived'}>Archived</option>
+          </select>
+        </div>
+
+        <div>
+          <select
+            name="category"
+            class="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+          >
+            <option value="">All Categories</option>
+            {categories.map((c) => (
+              <option value={c.id} selected={categoryId === c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <Button type="submit" variant="secondary" size="sm">
+          Filter
+        </Button>
+
+        {(search || status || categoryId) && (
+          <a href="/admin/content/posts" class="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2">
+            Clear
+          </a>
+        )}
+      </form>
+    </Card>
+
+    <!-- Posts Table -->
+    <Card class="border-slate-200 bg-white overflow-hidden shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+            <tr>
+              <th class="p-3.5">Title & Slug</th>
+              <th class="p-3.5">Category</th>
+              <th class="p-3.5">Author</th>
+              <th class="p-3.5">Status</th>
+              <th class="p-3.5">Published / Updated</th>
+              <th class="p-3.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            {postsResult.posts.length === 0 ? (
+              <tr>
+                <td colspan="6" class="p-8 text-center text-slate-400">
+                  No articles found matching the current criteria.
+                </td>
+              </tr>
+            ) : (
+              postsResult.posts.map((post) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="p-3.5 font-medium max-w-sm">
+                    <div class="font-bold text-slate-900 line-clamp-1">
+                      <a href={`/admin/content/posts/${post.id}`} class="hover:text-indigo-600">
+                        {post.title}
+                      </a>
+                    </div>
+                    <div class="text-[11px] text-slate-400 font-mono line-clamp-1">
+                      /blog/{post.slug}
+                    </div>
+                  </td>
+                  <td class="p-3.5">
+                    <Badge variant="default" size="sm">
+                      {post.category_name || 'Uncategorized'}
+                    </Badge>
+                  </td>
+                  <td class="p-3.5 text-slate-600 font-medium">
+                    {post.author_name || 'Editorial'}
+                  </td>
+                  <td class="p-3.5">
+                    <Badge
+                      variant={
+                        post.status === 'published'
+                          ? 'success'
+                          : post.status === 'scheduled'
+                            ? 'warning'
+                            : 'default'
+                      }
+                      size="sm"
+                    >
+                      {post.status}
+                    </Badge>
+                  </td>
+                  <td class="p-3.5 text-slate-400 font-mono">
+                    <div>{post.published_at ? new Date(post.published_at).toLocaleDateString() : 'Unpublished'}</div>
+                    <div class="text-[10px] text-slate-400">Upd: {new Date(post.updated_at).toLocaleDateString()}</div>
+                  </td>
+                  <td class="p-3.5 text-right space-x-3 whitespace-nowrap">
+                    <a
+                      href={`/blog/${post.slug}?preview=true`}
+                      target="_blank"
+                      class="text-indigo-600 hover:underline font-bold"
+                    >
+                      Preview
+                    </a>
+                    <a
+                      href={`/admin/content/posts/${post.id}`}
+                      class="text-slate-600 hover:underline font-bold"
+                    >
+                      Edit
+                    </a>
+                    <button
+                      onclick={`duplicatePost('${post.id}')`}
+                      class="text-slate-500 hover:text-slate-800 font-bold"
+                    >
+                      Clone
+                    </button>
+                    <button
+                      onclick={`deletePost('${post.id}')`}
+                      class="text-rose-600 hover:text-rose-800 font-bold"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {postsResult.totalPages > 1 && (
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-xs text-slate-500">
+            Showing {postsResult.posts.length} of {postsResult.total} articles
+          </span>
+          <div class="flex items-center gap-2">
+            {page > 1 && (
+              <a
+                href={`/admin/content/posts?page=${page - 1}${status ? `&status=${status}` : ''}${categoryId ? `&category=${categoryId}` : ''}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
+                class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg"
+              >
+                Prev
+              </a>
+            )}
+            <span class="text-xs font-mono text-slate-600">{page} / {postsResult.totalPages}</span>
+            {page < postsResult.totalPages && (
+              <a
+                href={`/admin/content/posts?page=${page + 1}${status ? `&status=${status}` : ''}${categoryId ? `&category=${categoryId}` : ''}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
+                class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg"
+              >
+                Next
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  </div>
+
+  <script is:inline>
+    async function duplicatePost(id) {
+      if (!confirm('Duplicate this article into a new draft?')) return;
+      try {
+        const res = await fetch('/api/v1/admin/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'duplicate', id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          window.location.href = `/admin/content/posts/${data.newId}`;
+        } else {
+          alert(data.message || 'Failed to duplicate post');
+        }
+      } catch (err) {
+        alert('Network error duplicating post');
+      }
+    }
+
+    async function deletePost(id) {
+      if (!confirm('Permanently delete this article? This action cannot be undone.')) return;
+      try {
+        const res = await fetch('/api/v1/admin/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          window.location.reload();
+        } else {
+          alert(data.message || 'Failed to delete post');
+        }
+      } catch (err) {
+        alert('Network error deleting post');
+      }
+    }
+  </script>
+</AdminLayout>

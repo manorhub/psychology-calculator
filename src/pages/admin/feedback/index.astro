@@ -1,0 +1,166 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import StatCard from '@/components/admin/StatCard.astro';
+import { getD1Database } from '@/lib/db/client';
+import { FeedbackService } from '@/services/growth/feedback.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const feedbackService = new FeedbackService(db);
+
+const [summary, feedbackList] = await Promise.all([
+  feedbackService.getFeedbackSummary(),
+  feedbackService.getAdminFeedbackList('all', 100, 0)
+]);
+---
+
+<AdminLayout title="User Feedback & Experience Sentiment">
+  <div class="space-y-8">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">User Feedback & Ratings</h1>
+        <p class="text-sm text-slate-500">Participant sentiment, helpfulness scores, and qualitative assessment feedback</p>
+      </div>
+      <a
+        href="/admin/growth"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition"
+      >
+        ← Back to Growth Dashboard
+      </a>
+    </div>
+
+    <!-- Feedback Aggregate Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <StatCard
+        title="Total Feedback Submissions"
+        value={summary.totalCount.toLocaleString()}
+        subtitle="All time reviews"
+        icon="💬"
+      />
+      <StatCard
+        title="Helpfulness Ratio"
+        value={`${summary.helpfulPercentage}%`}
+        subtitle={`${summary.helpfulCount} helpful vs ${summary.unhelpfulCount} unhelpful`}
+        icon="👍"
+        change={`${summary.helpfulPercentage}%`}
+        isPositive={summary.helpfulPercentage >= 80}
+      />
+      <StatCard
+        title="Average Satisfaction Rating"
+        value={`${summary.averageRating} / 5.0`}
+        subtitle="5-Star scale"
+        icon="⭐"
+      />
+      <StatCard
+        title="5-Star Ratings"
+        value={(summary.ratingDistribution[5] || 0).toLocaleString()}
+        subtitle="Top ratings"
+        icon="🏆"
+        change="High Quality"
+        isPositive={true}
+      />
+    </div>
+
+    <!-- Feedback Entries Table -->
+    <Card title={`Feedback Entries (${feedbackList.total})`}>
+      <div class="p-6">
+        {feedbackList.items.length === 0 ? (
+          <div class="p-8 text-center text-slate-500 text-sm">
+            No user feedback submitted yet.
+          </div>
+        ) : (
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Entity</th>
+                  <th class="py-3 px-4 text-center">Helpful?</th>
+                  <th class="py-3 px-4 text-center">Rating</th>
+                  <th class="py-3 px-4">Comment</th>
+                  <th class="py-3 px-4 text-center">Status</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {feedbackList.items.map((fb) => (
+                  <tr class="hover:bg-slate-50/80 transition">
+                    <td class="py-3.5 px-4 font-mono text-xs text-slate-800">
+                      <span class="block font-semibold capitalize">{fb.entity_type}</span>
+                      <span class="text-slate-400">{fb.entity_id.slice(0, 16)}...</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-center">
+                      {fb.is_helpful === 1 ? (
+                        <span class="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-semibold">👍 Yes</span>
+                      ) : fb.is_helpful === 0 ? (
+                        <span class="text-xs bg-rose-50 text-rose-700 px-2 py-0.5 rounded font-semibold">👎 No</span>
+                      ) : (
+                        <span class="text-xs text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td class="py-3.5 px-4 text-center">
+                      {fb.rating ? (
+                        <span class="font-bold text-amber-600">★ {fb.rating}</span>
+                      ) : (
+                        <span class="text-slate-400 text-xs">-</span>
+                      )}
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-700 max-w-sm text-xs">
+                      {fb.comment || <span class="text-slate-400 italic">No written comment</span>}
+                    </td>
+                    <td class="py-3.5 px-4 text-center">
+                      <Badge variant={fb.status === 'active' ? 'default' : 'outline'}>
+                        {fb.status.toUpperCase()}
+                      </Badge>
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                      {fb.status === 'active' && (
+                        <button
+                          onclick={`updateFeedbackStatus('${fb.id}', 'reviewed')`}
+                          class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 mr-2"
+                        >
+                          Mark Reviewed
+                        </button>
+                      )}
+                      {fb.status !== 'archived' && (
+                        <button
+                          onclick={`updateFeedbackStatus('${fb.id}', 'archived')`}
+                          class="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                        >
+                          Archive
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Card>
+  </div>
+
+  <script is:inline>
+    async function updateFeedbackStatus(feedbackId, status) {
+      try {
+        const res = await fetch('/api/admin/growth/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ feedbackId, status })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert(data.error?.message || 'Failed to update feedback status');
+        }
+      } catch {
+        alert('Network error updating feedback status');
+      }
+    }
+  </script>
+</AdminLayout>

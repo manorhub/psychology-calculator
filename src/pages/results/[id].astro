@@ -1,0 +1,370 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import DimensionScoreCard from '@/components/results/DimensionScoreCard.astro';
+import SectionNarrative from '@/components/results/SectionNarrative.astro';
+import { getD1Database } from '@/lib/db/client';
+import { ResultService } from '@/services/result.service';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+if (!db) return Astro.redirect('/');
+
+const resultService = new ResultService(db);
+
+const url = Astro.url;
+const shareToken = url.searchParams.get('token');
+const currentUser = Astro.locals.user;
+const guestSessionId = Astro.cookies.get('mm_guest_id')?.value || null;
+
+let resultData;
+try {
+  resultData = await resultService.getResult(
+    id,
+    currentUser?.id || null,
+    guestSessionId,
+    shareToken
+  );
+} catch (error: any) {
+  if (error.statusCode === 403 || error.statusCode === 404) {
+    return new Response('Result Not Found or Access Denied', { status: error.statusCode });
+  }
+  return Astro.redirect('/');
+}
+
+const { snapshot, isSharedView, shareToken: activeShareToken } = resultData;
+const [relatedAssessments, faqs, existingReport] = await Promise.all([
+  resultService.getRelatedAssessments(snapshot.assessmentId, snapshot.assessmentId, 3),
+  resultService.getAssessmentFaqs(snapshot.assessmentId),
+  db.prepare("SELECT id FROM reports WHERE attempt_id = ? AND report_type = 'ai' AND status = 'completed'").bind(id).first<{ id: string }>()
+]);
+
+const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
+---
+
+<BaseLayout
+  title={`Results: ${snapshot.assessmentName}`}
+  description={`Comprehensive psychometric evaluation and dimensional breakdown for ${snapshot.assessmentName}`}
+>
+  <!-- SEO Privacy: Strictly Noindex for personal psychometric results -->
+  <Fragment slot="head">
+    <meta name="robots" content="noindex, nofollow" />
+  </Fragment>
+
+  <div class="max-w-4xl mx-auto py-10 sm:py-16 px-4 sm:px-6 space-y-12">
+    <!-- Shared View Notice Banner -->
+    {isSharedView && (
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>🔗</span>
+          <span>You are viewing a shared assessment result link.</span>
+        </div>
+        <a href={`/assessments/${snapshot.assessmentSlug}`} class="font-bold text-amber-950 underline">
+          Take This Assessment Yourself →
+        </a>
+      </div>
+    )}
+
+    <!-- Header & Summary Card -->
+    <div class="text-center space-y-3">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-bold">
+        <span>✓ Completed Assessment</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
+        {snapshot.assessmentName} Results
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-500 font-mono">
+        Completed in {durationMins} mins • {new Date(snapshot.completedAt).toLocaleDateString()} • v{snapshot.assessmentVersion}
+      </p>
+    </div>
+
+    <!-- Guest Account Conversion Banner -->
+    {!currentUser && (
+      <div class="bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-teal-800/40 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="space-y-1.5 text-center sm:text-left">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-teal-800/70 text-teal-200 rounded-full text-[11px] font-bold">
+            <span>💾 Save Your Result</span>
+          </div>
+          <h3 class="text-lg sm:text-xl font-extrabold text-white">
+            Keep this assessment permanently in your Dashboard
+          </h3>
+          <p class="text-xs text-slate-300 max-w-lg leading-relaxed">
+            Create a free account or sign in to link this result, track your psychometric progress over time, and unlock detailed AI insights.
+          </p>
+        </div>
+
+        <div class="flex-shrink-0 flex flex-wrap gap-2.5 justify-center">
+          <a
+            href={`/register?redirect=${encodeURIComponent(`/results/${snapshot.attemptId}`)}`}
+            class="px-5 py-2.5 text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl transition-all shadow-sm"
+          >
+            Create Free Account
+          </a>
+          <a
+            href={`/login?redirect=${encodeURIComponent(`/results/${snapshot.attemptId}`)}`}
+            class="px-5 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl transition-all"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+    )}
+
+    <!-- Primary Psychological Outcome Card -->
+    {snapshot.primaryResultType && (
+      <div class="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span class="text-xs font-bold tracking-wider uppercase text-teal-300">
+            Primary Psychometric Archetype
+          </span>
+          <span class="text-xs font-mono px-3 py-1 bg-teal-900/60 rounded-full text-teal-200 border border-teal-700/50">
+            Overall Score: {snapshot.totalRawScore} / {snapshot.totalMaxScore} ({snapshot.totalNormalizedScore}%)
+          </span>
+        </div>
+
+        <div class="space-y-3">
+          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            {snapshot.primaryResultType.name}
+          </h2>
+          {snapshot.primaryResultType.description && (
+            <p class="text-sm sm:text-base text-teal-100/90 leading-relaxed max-w-2xl">
+              {snapshot.primaryResultType.description}
+            </p>
+          )}
+        </div>
+
+        <!-- Share Actions & PDF Download -->
+        {!isSharedView && (
+          <div class="pt-4 border-t border-teal-800/60 flex flex-wrap items-center justify-between gap-4">
+            <div class="text-xs text-teal-200/80">
+              Save or share your official psychometric outcome:
+            </div>
+            <div class="flex items-center gap-2">
+              <a
+                href={`/api/v1/results/${snapshot.attemptId}/pdf`}
+                download
+                class="px-4 py-2 text-xs font-bold bg-teal-800/80 hover:bg-teal-700 text-teal-100 border border-teal-600/60 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+              >
+                <span>📄</span>
+                <span>Download Result PDF</span>
+              </a>
+              <button
+                type="button"
+                id="share-result-btn"
+                data-attempt-id={snapshot.attemptId}
+                class="px-4 py-2 text-xs font-bold bg-white text-slate-950 hover:bg-teal-50 rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <span>🔗</span>
+                <span id="share-btn-text">{activeShareToken ? 'Copy Share Link' : 'Generate Share Link'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    <!-- Evaluated Dimension Score Grid -->
+    {snapshot.dimensionScores.length > 0 && (
+      <div class="space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Dimensional Breakdown
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Standardized psychological construct evaluations
+            </p>
+          </div>
+          <span class="text-xs text-slate-400 font-mono hidden sm:inline">
+            Deterministic Engine
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {snapshot.dimensionScores.map((dim) => (
+            <DimensionScoreCard dimension={dim} />
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Dynamic Modular Psychological Interpretation Sections -->
+    {snapshot.primaryResultType?.contents && snapshot.primaryResultType.contents.length > 0 && (
+      <div class="space-y-6">
+        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+          Psychological Narrative & Insights
+        </h2>
+
+        <div class="space-y-4">
+          {snapshot.primaryResultType.contents.map((section) => (
+            <SectionNarrative section={section} />
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- AI In-Depth Report Banner -->
+    <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white rounded-3xl p-8 sm:p-10 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="space-y-2 max-w-xl">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-800/60 rounded-full text-xs font-bold text-indigo-300">
+          <span>✨ In-Depth AI Analysis</span>
+        </div>
+        <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+          Unlock Your Comprehensive Personality Synthesis
+        </h3>
+        <p class="text-xs sm:text-sm text-indigo-200 leading-relaxed">
+          Receive a personalized narrative exploring your cognitive blind spots, communication style, relationship dynamics, and actionable daily exercises.
+        </p>
+      </div>
+
+      <div class="flex-shrink-0">
+        {existingReport ? (
+          <a
+            href={`/reports/${existingReport.id}`}
+            class="inline-flex items-center justify-center px-6 py-3.5 text-xs font-bold text-slate-950 bg-white hover:bg-indigo-50 rounded-xl shadow-md transition-all"
+          >
+            View Existing AI Report →
+          </a>
+        ) : (
+          <button
+            type="button"
+            id="generate-ai-btn"
+            data-attempt-id={snapshot.attemptId}
+            class="inline-flex items-center justify-center px-6 py-3.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            <span id="ai-btn-text">Generate AI Report ✨</span>
+          </button>
+        )}
+      </div>
+    </div>
+
+    <!-- Related Assessments Section -->
+    {relatedAssessments.length > 0 && (
+      <div class="space-y-4 pt-6 border-t border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900">Explore Related Assessments</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {relatedAssessments.map((ra) => (
+            <Card class="p-5 space-y-2 hover:border-teal-500 transition-colors flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 block mb-1">
+                  {ra.category_name}
+                </span>
+                <h4 class="text-xs font-bold text-slate-900">{ra.name}</h4>
+                <p class="text-[11px] text-slate-500 line-clamp-2 mt-1">{ra.short_description}</p>
+              </div>
+              <a
+                href={`/assessments/${ra.slug}`}
+                class="text-xs font-semibold text-teal-700 hover:text-teal-800 pt-2 block"
+              >
+                Take Assessment →
+              </a>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Assessment FAQs -->
+    {faqs.length > 0 && (
+      <div class="space-y-4 pt-6 border-t border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900">Frequently Asked Questions</h3>
+        <div class="space-y-3">
+          {faqs.map((faq) => (
+            <details class="p-4 bg-white border border-slate-200 rounded-2xl text-xs group">
+              <summary class="font-bold text-slate-800 cursor-pointer flex items-center justify-between list-none">
+                <span>{faq.question}</span>
+                <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p class="mt-2 text-slate-600 leading-relaxed pt-2 border-t border-slate-100">
+                {faq.answer}
+              </p>
+            </details>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Clinical Disclaimer -->
+    <div class="p-5 bg-slate-100 border border-slate-200 rounded-2xl text-[11px] text-slate-500 text-center leading-relaxed space-y-1">
+      <strong class="text-slate-700 block">Psychological & Educational Disclaimer</strong>
+      <p>{snapshot.disclaimer || 'This psychometric self-assessment is designed exclusively for educational, personal reflection, and self-discovery purposes and does not constitute clinical psychological diagnosis or medical advice.'}</p>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <a
+        href={`/assessments/${snapshot.assessmentSlug}`}
+        class="text-xs font-semibold text-teal-700 hover:text-teal-800"
+      >
+        ← Retake Assessment
+      </a>
+
+      <a
+        href="/"
+        class="inline-flex items-center justify-center px-6 py-3 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm transition-all"
+      >
+        Explore All Assessments →
+      </a>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ attemptId: snapshot.attemptId, activeShareToken }}>
+  const shareBtn = document.getElementById('share-result-btn');
+  const shareText = document.getElementById('share-btn-text');
+
+  shareBtn?.addEventListener('click', async () => {
+    try {
+      const res = await fetch(`/api/v1/results/${attemptId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (data.success && data.data?.shareUrl) {
+        const fullUrl = `${window.location.origin}${data.data.shareUrl}`;
+        await navigator.clipboard.writeText(fullUrl);
+        if (shareText) shareText.innerText = '✓ Copied Share Link!';
+        setTimeout(() => {
+          if (shareText) shareText.innerText = 'Copy Share Link';
+        }, 3000);
+      }
+    } catch {
+      alert('Unable to generate share link.');
+    }
+  });
+
+  const aiBtn = document.getElementById('generate-ai-btn');
+  const aiBtnText = document.getElementById('ai-btn-text');
+
+  aiBtn?.addEventListener('click', async () => {
+    if (!aiBtnText) return;
+    aiBtnText.innerText = 'Generating personalized report...';
+    aiBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/v1/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId })
+      });
+      const data = await res.json();
+
+      if (data.success && data.data?.reportId) {
+        window.location.href = `/reports/${data.data.reportId}`;
+      } else {
+        alert(data.error?.message || 'AI generation failed. Please try again.');
+        aiBtnText.innerText = 'Generate AI Report ✨';
+        aiBtn.disabled = false;
+      }
+    } catch (err) {
+      alert('An error occurred during AI report synthesis.');
+      aiBtnText.innerText = 'Generate AI Report ✨';
+      aiBtn.disabled = false;
+    }
+  });
+</script>
+

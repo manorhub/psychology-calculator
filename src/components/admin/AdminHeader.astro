@@ -1,0 +1,86 @@
+---
+import type { User } from '@/types/auth';
+
+interface Props {
+  user: User;
+}
+
+const { user } = Astro.props;
+---
+
+<header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-10">
+  <!-- Mobile Menu Button -->
+  <div class="flex items-center gap-3">
+    <button
+      type="button"
+      id="admin-mobile-toggle"
+      class="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+      aria-label="Open mobile menu"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+    <div class="hidden sm:flex items-center gap-2">
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+        Admin Mode
+      </span>
+    </div>
+  </div>
+
+  <!-- Header Right Actions -->
+  <div class="flex items-center gap-4">
+    <!-- Visit Live Site -->
+    <a
+      href="/"
+      target="_blank"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+    >
+      <span>Live Site</span>
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+    </a>
+
+    <div class="h-4 w-px bg-slate-200"></div>
+
+    <!-- Admin Profile & Logout -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+          {user.profile.displayName ? user.profile.displayName.substring(0, 1).toUpperCase() : 'A'}
+        </div>
+        <div class="hidden md:flex flex-col text-left">
+          <span class="text-xs font-bold text-slate-800 leading-tight">
+            {user.profile.displayName || user.email}
+          </span>
+          <span class="text-[10px] text-slate-500 font-mono">{user.email}</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        id="admin-logout-btn"
+        class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+        title="Sign Out"
+        aria-label="Sign Out"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script>
+  const logoutBtn = document.getElementById('admin-logout-btn');
+  logoutBtn?.addEventListener('click', async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    } catch {
+      window.location.href = '/login';
+    }
+  });
+</script>
