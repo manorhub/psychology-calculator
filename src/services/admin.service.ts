@@ -11,6 +11,7 @@ import type {
 } from '@/types/database';
 import { executeQuery, fetchFirst } from '@/lib/db/query';
 import { AuditService } from './audit.service';
+import { CreditService } from './credit.service';
 import { destroyAllUserSessions } from '@/lib/auth/session';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 
@@ -36,6 +37,7 @@ export interface AdminUserListItem {
   role: UserRole;
   status: UserStatus;
   emailVerified: boolean;
+  credits: number;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -45,6 +47,7 @@ export interface AdminUserDetail {
   profile: ProfileRow | null;
   attemptCount: number;
   reportCount: number;
+  creditBalance: number;
   activeSubscription: {
     planName: string;
     status: string;
@@ -154,9 +157,11 @@ export class AdminService extends BaseService {
       `SELECT
          u.id, u.email, u.role, u.status, u.created_at as createdAt, u.last_login_at as lastLoginAt,
          (u.email_verified_at IS NOT NULL) as emailVerified,
+         COALESCE(cb.balance, 0) as credits,
          p.display_name as displayName
        FROM users u
        LEFT JOIN profiles p ON u.id = p.user_id
+       LEFT JOIN credit_balances cb ON u.id = cb.user_id
        ${whereClause}
        ORDER BY u.created_at DESC
        LIMIT ? OFFSET ?`,
@@ -181,7 +186,7 @@ export class AdminService extends BaseService {
     const user = await fetchFirst<UserRow>(this.db, 'SELECT * FROM users WHERE id = ?', [userId]);
     if (!user) return null;
 
-    const [profile, attempts, reports, subscription] = await Promise.all([
+    const [profile, attempts, reports, subscription, creditRow] = await Promise.all([
       fetchFirst<ProfileRow>(this.db, 'SELECT * FROM profiles WHERE user_id = ?', [userId]),
       fetchFirst<{ count: number }>(this.db, 'SELECT COUNT(*) as count FROM assessment_attempts WHERE user_id = ?', [userId]),
       fetchFirst<{ count: number }>(this.db, 'SELECT COUNT(*) as count FROM reports WHERE user_id = ?', [userId]),
@@ -193,7 +198,8 @@ export class AdminService extends BaseService {
          WHERE s.user_id = ? AND s.status = 'active'
          LIMIT 1`,
         [userId]
-      )
+      ),
+      fetchFirst<{ balance: number }>(this.db, 'SELECT balance FROM credit_balances WHERE user_id = ?', [userId])
     ]);
 
     return {
@@ -201,6 +207,7 @@ export class AdminService extends BaseService {
       profile: profile || null,
       attemptCount: attempts?.count ?? 0,
       reportCount: reports?.count ?? 0,
+      creditBalance: creditRow?.balance ?? 0,
       activeSubscription: subscription
         ? {
             planName: subscription.plan_name,
@@ -209,6 +216,44 @@ export class AdminService extends BaseService {
           }
         : null
     };
+  }
+
+  /**
+   * Adjusts user credits manually as an administrator
+   */
+  public async adjustUserCredits(
+    userId: string,
+    amount: number,
+    reason: string,
+    actorId: string
+  ): Promise<number> {
+    if (!this.db) throw new Error('Database not available');
+    const user = await fetchFirst<UserRow>(this.db, 'SELECT id, email FROM users WHERE id = ?', [userId]);
+    if (!user) throw new NotFoundError('User not found');
+
+    const creditService = new CreditService(this.db);
+    const newBalance = await creditService.addCredits(
+      userId,
+      amount,
+      'admin_adjustment',
+      reason || 'Admin manual credit adjustment'
+    );
+
+    await this.auditService.record({
+      actorId,
+      actorRole: 'admin',
+      action: 'admin_credits_adjusted',
+      entityType: 'user',
+      entityId: userId,
+      details: {
+        userEmail: user.email,
+        amount,
+        reason,
+        newBalance
+      }
+    });
+
+    return newBalance;
   }
 
   /**

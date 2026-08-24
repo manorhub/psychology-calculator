@@ -82,6 +82,7 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
               <th class="py-3.5 px-4 sm:px-6">User</th>
               <th class="py-3.5 px-4">Role</th>
               <th class="py-3.5 px-4">Status</th>
+              <th class="py-3.5 px-4">Credits</th>
               <th class="py-3.5 px-4">Verified</th>
               <th class="py-3.5 px-4">Joined Date</th>
               <th class="py-3.5 px-4">Last Login</th>
@@ -91,7 +92,7 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
           <tbody class="divide-y divide-slate-100">
             {result.items.length === 0 ? (
               <tr>
-                <td colspan="7" class="p-8 text-center text-slate-500">
+                <td colspan="8" class="p-8 text-center text-slate-500">
                   No users found matching the selected criteria.
                 </td>
               </tr>
@@ -127,6 +128,20 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
                     >
                       {user.status.replace('_', ' ').toUpperCase()}
                     </Badge>
+                  </td>
+                  <td class="py-3.5 px-4">
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-mono font-bold text-teal-800 text-xs">{user.credits}</span>
+                      <button
+                        type="button"
+                        class="quick-add-credits-btn px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 cursor-pointer transition-all"
+                        data-user-id={user.id}
+                        data-user-email={user.email}
+                        title="Add credits to this user"
+                      >
+                        + Add
+                      </button>
+                    </div>
                   </td>
                   <td class="py-3.5 px-4">
                     {user.emailVerified ? (
@@ -197,6 +212,41 @@ const result = await adminService.getUsers({ page, limit, search, status, role }
         }
       } catch {
         alert('Network error during verification');
+      }
+    });
+  });
+
+  document.querySelectorAll('.quick-add-credits-btn').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const userId = (btn as HTMLElement).dataset.userId;
+      const userEmail = (btn as HTMLElement).dataset.userEmail;
+      if (!userId) return;
+
+      const input = prompt(`Enter number of credits to add to ${userEmail} (e.g. 10, 50, 100):`, '10');
+      if (!input) return;
+
+      const amount = parseInt(input.trim(), 10);
+      if (isNaN(amount) || amount === 0) {
+        alert('Please enter a valid non-zero number of credits.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/users/credits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, amount, reason: 'Admin quick credit top-up' })
+        });
+        const data = (await res.json()) as any;
+        if (res.ok && data.success) {
+          alert(data.data?.message || 'Credits updated successfully!');
+          window.location.reload();
+        } else {
+          alert(data.error?.message || 'Failed to update credits');
+        }
+      } catch {
+        alert('Network error while updating credits');
       }
     });
   });

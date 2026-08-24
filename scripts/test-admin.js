@@ -224,10 +224,13 @@ async function runAdminTests() {
   const bobUnverified = sqlite.prepare("SELECT email_verified_at FROM users WHERE id = 'usr_bob'").get();
   assert.strictEqual(bobUnverified.email_verified_at, null, 'Bob email verification should be revoked');
 
-  // Re-verify Bob
-  await adminService.setUserVerification('usr_bob', true, 'admin_999');
+  // Test manual credit adjustments
+  const newBalance = await adminService.adjustUserCredits('usr_alice', 50, 'Bonus promo credits', 'admin_999');
+  assert.strictEqual(newBalance, 50, 'Alice balance should be 50 credits');
+  const userDetail = await adminService.getUserDetail('usr_alice');
+  assert.strictEqual(userDetail.creditBalance, 50, 'UserDetail should reflect updated credit balance');
 
-  console.log('✔ Admin user actions: Suspend, reactivate, manual email verification, and role elevation verified with self-protection');
+  console.log('✔ Admin user actions: Suspend, reactivate, manual email verification, role elevation, and credit adjustments verified with self-protection');
 
   console.log('\n--- 6. Testing Dynamic Settings & Persistence ---');
   await adminService.updateSettings(
