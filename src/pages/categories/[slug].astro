@@ -1,11 +1,12 @@
 ---
-import BaseLayout from '@/layouts/BaseLayout.astro';
+import PublicLayout from '@/layouts/PublicLayout.astro';
 import Card from '@/components/ui/Card.astro';
 import Badge from '@/components/ui/Badge.astro';
 import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
 import StructuredData from '@/components/seo/StructuredData.astro';
 import { SeoService } from '@/services/seo/seo.service';
 import { InternalLinkService } from '@/services/seo/internal-link.service';
+import { getD1Database } from '@/lib/db/client';
 import { executeQuery, fetchFirst } from '@/lib/db/query';
 import type { AssessmentCategoryRow, AssessmentRow, FaqRow } from '@/types/database';
 
@@ -15,7 +16,7 @@ const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/assessments');
 
 const env = Astro.locals.runtime?.env;
-const db = env?.DB || null;
+const db = getD1Database(env);
 
 const category = db
   ? await fetchFirst<AssessmentCategoryRow>(
@@ -33,7 +34,7 @@ if (!category) {
 const assessments = db
   ? await executeQuery<AssessmentRow>(
       db,
-      `SELECT * FROM assessments WHERE category_id = ? AND status = 'published' ORDER BY display_order ASC, popularity_score DESC`,
+      `SELECT * FROM assessments WHERE category_id = ? AND status = 'published' ORDER BY display_order ASC, created_at DESC`,
       [category.id]
     )
   : [];
@@ -61,15 +62,15 @@ const pageMetadata = await seoService.getPageMetadata({
   pageType: 'category',
   entityId: category.id,
   path: `/categories/${category.slug}`,
-  rawTitle: `${category.name} Psychology Tests & Assessments`,
+  rawTitle: `${category.name} Psychology Tests & Assessments | Psychology Calculator`,
   defaultDescription: category.description || `Explore standardized ${category.name} psychometric evaluations and AI personality reports.`
 });
 
 const faqSchema = faqs.length > 0 ? seoService.generateStructuredData('FAQPage', { faqs }) : null;
 ---
 
-<BaseLayout
-  title={pageMetadata.rawTitle}
+<PublicLayout
+  title={pageMetadata.title}
   description={pageMetadata.description}
   canonicalUrl={pageMetadata.canonicalUrl}
 >
@@ -81,7 +82,7 @@ const faqSchema = faqs.length > 0 ? seoService.generateStructuredData('FAQPage',
     <div class="space-y-4 max-w-3xl">
       <Badge variant="info" size="md">Psychometric Category</Badge>
       <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-        {category.name} <span class="text-indigo-600">Assessments</span>
+        {category.name} <span class="text-teal-600">Assessments</span>
       </h1>
       <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
         {category.description || 'Scientifically grounded psychological instruments designed for deep self-understanding and behavioral insight.'}
@@ -117,7 +118,7 @@ const faqSchema = faqs.length > 0 ? seoService.generateStructuredData('FAQPage',
                 </div>
 
                 <h3 class="text-lg font-bold text-slate-900 leading-snug">
-                  <a href={`/assessments/${asm.slug}`} class="hover:text-indigo-600 transition-colors">
+                  <a href={`/assessments/${asm.slug}`} class="hover:text-teal-600 transition-colors">
                     {asm.name}
                   </a>
                 </h3>
@@ -133,7 +134,7 @@ const faqSchema = faqs.length > 0 ? seoService.generateStructuredData('FAQPage',
                 </span>
                 <a
                   href={`/assessments/${asm.slug}`}
-                  class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors"
+                  class="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold rounded-xl transition-colors"
                 >
                   Start Test →
                 </a>
@@ -182,4 +183,4 @@ const faqSchema = faqs.length > 0 ? seoService.generateStructuredData('FAQPage',
   </div>
 
   {faqSchema && <StructuredData schema={faqSchema} />}
-</BaseLayout>
+</PublicLayout>
