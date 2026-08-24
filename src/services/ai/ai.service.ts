@@ -4,6 +4,7 @@ import { executeQuery, fetchFirst } from '@/lib/db/query';
 import { NotFoundError, ForbiddenError, ValidationError, ExternalServiceError } from '@/lib/errors';
 import { ResultService } from '../result.service';
 import { CreditService } from '../credit.service';
+import { AuditService } from '../audit.service';
 import { AIContextBuilder } from './ai-context-builder';
 import { AIValidator } from './ai-validator';
 import type { AIProvider, AIGenerationResponse } from './providers/ai-provider.interface';
@@ -391,6 +392,187 @@ export class AIService extends BaseService {
   }
 
   /**
+   * Checks if master AI feature flag is active
+   */
+  public async isMasterAiEnabled(): Promise<boolean> {
+    if (!this.db) return true;
+    const flag = await fetchFirst<{ is_enabled: number }>(
+      this.db,
+      "SELECT is_enabled FROM feature_flags WHERE key = 'ai_reports'"
+    );
+    return flag ? Boolean(flag.is_enabled) : true;
+  }
+
+  /**
+   * Toggles master AI feature flag
+   */
+  public async toggleMasterAi(isEnabled: boolean, actorId: string): Promise<void> {
+    if (!this.db) throw new Error('Database unavailable');
+    await this.db
+      .prepare("UPDATE feature_flags SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE key = 'ai_reports'")
+      .bind(isEnabled ? 1 : 0)
+      .run();
+
+    const auditService = new AuditService(this.db);
+    await auditService.record({
+      actorId,
+      actorRole: 'admin',
+      action: 'admin_feature_flag_toggled',
+      entityType: 'feature_flag',
+      entityId: 'ai_reports',
+      details: { isEnabled }
+    });
+  }
+
+  /**
+   * Toggles a single AI provider enabled status
+   */
+  public async toggleProvider(configId: string, isEnabled: boolean, actorId: string): Promise<void> {
+    if (!this.db) throw new Error('Database unavailable');
+    const config = await fetchFirst<AiConfigurationRow>(
+      this.db,
+      'SELECT * FROM ai_configurations WHERE id = ?',
+      [configId]
+    );
+    if (!config) throw new NotFoundError('AI Configuration not found');
+
+    await this.db
+      .prepare('UPDATE ai_configurations SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .bind(isEnabled ? 1 : 0, configId)
+      .run();
+
+    const auditService = new AuditService(this.db);
+    await auditService.record({
+      actorId,
+      actorRole: 'admin',
+      action: isEnabled ? 'admin_ai_provider_enabled' : 'admin_ai_provider_disabled',
+      entityType: 'ai_configuration',
+      entityId: configId,
+      details: { provider: config.provider, model: config.model, isEnabled }
+    });
+  }
+
+  /**
+   * Updates provider configuration and optional API key
+   */
+  public async updateProviderConfig(
+    configId: string,
+    data: {
+      model?: string;
+      priority?: number;
+      creditCost?: number;
+      isEnabled?: boolean;
+      apiKey?: string;
+      systemPrompt?: string;
+    },
+    actorId: string
+  ): Promise<void> {
+    if (!this.db) throw new Error('Database unavailable');
+    const config = await fetchFirst<AiConfigurationRow>(
+      this.db,
+      'SELECT * FROM ai_configurations WHERE id = ?',
+      [configId]
+    );
+    if (!config) throw new NotFoundError('AI Configuration not found');
+
+    const newModel = data.model !== undefined ? data.model : config.model;
+    const newPriority = data.priority !== undefined ? data.priority : config.priority;
+    const newCreditCost = data.creditCost !== undefined ? data.creditCost : config.credit_cost;
+    const newIsEnabled = data.isEnabled !== undefined ? (data.isEnabled ? 1 : 0) : config.is_enabled;
+    const newSystemPrompt = data.systemPrompt !== undefined ? data.systemPrompt : config.system_prompt;
+
+    await this.db
+      .prepare(
+        `UPDATE ai_configurations 
+         SET model = ?, priority = ?, credit_cost = ?, is_enabled = ?, system_prompt = ?, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`
+      )
+      .bind(newModel, newPriority, newCreditCost, newIsEnabled, newSystemPrompt, configId)
+      .run();
+
+    // If API Key is provided, store in site_settings securely
+    if (data.apiKey && data.apiKey.trim()) {
+      const secretKeyName = config.api_key_reference.toLowerCase();
+      await this.db
+        .prepare(
+          `INSERT INTO site_settings (key, value, type, is_public, description, updated_at)
+           VALUES (?, ?, 'string', 0, ?, CURRENT_TIMESTAMP)
+           ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`
+        )
+        .bind(secretKeyName, data.apiKey.trim(), `${config.provider.toUpperCase()} API Key`)
+        .run();
+    }
+
+    const auditService = new AuditService(this.db);
+    await auditService.record({
+      actorId,
+      actorRole: 'admin',
+      action: 'admin_ai_config_updated',
+      entityType: 'ai_configuration',
+      entityId: configId,
+      details: {
+        provider: config.provider,
+        model: newModel,
+        priority: newPriority,
+        creditCost: newCreditCost,
+        isEnabled: newIsEnabled === 1,
+        apiKeyUpdated: Boolean(data.apiKey && data.apiKey.trim())
+      }
+    });
+  }
+
+  /**
+   * Retrieves AI configs along with dynamic API key status
+   */
+  public async getConfigsWithKeyStatus(): Promise<
+    Array<
+      AiConfigurationRow & {
+        hasApiKey: boolean;
+        maskedKey: string | null;
+        source: 'database' | 'environment' | 'missing';
+      }
+    >
+  > {
+    if (!this.db) return [];
+    const configs = await this.getConfigs();
+
+    const result = [];
+    for (const cfg of configs) {
+      const secretKeyName = cfg.api_key_reference.toLowerCase();
+      const dbRow = await fetchFirst<{ value: string }>(
+        this.db,
+        'SELECT value FROM site_settings WHERE key = ?',
+        [secretKeyName]
+      );
+
+      let key = dbRow?.value;
+      let source: 'database' | 'environment' | 'missing' = 'database';
+
+      if (!key) {
+        key = this.env[cfg.api_key_reference] || process.env[cfg.api_key_reference];
+        if (key) source = 'environment';
+        else source = 'missing';
+      }
+
+      let maskedKey = null;
+      if (key && key.length > 8) {
+        maskedKey = `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
+      } else if (key) {
+        maskedKey = '••••••••';
+      }
+
+      result.push({
+        ...cfg,
+        hasApiKey: Boolean(key),
+        maskedKey,
+        source
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Admin: Returns all prompt templates
    */
   public async getPrompts(): Promise<AiPromptRow[]> {
@@ -411,7 +593,23 @@ export class AIService extends BaseService {
       throw new ExternalServiceError(`Unsupported AI provider: ${config.provider}`);
     }
 
-    const apiKey = this.env[config.api_key_reference] || process.env[config.api_key_reference];
+    // Dynamic resolution: Check database site_settings first, then worker environment
+    let apiKey: string | undefined;
+    if (this.db) {
+      const secretKeyName = config.api_key_reference.toLowerCase();
+      const dbSetting = await fetchFirst<{ value: string }>(
+        this.db,
+        'SELECT value FROM site_settings WHERE key = ?',
+        [secretKeyName]
+      );
+      if (dbSetting?.value) {
+        apiKey = dbSetting.value;
+      }
+    }
+
+    if (!apiKey) {
+      apiKey = this.env[config.api_key_reference] || process.env[config.api_key_reference];
+    }
 
     // Mock response fallback for local development or testing when API key is not present
     if (!apiKey) {

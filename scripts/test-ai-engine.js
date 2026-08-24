@@ -205,6 +205,47 @@ async function runAIEngineTests() {
   assert.ok(prompts.length >= 1);
   console.log(`✔ Admin prompts: ${prompts.map((p) => `${p.slug} (v${p.version})`).join(', ')}`);
 
+  console.log('\n--- 7. Testing Admin Dynamic API Keys & Master Switch Controls ---');
+  // 1. Test Master AI Toggle
+  await aiService.toggleMasterAi(false, 'admin_1');
+  let masterActive = await aiService.isMasterAiEnabled();
+  assert.strictEqual(masterActive, false, 'Master AI should be disabled');
+
+  await aiService.toggleMasterAi(true, 'admin_1');
+  masterActive = await aiService.isMasterAiEnabled();
+  assert.strictEqual(masterActive, true, 'Master AI should be re-enabled');
+
+  // 2. Test Provider Toggle
+  const firstConfig = configs[0];
+  await aiService.toggleProvider(firstConfig.id, false, 'admin_1');
+  const disabledConfig = sqlite.prepare('SELECT is_enabled FROM ai_configurations WHERE id = ?').get(firstConfig.id);
+  assert.strictEqual(disabledConfig.is_enabled, 0, 'Provider should be disabled');
+
+  await aiService.toggleProvider(firstConfig.id, true, 'admin_1');
+  const reenabledConfig = sqlite.prepare('SELECT is_enabled FROM ai_configurations WHERE id = ?').get(firstConfig.id);
+  assert.strictEqual(reenabledConfig.is_enabled, 1, 'Provider should be re-enabled');
+
+  // 3. Test Dynamic API Key Update
+  await aiService.updateProviderConfig(
+    firstConfig.id,
+    {
+      model: 'gemini-1.5-flash-updated',
+      creditCost: 3,
+      apiKey: 'AIzaSy_test_secret_key_123456789'
+    },
+    'admin_1'
+  );
+
+  const configsWithStatus = await aiService.getConfigsWithKeyStatus();
+  const updatedCfg = configsWithStatus.find((c) => c.id === firstConfig.id);
+  assert.ok(updatedCfg, 'Updated config found');
+  assert.strictEqual(updatedCfg.model, 'gemini-1.5-flash-updated');
+  assert.strictEqual(updatedCfg.credit_cost, 3);
+  assert.strictEqual(updatedCfg.hasApiKey, true);
+  assert.ok(updatedCfg.maskedKey?.includes('AIza'), 'Key masked for security');
+
+  console.log('✔ Admin dynamic controls: Master switch, provider toggles, and secure API key updates verified');
+
   console.log('\n============================================================');
   console.log('🎉 ALL PHASE 8 AI ENGINE TESTS PASSED!');
   console.log('============================================================\n');
