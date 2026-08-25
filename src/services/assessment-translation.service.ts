@@ -101,14 +101,12 @@ export class AssessmentTranslationService extends BaseService {
       long_description: string | null;
       instructions: string | null;
       disclaimer: string | null;
-      seo_title: string | null;
-      seo_description: string | null;
       category_id: string | null;
       category_name: string | null;
     }>(
       this.db,
       `SELECT a.id, a.slug, a.name, a.short_description, a.long_description, a.instructions, a.disclaimer,
-              a.seo_title, a.seo_description, a.category_id, c.name as category_name
+              a.category_id, c.name as category_name
        FROM assessments a
        LEFT JOIN assessment_categories c ON a.category_id = c.id
        WHERE a.id = ? OR a.slug = ?`,
@@ -125,34 +123,33 @@ export class AssessmentTranslationService extends BaseService {
       description: string | null;
     }>(
       this.db,
-      'SELECT id, name, description FROM assessment_dimensions WHERE assessment_id = ? ORDER BY id ASC',
+      'SELECT id, name, description FROM assessment_dimensions WHERE assessment_id = ? ORDER BY display_order ASC, id ASC',
       [asm.id]
     );
 
     const questions = await executeQuery<{
       id: string;
-      dimension_id: string | null;
       question_text: string;
-      question_order: number;
+      display_order: number;
     }>(
       this.db,
-      'SELECT id, dimension_id, question_text, question_order FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC, id ASC',
+      'SELECT id, question_text, display_order FROM assessment_questions WHERE assessment_id = ? ORDER BY display_order ASC, id ASC',
       [asm.id]
     );
 
     const questionIds = questions.map((q) => q.id);
-    let options: Array<{ id: string; question_id: string; option_text: string; option_value: number }> = [];
+    let options: Array<{ id: string; question_id: string; option_text: string; option_value: string }> = [];
 
     if (questionIds.length > 0) {
       const placeholders = questionIds.map(() => '?').join(',');
-      options = await executeQuery<{ id: string; question_id: string; option_text: string; option_value: number }>(
+      options = await executeQuery<{ id: string; question_id: string; option_text: string; option_value: string }>(
         this.db,
-        `SELECT id, question_id, option_text, option_value FROM question_options WHERE question_id IN (${placeholders}) ORDER BY option_value ASC`,
+        `SELECT id, question_id, option_text, option_value FROM question_options WHERE question_id IN (${placeholders}) ORDER BY display_order ASC, id ASC`,
         questionIds
       );
     }
 
-    const optionsByQ = new Map<string, Array<{ id: string; option_text: string; option_value: number }>>();
+    const optionsByQ = new Map<string, Array<{ id: string; option_text: string; option_value: string }>>();
     for (const opt of options) {
       if (!optionsByQ.has(opt.question_id)) {
         optionsByQ.set(opt.question_id, []);
@@ -166,9 +163,13 @@ export class AssessmentTranslationService extends BaseService {
 
     return {
       ...asm,
+      seo_title: `${asm.name} | PsychologyCalculator.com`,
+      seo_description: asm.short_description,
       dimensions,
       questions: questions.map((q) => ({
         ...q,
+        dimension_id: null,
+        question_order: q.display_order || 0,
         options: optionsByQ.get(q.id) || []
       }))
     };
@@ -319,11 +320,12 @@ CRITICAL INSTRUCTIONS:
     const apiKey = await this.resolveDeepSeekApiKey();
 
     if (adminId && this.db) {
-      await this.auditService.log({
-        adminId,
+      await this.auditService.record({
+        actorId: adminId,
+        actorRole: 'admin',
         action: 'ASSESSMENT_TRANSLATION_STARTED',
-        resourceType: 'assessment_translation',
-        resourceId: `${source.id}_${targetLocale}`,
+        entityType: 'assessment_translation',
+        entityId: `${source.id}_${targetLocale}`,
         details: { assessmentId: source.id, targetLocale }
       });
     }
@@ -357,11 +359,12 @@ CRITICAL INSTRUCTIONS:
     const validatedTranslation = this.validateAndNormalizeTranslation(source, parsed, targetLocale);
 
     if (adminId && this.db) {
-      await this.auditService.log({
-        adminId,
+      await this.auditService.record({
+        actorId: adminId,
+        actorRole: 'admin',
         action: 'ASSESSMENT_TRANSLATION_COMPLETED',
-        resourceType: 'assessment_translation',
-        resourceId: `${source.id}_${targetLocale}`,
+        entityType: 'assessment_translation',
+        entityId: `${source.id}_${targetLocale}`,
         details: {
           assessmentId: source.id,
           targetLocale,
@@ -475,11 +478,12 @@ CRITICAL INSTRUCTIONS:
       }
     }
 
-    await this.auditService.log({
-      adminId,
+    await this.auditService.record({
+      actorId: adminId,
+      actorRole: 'admin',
       action: status === 'published' ? 'ASSESSMENT_TRANSLATION_APPROVED' : 'ASSESSMENT_TRANSLATION_SAVED',
-      resourceType: 'assessment_translation',
-      resourceId: translationId,
+      entityType: 'assessment_translation',
+      entityId: translationId,
       details: { assessmentId: source.id, targetLocale, status }
     });
 
@@ -503,7 +507,6 @@ CRITICAL INSTRUCTIONS:
 
     // Dimensions QA
     const rawDims: any[] = Array.isArray(raw.dimensions) ? raw.dimensions : [];
-    const sourceDimIds = new Set(source.dimensions.map((d) => d.id));
     const normalizedDimensions = source.dimensions.map((srcDim) => {
       const matched = rawDims.find((d) => d.id === srcDim.id);
       return {
@@ -551,12 +554,16 @@ CRITICAL INSTRUCTIONS:
 
   private async resolveDeepSeekApiKey(): Promise<string | undefined> {
     if (this.db) {
-      const setting = await fetchFirst<{ value: string }>(
-        this.db,
-        'SELECT value FROM site_settings WHERE key = ?',
-        ['deepseek_api_key']
-      );
-      if (setting?.value) return setting.value;
+      try {
+        const setting = await fetchFirst<{ value: string }>(
+          this.db,
+          'SELECT value FROM site_settings WHERE key = ?',
+          ['deepseek_api_key']
+        );
+        if (setting?.value) return setting.value;
+      } catch (err) {
+        this.logger.warn('Failed to query site_settings for deepseek_api_key', { error: String(err) });
+      }
     }
     return this.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY;
   }
