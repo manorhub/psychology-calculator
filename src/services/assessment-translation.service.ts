@@ -280,11 +280,7 @@ CRITICAL INSTRUCTIONS:
         })),
         questions: source.questions.map((q) => ({
           id: q.id,
-          question_text: q.question_text,
-          options: q.options.map((o) => ({
-            id: o.id,
-            option_text: o.option_text
-          }))
+          question_text: q.question_text
         }))
       },
       required_json_format: {
@@ -305,13 +301,7 @@ CRITICAL INSTRUCTIONS:
         questions: [
           {
             id: 'Exact question ID matching source',
-            question_text: `Translated question text in ${langInfo.name}`,
-            options: [
-              {
-                id: 'Exact option ID matching source',
-                option_text: `Translated option text in ${langInfo.name}`
-              }
-            ]
+            question_text: `Translated question text in ${langInfo.name}`
           }
         ]
       }
@@ -333,13 +323,13 @@ CRITICAL INSTRUCTIONS:
     let genResponse;
     if (apiKey) {
       genResponse = await this.deepSeekProvider.generateStructured(
-        JSON.stringify(userPromptPayload, null, 2),
+        JSON.stringify(userPromptPayload),
         systemPrompt,
         {
           apiKey,
           model: 'deepseek-chat',
           temperature: 0.3,
-          maxTokens: 4096,
+          maxTokens: 8192,
           timeoutMs: 120000
         }
       );
@@ -350,7 +340,7 @@ CRITICAL INSTRUCTIONS:
 
     let parsed: any;
     try {
-      parsed = JSON.parse(genResponse.contentJson);
+      parsed = this.parseAndRepairJson(genResponse.contentJson);
     } catch (err) {
       throw new ExternalServiceError(`Failed to parse DeepSeek JSON translation response: ${String(err)}`);
     }
@@ -550,6 +540,70 @@ CRITICAL INSTRUCTIONS:
       dimensions: normalizedDimensions,
       questions: normalizedQuestions
     };
+  }
+
+  /**
+   * Cleans and defensively parses / repairs JSON from DeepSeek output
+   */
+  public parseAndRepairJson(raw: string): any {
+    let cleaned = (raw || '').trim();
+
+    // 1. Remove markdown backticks if present
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    }
+
+    // 2. Try parsing directly
+    try {
+      return JSON.parse(cleaned);
+    } catch (initialErr) {
+      // 3. Clean trailing commas and non-printable control characters
+      try {
+        const sanitized = cleaned
+          .replace(/[\u0000-\u001F\u007F-\u009F]+/g, ' ')
+          .replace(/,\s*([}\]])/g, '$1');
+        return JSON.parse(sanitized);
+      } catch {
+        // 4. Attempt heuristic closure of cut-off strings/arrays/objects
+        try {
+          let fixed = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]+/g, ' ');
+          
+          // Remove incomplete trailing key/value pair up to last valid comma or bracket
+          const lastValidDelimiter = Math.max(
+            fixed.lastIndexOf('},'),
+            fixed.lastIndexOf('"],'),
+            fixed.lastIndexOf('",'),
+            fixed.lastIndexOf('}')
+          );
+
+          if (lastValidDelimiter > fixed.length * 0.7) {
+            fixed = fixed.substring(0, lastValidDelimiter + 1);
+          }
+
+          // Count open and close brackets
+          const openBraces = (fixed.match(/{/g) || []).length;
+          const closeBraces = (fixed.match(/}/g) || []).length;
+          const openBrackets = (fixed.match(/\[/g) || []).length;
+          const closeBrackets = (fixed.match(/\]/g) || []).length;
+          const quotes = (fixed.match(/(?<!\\)"/g) || []).length;
+
+          if (quotes % 2 !== 0) {
+            fixed += '"';
+          }
+
+          for (let i = 0; i < openBrackets - closeBrackets; i++) {
+            fixed += ']';
+          }
+          for (let i = 0; i < openBraces - closeBraces; i++) {
+            fixed += '}';
+          }
+
+          return JSON.parse(fixed);
+        } catch {
+          throw initialErr;
+        }
+      }
+    }
   }
 
   private async resolveDeepSeekApiKey(): Promise<string | undefined> {

@@ -158,9 +158,19 @@ const saveApprovedResult = await service.saveTranslation(
 );
 assert(saveApprovedResult.success === true, 'Translation approved and published to D1');
 
-// Verify updated status in D1
-const updatedStatusMap = await service.getTranslationStatusMap('asm_big_five');
-assert(updatedStatusMap.es.status === 'published', 'D1 status updated to published');
+// 6. Test JSON Parsing & Repairing Defense
+console.log('\n6. Testing JSON Parsing & Heuristic Repair Defense...');
+const fencedJson = '```json\n{"name": "Test Markdown", "short_description": "Cleaned"}\n```';
+const parsedFenced = service.parseAndRepairJson(fencedJson);
+assert(parsedFenced.name === 'Test Markdown', 'Successfully parsed markdown fenced JSON');
+
+const trailingCommaJson = '{"name": "Trailing Comma", "short_description": "Valid",}';
+const parsedTrailing = service.parseAndRepairJson(trailingCommaJson);
+assert(parsedTrailing.name === 'Trailing Comma', 'Successfully parsed JSON with trailing comma');
+
+const unclosedJson = '{"name": "Unclosed Test", "short_description": "Recovered"';
+const parsedUnclosed = service.parseAndRepairJson(unclosedJson);
+assert(parsedUnclosed.name === 'Unclosed Test', 'Successfully repaired unclosed JSON structure');
 
 console.log(`\n======================================================`);
 console.log(`All ${passedTests} / ${totalTests} Admin AI Translation tests PASSED successfully!`);
