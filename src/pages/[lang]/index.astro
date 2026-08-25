@@ -54,6 +54,7 @@ const categories = await Promise.all(
     };
   })
 );
+const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
 
 // Localize Featured Assessments
 const featuredAssessments = await Promise.all(
@@ -62,7 +63,8 @@ const featuredAssessments = await Promise.all(
     return {
       ...asm,
       name: loc?.name || asm.name,
-      short_description: loc?.shortDescription || asm.short_description
+      short_description: loc?.shortDescription || asm.short_description,
+      category_name: (asm.category_id && categoryMap.get(asm.category_id)) || asm.category_name
     };
   })
 );

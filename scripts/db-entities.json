@@ -1,0 +1,317 @@
+{
+  "categories": [
+    {
+      "id": "cat_personality",
+      "slug": "personality",
+      "name": "Personality",
+      "description": "Explore personality traits, behavioral patterns, and character strengths through validated self-assessments."
+    },
+    {
+      "id": "cat_relationships",
+      "slug": "relationships",
+      "name": "Relationships",
+      "description": "Understand attachment patterns, communication tendencies, and intimacy dynamics in relationships."
+    },
+    {
+      "id": "cat_eq",
+      "slug": "emotional-intelligence",
+      "name": "Emotional Intelligence",
+      "description": "Measure emotional quotient, stress tolerance, and interpersonal agility through structured self-evaluations."
+    },
+    {
+      "id": "cat_self_dev",
+      "slug": "self-development",
+      "name": "Self Development",
+      "description": "Scientifically structured self-esteem, self-discipline, and personal growth assessments."
+    },
+    {
+      "id": "cat_communication",
+      "slug": "communication",
+      "name": "Communication",
+      "description": "Evaluate interpersonal communication habits, negotiation tendencies, and conflict styles."
+    },
+    {
+      "id": "cat_wellbeing",
+      "slug": "mental-wellbeing",
+      "name": "Mental Wellbeing",
+      "description": "Reflective self-assessments for exploring everyday stress patterns, coping habits, and emotional equilibrium."
+    },
+    {
+      "id": "cat_relationships_attachment",
+      "slug": "relationships-attachment",
+      "name": "Relationships & Attachment",
+      "description": "Understand attachment patterns, communication tendencies, and intimacy dynamics in relationships."
+    },
+    {
+      "id": "cat_emotional_wellbeing",
+      "slug": "emotional-wellbeing",
+      "name": "Emotional Wellbeing",
+      "description": "Assess emotional self-awareness, stress management, empathy, and everyday psychological resilience."
+    },
+    {
+      "id": "cat_career_work",
+      "slug": "career-work",
+      "name": "Career & Work",
+      "description": "Discover your professional working style, leadership strengths, and workplace communication tendencies."
+    },
+    {
+      "id": "cat_social_communication",
+      "slug": "social-communication",
+      "name": "Social & Communication",
+      "description": "Evaluate interpersonal communication habits, negotiation tendencies, and conflict styles."
+    },
+    {
+      "id": "cat_cognitive_style",
+      "slug": "cognitive-style",
+      "name": "Cognitive Style",
+      "description": "Understand how you process information, make complex decisions, and solve problems creatively."
+    }
+  ],
+  "assessments": [
+    {
+      "id": "asm_92cd0fc853d345e8",
+      "slug": "openness-to-experience-test",
+      "name": "Openness to Experience Test",
+      "short_description": "Explore your intellectual curiosity, creative imagination, aesthetic appreciation, and openness to novel perspectives.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_3cf5d9fa464f49b0",
+      "slug": "multidimensional-anger-test",
+      "name": "Multidimensional Anger Test",
+      "short_description": "Examine your anger triggers, emotional arousal intensity, cognitive appraisal patterns, and behavioral regulation strategies.",
+      "category_id": "cat_emotional_wellbeing"
+    },
+    {
+      "id": "asm_f99117e467bb41ee",
+      "slug": "16-type-personality-test",
+      "name": "16-Type Personality Test",
+      "short_description": "Explore your cognitive preferences across Extraversion vs Introversion, Sensing vs Intuition, Thinking vs Feeling, and Judging vs Perceiving.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_2ecf238b3a124cfd",
+      "slug": "agreeableness-test",
+      "name": "Agreeableness Test",
+      "short_description": "Measure your prosocial cooperativeness, trust, empathy, and compassionate communication tendencies in social environments.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_5d8a9342795e4089",
+      "slug": "relationship-compatibility-test",
+      "name": "Relationship Compatibility Test",
+      "short_description": "Assess emotional resonance, communication synergy, conflict tendencies, and shared relationship expectations with a partner.",
+      "category_id": "cat_relationships_attachment"
+    },
+    {
+      "id": "asm_b18fd0cd016a4745",
+      "slug": "emotional-awareness-test",
+      "name": "Emotional Awareness Test",
+      "short_description": "Measure how accurately you identify, process, and articulate your internal feelings and emotional signals in real time.",
+      "category_id": "cat_emotional_wellbeing"
+    },
+    {
+      "id": "asm_06f7b593f4274449",
+      "slug": "career-personality-test",
+      "name": "Career Personality Test",
+      "short_description": "Discover career paths, workplace environments, and occupational roles aligned with your natural behavioral style and cognitive strengths.",
+      "category_id": "cat_career_work"
+    },
+    {
+      "id": "asm_52c09245bbb44b6a",
+      "slug": "work-style-test",
+      "name": "Work Style Test",
+      "short_description": "Understand what energizes your work, leadership instincts, problem-solving, and professional collaboration in workplace settings.",
+      "category_id": "cat_career_work"
+    },
+    {
+      "id": "asm_587569205b7c4822",
+      "slug": "social-confidence-test",
+      "name": "Social Confidence Test",
+      "short_description": "Assess your level of comfort, authenticity, and self-assurance in social gatherings, group conversations, and public speaking.",
+      "category_id": "cat_social_communication"
+    },
+    {
+      "id": "asm_e49c2d653dd74f0d",
+      "slug": "social-skills-test",
+      "name": "Social Skills Test",
+      "short_description": "Evaluate active listening, nonverbal communication, conversational rapport, and interpersonal effectiveness in social settings.",
+      "category_id": "cat_social_communication"
+    },
+    {
+      "id": "asm_a262305ef26f4a71",
+      "slug": "motivation-style-test",
+      "name": "Motivation Style Test",
+      "short_description": "Identify your primary internal and external motivation drivers to maintain momentum, focus, and purposeful engagement.",
+      "category_id": "cat_self_dev"
+    },
+    {
+      "id": "asm_81b98f9600754fb8",
+      "slug": "goal-orientation-test",
+      "name": "Goal Orientation Test",
+      "short_description": "Discover whether you are driven by mastery, performance, or avoidance motivations in personal and professional pursuits.",
+      "category_id": "cat_self_dev"
+    },
+    {
+      "id": "asm_adf613b5df2c4a85",
+      "slug": "decision-making-style-test",
+      "name": "Decision-Making Style Test",
+      "short_description": "Evaluate your decision-making approach: Analytical, Intuitive, Directive, or Conceptual when facing complex challenges.",
+      "category_id": "cat_self_dev"
+    },
+    {
+      "id": "asm_e727215f0a8d42f0",
+      "slug": "thinking-style-test",
+      "name": "Thinking Style Test",
+      "short_description": "Understand your natural cognitive patterns: Linear vs Holistic, Concrete vs Abstract, and Detail-oriented vs Big-picture thinking.",
+      "category_id": "cat_cognitive_style"
+    },
+    {
+      "id": "asm_fefb0ac8489a4c2f",
+      "slug": "problem-solving-style-test",
+      "name": "Problem-Solving Style Test",
+      "short_description": "Identify your cognitive problem-solving approach: Systematic, Creative, Pragmatic, or Collaborative when tackling obstacles.",
+      "category_id": "cat_cognitive_style"
+    },
+    {
+      "id": "asm_3accbcd1009748b2",
+      "slug": "leadership-style-test",
+      "name": "Leadership Style Test",
+      "short_description": "Explore your core leadership instincts: Transformational, Democratic, Authoritative, or Coaching to lead teams effectively.",
+      "category_id": "cat_career_work"
+    },
+    {
+      "id": "asm_1e7a95fd8f5441f6",
+      "slug": "workplace-communication-test",
+      "name": "Workplace Communication Test",
+      "short_description": "Evaluate your verbal, written, and collaborative communication effectiveness within teams and cross-functional organizations.",
+      "category_id": "cat_career_work"
+    },
+    {
+      "id": "asm_4f0625e2ddc14ac0",
+      "slug": "conflict-resolution-style-test",
+      "name": "Conflict Resolution Style Test",
+      "short_description": "Understand your strategic approach to resolving interpersonal disagreements constructively and preserving collaborative relationships.",
+      "category_id": "cat_social_communication"
+    },
+    {
+      "id": "asm_7b2b4a5010a146ba",
+      "slug": "stress-management-style-test",
+      "name": "Stress Management Style Test",
+      "short_description": "Discover how you cope with acute and chronic pressure: Problem-focused, Emotion-focused, or Avoidance-oriented strategies.",
+      "category_id": "cat_emotional_wellbeing"
+    },
+    {
+      "id": "asm_c8c7679d0fd34ac0",
+      "slug": "resilience-test",
+      "name": "Resilience Test",
+      "short_description": "Measure psychological resilience, adaptive coping strategies, and mental fortitude when navigating adversity and life stress.",
+      "category_id": "cat_emotional_wellbeing"
+    },
+    {
+      "id": "asm_651fe13ed5034909",
+      "slug": "empathy-test",
+      "name": "Empathy Test",
+      "short_description": "Measure cognitive, emotional, and compassionate empathy to understand how you perceive and respond to others' emotional experiences.",
+      "category_id": "cat_emotional_wellbeing"
+    },
+    {
+      "id": "asm_41d9388ef991490c",
+      "slug": "relationship-boundaries-test",
+      "name": "Relationship Boundaries Test",
+      "short_description": "Evaluate your ability to establish, communicate, and maintain healthy emotional and physical boundaries in close relationships.",
+      "category_id": "cat_relationships_attachment"
+    },
+    {
+      "id": "asm_5b2cbb362c1c4cdd",
+      "slug": "self-discipline-test",
+      "name": "Self-Discipline Test",
+      "short_description": "Evaluate impulse control, habit consistency, sustained attention, and willpower in working toward long-term goals.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_3d8e5d3efae541d0",
+      "slug": "assertiveness-test",
+      "name": "Assertiveness Test",
+      "short_description": "Assess your ability to express personal boundaries, communicate needs clearly, and stand up for yourself with confidence and respect.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_e4ef228659e84706",
+      "slug": "emotional-availability-test",
+      "name": "Emotional Availability Test",
+      "short_description": "Assess your readiness and capacity for vulnerable, authentic emotional connection and intimacy in close relationships.",
+      "category_id": "cat_relationships_attachment"
+    },
+    {
+      "id": "asm_dd29493e90e84f46",
+      "slug": "self-awareness-test",
+      "name": "Self-Awareness Test",
+      "short_description": "Examine your internal and external self-awareness to gain insight into how your thoughts, values, and actions shape your life.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_9f6ce1b54437484c",
+      "slug": "introvert-vs-extrovert-test",
+      "name": "Introvert vs Extrovert Test",
+      "short_description": "Comprehensive Introvert vs Extrovert Test evaluation.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_big_five",
+      "slug": "big-five-personality-test",
+      "name": "Big Five (OCEAN) Personality Test",
+      "short_description": "Discover your unique profile across the 5 scientifically validated core personality dimensions: Openness, Conscientiousness, Extraversion, Agreeableness, and Emotional Stability.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_attachment",
+      "slug": "attachment-style-test",
+      "name": "Attachment Style Test",
+      "short_description": "Identify your relational bonding style: Secure, Anxious-Preoccupied, Dismissive-Avoidant, or Fearful-Avoidant to understand romantic intimacy patterns.",
+      "category_id": "cat_relationships"
+    },
+    {
+      "id": "asm_love_language",
+      "slug": "love-language-quiz",
+      "name": "Love Language Quiz",
+      "short_description": "Discover your primary pathways for giving and receiving love: Words of Affirmation, Quality Time, Receiving Gifts, Acts of Service, or Physical Touch.",
+      "category_id": "cat_relationships"
+    },
+    {
+      "id": "asm_eq",
+      "slug": "emotional-intelligence-test",
+      "name": "Emotional Intelligence Test",
+      "short_description": "Assess your emotional self-awareness, impulse regulation, empathy, and social agility to improve personal and professional relationships.",
+      "category_id": "cat_eq"
+    },
+    {
+      "id": "asm_intro_extro",
+      "slug": "introvert-extrovert-test",
+      "name": "Introvert vs Extrovert Test",
+      "short_description": "Map your social energy spectrum: Introvert, Ambivert, or Extrovert to understand how you recharge, communicate, and navigate social stimulation.",
+      "category_id": "cat_personality"
+    },
+    {
+      "id": "asm_self_esteem",
+      "slug": "self-esteem-test",
+      "name": "Self-Esteem Test",
+      "short_description": "Evaluate your foundational sense of self-worth, unconditional self-acceptance, and internal psychological self-efficacy.",
+      "category_id": "cat_self_dev"
+    },
+    {
+      "id": "asm_communication",
+      "slug": "communication-style-test",
+      "name": "Communication Style Test",
+      "short_description": "Identify whether your communication tendencies are Assertive, Passive, Aggressive, or Passive-Aggressive in everyday conversations.",
+      "category_id": "cat_relationships"
+    },
+    {
+      "id": "asm_conflict",
+      "slug": "conflict-style-test",
+      "name": "Conflict Style Test",
+      "short_description": "Map your primary conflict negotiation tendencies: Collaborating, Compromising, Accommodating, Competing, or Avoiding under interpersonal pressure.",
+      "category_id": "cat_communication"
+    }
+  ]
+}

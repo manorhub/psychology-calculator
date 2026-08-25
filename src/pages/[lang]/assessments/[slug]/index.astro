@@ -72,24 +72,132 @@ const dimensions = await Promise.all(
 const siteUrl = 'https://www.psychologycalculator.com';
 const currentUrl = `${siteUrl}/${currentLocale}/assessments/${assessment.slug}`;
 
-const assessmentFaqs = [
-  {
-    q: `How long does the ${assessment.name} take?`,
-    a: `This assessment contains approximately ${questions.length || assessment.question_count || 10} validated items and typically takes around ${assessment.estimated_minutes || 6} minutes to complete at a natural pace.`
-  },
-  {
-    q: `Is the ${assessment.name} free to take?`,
-    a: `Yes. You can take this assessment as a guest with no registration required. You will receive an immediate score breakdown across all ${dimensions.length} evaluated dimensions at no cost.`
-  },
-  {
-    q: `Are my responses and results confidential?`,
-    a: `Yes. Your privacy is protected. Guest sessions do not store identifying personal details, and responses are processed solely to compute your personal score breakdown.`
-  },
-  {
-    q: `Is this assessment a medical or clinical diagnosis?`,
-    a: `No. Assessments on PsychologyCalculator.com are provided strictly for educational, self-reflection, and personal exploration purposes. They do not substitute for professional medical or psychological diagnosis.`
+const getLocalizedFaqs = (loc: SupportedLocale, asmName: string, qCount: number, estMin: number, dimCount: number) => {
+  switch (loc) {
+    case 'es':
+      return [
+        {
+          q: `¿Cuánto tiempo dura el ${asmName}?`,
+          a: `Esta evaluación contiene aproximadamente ${qCount} preguntas validadas y suele completarse en unos ${estMin} minutos a un ritmo natural.`
+        },
+        {
+          q: `¿El ${asmName} es gratuito?`,
+          a: `Sí. Puedes realizar este test como invitado sin necesidad de registro y recibirás un desglose inmediato de tu puntuación en las ${dimCount} dimensiones evaluadas sin coste alguno.`
+        },
+        {
+          q: `¿Mis respuestas y resultados son confidenciales?`,
+          a: `Sí. Tu privacidad está protegida. Las sesiones de invitados no guardan datos personales identificativos y las respuestas se procesan únicamente para calcular tu puntuación.`
+        },
+        {
+          q: `¿Es esta evaluación un diagnóstico médico o clínico?`,
+          a: `No. Las evaluaciones de PsychologyCalculator.com se proporcionan únicamente con fines educativos, de autorreflexión y crecimiento personal. No sustituyen el diagnóstico profesional médico o psicológico.`
+        }
+      ];
+    case 'fr':
+      return [
+        {
+          q: `Combien de temps dure le ${asmName} ?`,
+          a: `Ce test comprend environ ${qCount} questions validées et nécessite environ ${estMin} minutes à un rythme régulier.`
+        },
+        {
+          q: `Le ${asmName} est-il gratuit ?`,
+          a: `Oui. Vous pouvez passer ce test en tant qu'invité sans inscription préalable et recevoir instantanément votre profil détaillé sur les ${dimCount} dimensions sans frais.`
+        },
+        {
+          q: `Mes réponses et résultats sont-ils confidentiels ?`,
+          a: `Oui. Votre vie privée est protégée. Les sessions invités ne stockent aucune donnée personnelle identifiable.`
+        },
+        {
+          q: `Ce test constitue-t-il un diagnostic médical ou clinique ?`,
+          a: `Non. Les tests de PsychologyCalculator.com sont fournis à des fins éducatives et de réflexion personnelle et ne remplacent pas un avis médical ou psychiatrique.`
+        }
+      ];
+    case 'de':
+      return [
+        {
+          q: `Wie lange dauert der ${asmName}?`,
+          a: `Dieser Selbsttest umfasst ca. ${qCount} validierte Fragen und dauert in der Regel etwa ${estMin} Minuten in normalem Tempo.`
+        },
+        {
+          q: `Ist der ${asmName} kostenlos?`,
+          a: `Ja. Sie können den Test ohne Registrierung als Gast durchführen und erhalten sofort Ihre kostenfreie Auswertung über alle ${dimCount} Dimensionen.`
+        },
+        {
+          q: `Sind meine Antworten und Testergebnisse vertraulich?`,
+          a: `Ja. Ihre Privatsphäre ist geschützt. Gastsitzungen erfassen keine identifizierenden personenbezogenen Daten.`
+        },
+        {
+          q: `Ist dieses Assessment eine medizinische oder klinische Diagnose?`,
+          a: `Nein. Assessments auf PsychologyCalculator.com dienen ausschließlich der Bildung, Selbstreflexion und persönlichen Entwicklung. Sie ersetzen keine ärztliche oder psychologische Diagnose.`
+        }
+      ];
+    case 'pt':
+      return [
+        {
+          q: `Quanto tempo leva o ${asmName}?`,
+          a: `Esta avaliação contém cerca de ${qCount} questões validadas e normalmente leva cerca de ${estMin} minutos em ritmo natural.`
+        },
+        {
+          q: `O ${asmName} é gratuito?`,
+          a: `Sim. Você pode realizar este teste como convidado sem necessidade de cadastro e receberá um relatório imediato das ${dimCount} dimensões sem qualquer custo.`
+        },
+        {
+          q: `Minhas respostas e resultados são confidenciais?`,
+          a: `Sim. Sua privacidade é protegida. Sessões de convidados não gravam dados pessoais de identificação.`
+        },
+        {
+          q: `Esta avaliação substitui um diagnóstico médico ou clínico?`,
+          a: `Não. Os testes do PsychologyCalculator.com são fornecidos estritamente para fins educativos, de autorreflexão e exploração pessoal, não substituindo diagnósticos clínicos profissionais.`
+        }
+      ];
+    case 'hi':
+      return [
+        {
+          q: `${asmName} में कितना समय लगता है?`,
+          a: `इस मूल्यांकन में लगभग ${qCount} प्रमाणित प्रश्न हैं और इसे सामान्य गति से पूरा करने में लगभग ${estMin} मिनट लगते हैं।`
+        },
+        {
+          q: `क्या ${asmName} निःशुल्क है?`,
+          a: `हाँ। आप बिना किसी पंजीकरण के अतिथि के रूप में यह परीक्षण ले सकते हैं और बिना किसी शुल्क के सभी ${dimCount} आयामों में अपना तत्काल स्कोर देख सकते हैं।`
+        },
+        {
+          q: `क्या मेरे उत्तर और परिणाम गोपनीय हैं?`,
+          a: `हाँ। आपकी गोपनीयता सुरक्षित है। अतिथि सत्र व्यक्तिगत पहचान योग्य विवरण संग्रहीत नहीं करते हैं।`
+        },
+        {
+          q: `क्या यह मूल्यांकन कोई चिकित्सीय या नैदानिक निदान है?`,
+          a: `नहीं। PsychologyCalculator.com पर परीक्षण केवल शैक्षिक, आत्म-प्रतिबिंब और व्यक्तिगत विकास के उद्देश्यों के लिए प्रदान किए जाते हैं। ये पेशेवर चिकित्सा या मनोवैज्ञानिक निदान का विकल्प नहीं हैं।`
+        }
+      ];
+    default:
+      return [
+        {
+          q: `How long does the ${asmName} take?`,
+          a: `This assessment contains approximately ${qCount} validated items and typically takes around ${estMin} minutes to complete at a natural pace.`
+        },
+        {
+          q: `Is the ${asmName} free to take?`,
+          a: `Yes. You can take this assessment as a guest with no registration required. You will receive an immediate score breakdown across all ${dimCount} evaluated dimensions at no cost.`
+        },
+        {
+          q: `Are my responses and results confidential?`,
+          a: `Yes. Your privacy is protected. Guest sessions do not store identifying personal details, and responses are processed solely to compute your personal score breakdown.`
+        },
+        {
+          q: `Is this assessment a medical or clinical diagnosis?`,
+          a: `No. Assessments on PsychologyCalculator.com are provided strictly for educational, self-reflection, and personal exploration purposes. They do not substitute for professional medical or psychological diagnosis.`
+        }
+      ];
   }
-];
+};
+
+const assessmentFaqs = getLocalizedFaqs(
+  currentLocale,
+  assessment.name,
+  questions.length || assessment.question_count || 10,
+  assessment.estimated_minutes || 6,
+  dimensions.length || 5
+);
 
 const webPageSchema = {
   '@context': 'https://schema.org',
