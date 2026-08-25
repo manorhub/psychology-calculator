@@ -180,6 +180,13 @@ const [result, categories] = await Promise.all([
                   <td class="py-3.5 px-4 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1.5">
                       <a
+                        href={`/admin/assessments/translate?assessmentId=${test.id}`}
+                        class="px-2 py-1 font-semibold text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 border border-indigo-200/80 rounded-lg transition-colors text-[11px]"
+                        title="Translate with AI"
+                      >
+                        🌐 Translate
+                      </a>
+                      <a
                         href={`/admin/assessments/${test.id}/preview`}
                         class="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
                         title="Interactive Preview"

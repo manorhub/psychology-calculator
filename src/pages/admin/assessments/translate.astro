@@ -1,0 +1,710 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { getD1Database } from '@/lib/db/client';
+import { executeQuery } from '@/lib/db/query';
+import { AssessmentTranslationService } from '@/services/assessment-translation.service';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+if (!user || user.role !== 'admin') {
+  return Astro.redirect('/login');
+}
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+// Fetch all assessments from D1
+const assessments = await executeQuery<{
+  id: string;
+  slug: string;
+  name: string;
+  status: string;
+  category_name: string | null;
+}>(
+  db,
+  `SELECT a.id, a.slug, a.name, a.status, c.name as category_name
+   FROM assessments a
+   LEFT JOIN assessment_categories c ON a.category_id = c.id
+   ORDER BY a.name ASC`
+);
+
+const url = Astro.url;
+const initialAssessmentId = url.searchParams.get('assessmentId') || (assessments[0]?.id ?? '');
+const initialLocale = url.searchParams.get('locale') || 'es';
+
+const transService = new AssessmentTranslationService(db, env || {});
+let initialStatusMap: any = {};
+if (initialAssessmentId) {
+  initialStatusMap = await transService.getTranslationStatusMap(initialAssessmentId);
+}
+---
+
+<AdminLayout title="Translate Assessment with AI" description="Admin-controlled multilingual assessment localization powered by DeepSeek">
+  <div class="space-y-6 max-w-7xl mx-auto pb-16">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="p-2 bg-indigo-50 text-indigo-700 rounded-xl font-mono text-base border border-indigo-100">🤖 AI</span>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Translate Assessment with AI</h1>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Review, edit, and translate psychological instruments with DeepSeek while maintaining strict score and ID integrity.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a
+          href="/admin/assessments"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-all shadow-2xs"
+        >
+          <span>←</span> Back to Catalog
+        </a>
+      </div>
+    </div>
+
+    <!-- Selection Controls Card -->
+    <Card class="p-6 bg-white border border-slate-200/90 shadow-xs space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 1. Assessment Selector -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            1. Select Assessment
+          </label>
+          <select
+            id="assessmentSelect"
+            class="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600"
+          >
+            {assessments.map((asm) => (
+              <option value={asm.id} selected={asm.id === initialAssessmentId}>
+                {asm.name} ({asm.slug}) — {asm.category_name || 'General'} [{asm.status.toUpperCase()}]
+              </option>
+            ))}
+          </select>
+          <p class="text-[11px] text-slate-400">
+            Choose from all {assessments.length} registered psychometric instruments in your database.
+          </p>
+        </div>
+
+        <!-- 2. Target Language Selector -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            2. Select Target Language
+          </label>
+          <select
+            id="languageSelect"
+            class="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600"
+          >
+            <option value="es" selected={initialLocale === 'es'}>🇪🇸 Spanish — Español (es)</option>
+            <option value="fr" selected={initialLocale === 'fr'}>🇫🇷 French — Français (fr)</option>
+            <option value="de" selected={initialLocale === 'de'}>🇩🇪 German — Deutsch (de)</option>
+            <option value="pt" selected={initialLocale === 'pt'}>🇵🇹 Portuguese — Português (pt)</option>
+            <option value="hi" selected={initialLocale === 'hi'}>🇮🇳 Hindi — हिन्दी (hi)</option>
+          </select>
+          <p class="text-[11px] text-slate-400">
+            English (en) is the master source language and cannot be selected as target.
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Status & Action Trigger -->
+      <div class="pt-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Status Matrix Badges -->
+        <div class="space-y-1.5">
+          <span class="text-xs font-bold text-slate-500">Current Translation Matrix for Selected Assessment:</span>
+          <div id="statusBadgesContainer" class="flex flex-wrap items-center gap-2">
+            <!-- Dynamic Status Badges injected via JS -->
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="flex items-center gap-3">
+          <button
+            type="button"
+            id="translateBtn"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+          >
+            <span>✨</span>
+            <span>Translate with AI (DeepSeek)</span>
+          </button>
+        </div>
+      </div>
+    </Card>
+
+    <!-- Generation Loading State -->
+    <div id="loadingCard" class="hidden p-8 bg-indigo-50/70 border border-indigo-200 rounded-3xl text-center space-y-3">
+      <div class="inline-block animate-spin text-3xl">🌀</div>
+      <h3 class="text-base font-bold text-indigo-950">DeepSeek is translating the assessment...</h3>
+      <p class="text-xs text-indigo-700 max-w-md mx-auto">
+        Translating title, short description, instructions, all questions, answer options, and dimension descriptions while preserving psychometric scoring logic.
+      </p>
+    </div>
+
+    <!-- Translation Preview & Edit Workspace -->
+    <div id="previewWorkspace" class="hidden space-y-6">
+      <!-- Metadata & QA Verification Bar -->
+      <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-3 text-emerald-900 font-medium">
+          <span class="font-bold">✓ AI Translation Draft Generated</span>
+          <span>• Model: <span id="metaModel" class="font-mono font-bold">deepseek-chat</span></span>
+          <span>• Latency: <span id="metaLatency" class="font-mono font-bold">0ms</span></span>
+          <span>• Tokens: <span id="metaTokens" class="font-mono font-bold">0</span></span>
+        </div>
+        <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg uppercase tracking-wider">
+          QA: Scoring & IDs 100% Intact
+        </span>
+      </div>
+
+      <!-- Tabbed Navigation for Preview Sections -->
+      <div class="border-b border-slate-200 flex items-center gap-2">
+        <button type="button" data-tab="tab-overview" class="tab-btn px-4 py-2.5 text-xs font-bold text-indigo-700 border-b-2 border-indigo-600">
+          1. Overview & Instructions
+        </button>
+        <button type="button" data-tab="tab-questions" class="tab-btn px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 border-b-2 border-transparent">
+          2. Questions & Answer Options (<span id="tabQuestionCount">0</span>)
+        </button>
+        <button type="button" data-tab="tab-dimensions" class="tab-btn px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 border-b-2 border-transparent">
+          3. Dimensions & Profiles (<span id="tabDimensionCount">0</span>)
+        </button>
+        <button type="button" data-tab="tab-seo" class="tab-btn px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 border-b-2 border-transparent">
+          4. SEO & Metadata
+        </button>
+      </div>
+
+      <!-- Tab 1: Overview -->
+      <div id="tab-overview" class="tab-pane space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- English Source -->
+          <Card class="p-5 bg-slate-50 border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+              <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">🇬🇧 English Source Content</span>
+              <span class="text-[11px] font-mono text-slate-400">Read-Only</span>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500">Assessment Name</label>
+                <div id="srcName" class="text-sm font-semibold text-slate-900 mt-1 p-2.5 bg-white rounded-xl border border-slate-200"></div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500">Short Description</label>
+                <div id="srcShortDesc" class="text-xs text-slate-700 mt-1 p-2.5 bg-white rounded-xl border border-slate-200 leading-relaxed"></div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500">Full Description</label>
+                <div id="srcLongDesc" class="text-xs text-slate-700 mt-1 p-2.5 bg-white rounded-xl border border-slate-200 leading-relaxed max-h-40 overflow-y-auto"></div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500">Instructions</label>
+                <div id="srcInstructions" class="text-xs text-slate-700 mt-1 p-2.5 bg-white rounded-xl border border-slate-200 leading-relaxed"></div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500">Disclaimer</label>
+                <div id="srcDisclaimer" class="text-xs text-slate-700 mt-1 p-2.5 bg-white rounded-xl border border-slate-200 leading-relaxed"></div>
+              </div>
+            </div>
+          </Card>
+
+          <!-- Target Language (Editable) -->
+          <Card class="p-5 bg-white border border-indigo-200 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-indigo-100">
+              <span class="text-xs font-extrabold text-indigo-900 uppercase tracking-wider" id="targetHeaderLabel">✨ Translated Content (Editable)</span>
+              <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded">Draft</span>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700">Translated Name</label>
+                <input
+                  type="text"
+                  id="tgtName"
+                  class="w-full text-sm font-semibold text-slate-900 mt-1 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                />
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700">Translated Short Description</label>
+                <textarea
+                  id="tgtShortDesc"
+                  rows="3"
+                  class="w-full text-xs text-slate-800 mt-1 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 leading-relaxed"
+                ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700">Translated Full Description</label>
+                <textarea
+                  id="tgtLongDesc"
+                  rows="4"
+                  class="w-full text-xs text-slate-800 mt-1 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 leading-relaxed"
+                ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700">Translated Instructions</label>
+                <textarea
+                  id="tgtInstructions"
+                  rows="2"
+                  class="w-full text-xs text-slate-800 mt-1 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 leading-relaxed"
+                ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700">Translated Disclaimer</label>
+                <textarea
+                  id="tgtDisclaimer"
+                  rows="2"
+                  class="w-full text-xs text-slate-800 mt-1 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 leading-relaxed"
+                ></textarea>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <!-- Tab 2: Questions -->
+      <div id="tab-questions" class="tab-pane hidden space-y-4">
+        <div id="questionsContainer" class="space-y-4">
+          <!-- Dynamically populated question cards with side-by-side comparison and editable fields -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Dimensions -->
+      <div id="tab-dimensions" class="tab-pane hidden space-y-4">
+        <div id="dimensionsContainer" class="space-y-4">
+          <!-- Dynamically populated dimension cards -->
+        </div>
+      </div>
+
+      <!-- Tab 4: SEO -->
+      <div id="tab-seo" class="tab-pane hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card class="p-5 bg-slate-50 border border-slate-200 space-y-4">
+            <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider pb-2 border-b border-slate-200">
+              🇬🇧 English Source SEO
+            </h4>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500">SEO Title</label>
+                <div id="srcSeoTitle" class="text-xs text-slate-800 mt-1 p-2.5 bg-white rounded-xl border border-slate-200"></div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500">SEO Description</label>
+                <div id="srcSeoDesc" class="text-xs text-slate-800 mt-1 p-2.5 bg-white rounded-xl border border-slate-200"></div>
+              </div>
+            </div>
+          </Card>
+
+          <Card class="p-5 bg-white border border-indigo-200 shadow-xs space-y-4">
+            <h4 class="text-xs font-extrabold text-indigo-900 uppercase tracking-wider pb-2 border-b border-indigo-100">
+              ✨ Localized SEO Metadata (Editable)
+            </h4>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700">SEO Title</label>
+                <input
+                  type="text"
+                  id="tgtSeoTitle"
+                  class="w-full text-xs text-slate-800 mt-1 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700">SEO Description</label>
+                <textarea
+                  id="tgtSeoDesc"
+                  rows="3"
+                  class="w-full text-xs text-slate-800 mt-1 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 leading-relaxed"
+                ></textarea>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <!-- Action Footer Bar -->
+      <Card class="p-5 bg-slate-900 text-white rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg sticky bottom-4 z-20">
+        <div class="text-xs space-y-0.5">
+          <div class="font-bold text-sm">Ready to save your translation?</div>
+          <div class="text-slate-400">All translations are verified against strict schema validation before storing in D1.</div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            id="regenerateBtn"
+            class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all cursor-pointer"
+          >
+            🔄 Regenerate with AI
+          </button>
+
+          <button
+            type="button"
+            id="saveDraftBtn"
+            class="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+          >
+            📁 Save as Draft
+          </button>
+
+          <button
+            type="button"
+            id="approvePublishBtn"
+            class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            ✓ Approve & Publish Translation
+          </button>
+        </div>
+      </Card>
+    </div>
+  </div>
+</AdminLayout>
+
+<script is:inline define:vars={{ initialStatusMap }}>
+  let currentSourceData = null;
+  let currentTranslationData = null;
+  let statusMap = initialStatusMap || {};
+
+  const assessmentSelect = document.getElementById('assessmentSelect');
+  const languageSelect = document.getElementById('languageSelect');
+  const translateBtn = document.getElementById('translateBtn');
+  const loadingCard = document.getElementById('loadingCard');
+  const previewWorkspace = document.getElementById('previewWorkspace');
+  const statusBadgesContainer = document.getElementById('statusBadgesContainer');
+
+  // Tab switching logic
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-tab');
+      tabBtns.forEach((b) => {
+        b.classList.remove('text-indigo-700', 'border-indigo-600');
+        b.classList.add('text-slate-500', 'border-transparent');
+      });
+      btn.classList.add('text-indigo-700', 'border-indigo-600');
+      btn.classList.remove('text-slate-500', 'border-transparent');
+
+      tabPanes.forEach((p) => p.classList.add('hidden'));
+      document.getElementById(targetId)?.classList.remove('hidden');
+    });
+  });
+
+  // Render Status Matrix Badges
+  function renderStatusBadges() {
+    statusBadgesContainer.innerHTML = '';
+    const locales = ['es', 'fr', 'de', 'pt', 'hi'];
+    const flags = { es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', pt: '🇵🇹', hi: '🇮🇳' };
+
+    locales.forEach((loc) => {
+      const info = statusMap[loc] || { status: 'missing' };
+      const flag = flags[loc] || '🌐';
+      let badgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+      let statusLabel = 'Missing';
+
+      if (info.status === 'published') {
+        badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+        statusLabel = 'Published';
+      } else if (info.status === 'draft') {
+        badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
+        statusLabel = 'Draft';
+      }
+
+      const el = document.createElement('div');
+      el.className = `inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg border ${badgeClass}`;
+      el.innerHTML = `<span>${flag} ${loc.toUpperCase()}</span>: <span>${statusLabel}</span>`;
+      statusBadgesContainer.appendChild(el);
+    });
+  }
+
+  // Load Status Map when assessment changes
+  async function loadStatusMap(assessmentId) {
+    try {
+      const res = await fetch(`/api/admin/assessments/translate/status?assessmentId=${encodeURIComponent(assessmentId)}`);
+      const json = await res.json();
+      if (json.success) {
+        statusMap = json.data;
+        renderStatusBadges();
+      }
+    } catch (e) {
+      console.error('Failed to load status map', e);
+    }
+  }
+
+  assessmentSelect?.addEventListener('change', () => {
+    loadStatusMap(assessmentSelect.value);
+    previewWorkspace.classList.add('hidden');
+  });
+
+  renderStatusBadges();
+
+  // Trigger DeepSeek AI Translation
+  async function runTranslation() {
+    const assessmentId = assessmentSelect.value;
+    const targetLocale = languageSelect.value;
+
+    const existing = statusMap[targetLocale];
+    if (existing && existing.status === 'published') {
+      const confirmOverwrite = confirm(
+        `A published ${existing.languageName} translation already exists for this assessment.\n\nGenerating a new AI translation will create a draft preview for your review before updating. Continue?`
+      );
+      if (!confirmOverwrite) return;
+    }
+
+    loadingCard.classList.remove('hidden');
+    previewWorkspace.classList.add('hidden');
+    translateBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/admin/assessments/translate/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assessmentId, targetLocale })
+      });
+
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.error || 'Translation generation failed');
+      }
+
+      currentSourceData = json.data.source;
+      currentTranslationData = json.data.translation;
+      const meta = json.data.meta;
+
+      // Populate Meta stats
+      document.getElementById('metaModel').textContent = meta.model;
+      document.getElementById('metaLatency').textContent = `${meta.latencyMs}ms`;
+      document.getElementById('metaTokens').textContent = `${meta.inputTokens + meta.outputTokens} (${meta.inputTokens} in / ${meta.outputTokens} out)`;
+      document.getElementById('targetHeaderLabel').textContent = `✨ ${meta.targetLanguageName} Translation (Editable)`;
+
+      // Populate Overview tab
+      document.getElementById('srcName').textContent = currentSourceData.name;
+      document.getElementById('srcShortDesc').textContent = currentSourceData.short_description;
+      document.getElementById('srcLongDesc').textContent = currentSourceData.long_description || 'N/A';
+      document.getElementById('srcInstructions').textContent = currentSourceData.instructions || 'N/A';
+      document.getElementById('srcDisclaimer').textContent = currentSourceData.disclaimer || 'N/A';
+
+      document.getElementById('tgtName').value = currentTranslationData.name;
+      document.getElementById('tgtShortDesc').value = currentTranslationData.short_description;
+      document.getElementById('tgtLongDesc').value = currentTranslationData.long_description || '';
+      document.getElementById('tgtInstructions').value = currentTranslationData.instructions || '';
+      document.getElementById('tgtDisclaimer').value = currentTranslationData.disclaimer || '';
+
+      // Populate SEO tab
+      document.getElementById('srcSeoTitle').textContent = currentSourceData.seo_title || currentSourceData.name;
+      document.getElementById('srcSeoDesc').textContent = currentSourceData.seo_description || currentSourceData.short_description;
+      document.getElementById('tgtSeoTitle').value = currentTranslationData.seo_title || '';
+      document.getElementById('tgtSeoDesc').value = currentTranslationData.seo_description || '';
+
+      // Populate Questions tab
+      renderQuestionsTab(currentSourceData.questions, currentTranslationData.questions);
+      document.getElementById('tabQuestionCount').textContent = currentSourceData.questions.length;
+
+      // Populate Dimensions tab
+      renderDimensionsTab(currentSourceData.dimensions, currentTranslationData.dimensions);
+      document.getElementById('tabDimensionCount').textContent = currentSourceData.dimensions.length;
+
+      loadingCard.classList.add('hidden');
+      previewWorkspace.classList.remove('hidden');
+      window.scrollTo({ top: previewWorkspace.offsetTop - 40, behavior: 'smooth' });
+    } catch (err) {
+      loadingCard.classList.add('hidden');
+      alert(`Translation Error: ${err.message}`);
+    } finally {
+      translateBtn.disabled = false;
+    }
+  }
+
+  translateBtn?.addEventListener('click', runTranslation);
+  document.getElementById('regenerateBtn')?.addEventListener('click', runTranslation);
+
+  // Render Questions Tab
+  function renderQuestionsTab(srcQuestions, tgtQuestions) {
+    const container = document.getElementById('questionsContainer');
+    container.innerHTML = '';
+
+    srcQuestions.forEach((sq, idx) => {
+      const tq = (tgtQuestions || []).find((t) => t.id === sq.id) || { question_text: sq.question_text, options: sq.options };
+      const card = document.createElement('div');
+      card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-4';
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <span class="px-2 py-0.5 bg-indigo-50 text-indigo-800 text-[11px] font-bold rounded-md">
+            Question #${sq.question_order || idx + 1}
+          </span>
+          <span class="text-[11px] font-mono text-slate-400">ID: ${sq.id}</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label class="block text-[11px] font-bold text-slate-500">🇬🇧 English Question Text</label>
+            <div class="text-xs text-slate-800 p-2.5 bg-slate-50 rounded-xl border border-slate-200">${sq.question_text}</div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-[11px] font-bold text-indigo-900">✨ Translated Question Text</label>
+            <input
+              type="text"
+              data-qid="${sq.id}"
+              class="q-text-input w-full text-xs font-semibold text-slate-900 p-2.5 bg-indigo-50/40 border border-indigo-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              value="${tq.question_text.replace(/"/g, '&quot;')}"
+            />
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  // Render Dimensions Tab
+  function renderDimensionsTab(srcDimensions, tgtDimensions) {
+    const container = document.getElementById('dimensionsContainer');
+    container.innerHTML = '';
+
+    srcDimensions.forEach((sd) => {
+      const td = (tgtDimensions || []).find((t) => t.id === sd.id) || { name: sd.name, description: sd.description };
+      const card = document.createElement('div');
+      card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-4';
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <span class="text-xs font-extrabold text-slate-800">Dimension: ${sd.name}</span>
+          <span class="text-[11px] font-mono text-slate-400">ID: ${sd.id}</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500">🇬🇧 English Dimension Name</label>
+              <div class="text-xs font-semibold text-slate-800 p-2 bg-slate-50 rounded-lg border border-slate-200">${sd.name}</div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500">🇬🇧 English Description</label>
+              <div class="text-xs text-slate-700 p-2 bg-slate-50 rounded-lg border border-slate-200 leading-relaxed">${sd.description || 'N/A'}</div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-bold text-indigo-900">✨ Translated Dimension Name</label>
+              <input
+                type="text"
+                data-dimid="${sd.id}"
+                class="dim-name-input w-full text-xs font-semibold text-slate-900 p-2 bg-indigo-50/40 border border-indigo-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                value="${td.name.replace(/"/g, '&quot;')}"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-indigo-900">✨ Translated Description</label>
+              <textarea
+                data-dimid-desc="${sd.id}"
+                rows="2"
+                class="dim-desc-input w-full text-xs text-slate-800 p-2 bg-indigo-50/40 border border-indigo-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 leading-relaxed"
+              >${td.description || ''}</textarea>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  // Save Translation Handler (Draft or Published)
+  async function submitSave(status) {
+    if (!currentSourceData) return;
+
+    // Gather edited inputs
+    const name = document.getElementById('tgtName').value.trim();
+    const short_description = document.getElementById('tgtShortDesc').value.trim();
+    const long_description = document.getElementById('tgtLongDesc').value.trim();
+    const instructions = document.getElementById('tgtInstructions').value.trim();
+    const disclaimer = document.getElementById('tgtDisclaimer').value.trim();
+    const seo_title = document.getElementById('tgtSeoTitle').value.trim();
+    const seo_description = document.getElementById('tgtSeoDesc').value.trim();
+
+    if (!name || !short_description) {
+      alert('Please fill out the translated Name and Short Description.');
+      return;
+    }
+
+    // Gather questions
+    const qInputs = document.querySelectorAll('.q-text-input');
+    const questions = [];
+    qInputs.forEach((inp) => {
+      const qid = inp.getAttribute('data-qid');
+      questions.push({
+        id: qid,
+        question_text: inp.value.trim()
+      });
+    });
+
+    // Gather dimensions
+    const dimInputs = document.querySelectorAll('.dim-name-input');
+    const dimensions = [];
+    dimInputs.forEach((inp) => {
+      const dimid = inp.getAttribute('data-dimid');
+      const descInp = document.querySelector(`textarea[data-dimid-desc="${dimid}"]`);
+      dimensions.push({
+        id: dimid,
+        name: inp.value.trim(),
+        description: descInp ? descInp.value.trim() : null
+      });
+    });
+
+    const payload = {
+      assessmentId: currentSourceData.id,
+      targetLocale: languageSelect.value,
+      status,
+      translation: {
+        name,
+        short_description,
+        long_description,
+        instructions,
+        disclaimer,
+        seo_title,
+        seo_description,
+        dimensions,
+        questions
+      }
+    };
+
+    const saveBtn = status === 'published' ? document.getElementById('approvePublishBtn') : document.getElementById('saveDraftBtn');
+    const origText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const res = await fetch('/api/admin/assessments/translate/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to save translation');
+      }
+
+      alert(`✅ Translation successfully saved as ${status.toUpperCase()}!`);
+      await loadStatusMap(currentSourceData.id);
+    } catch (err) {
+      alert(`Save Failed: ${err.message}`);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = origText;
+    }
+  }
+
+  document.getElementById('approvePublishBtn')?.addEventListener('click', () => submitSave('published'));
+  document.getElementById('saveDraftBtn')?.addEventListener('click', () => submitSave('draft'));
+</script>

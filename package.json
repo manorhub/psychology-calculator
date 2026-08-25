@@ -37,7 +37,8 @@
     "test:email": "tsx scripts/test-transactional-email-system.js",
     "test:seo-audit": "tsx scripts/test-technical-seo-audit.js",
     "test:i18n": "tsx scripts/test-multilingual-i18n-system.js",
-    "test:all": "npm run test:db && npm run test:auth && npm run test:admin && npm run test:assessment && npm run test:engine && npm run test:result && npm run test:initial && npm run test:ai && npm run test:dashboard && npm run test:pdf && npm run test:billing && npm run test:seo && npm run test:seo-audit && npm run test:cms && npm run test:notifications && npm run test:email && npm run test:analytics && npm run test:control-center && npm run test:launch && npm run test:growth && npm run test:guest && npm run test:import-export && npm run test:category && npm run test:ai-experience && npm run test:pdf-quality && npm run test:question-experience && npm run test:one-time-credits && npm run test:i18n"
+    "test:admin-ai-translate": "tsx scripts/test-admin-ai-translation.js",
+    "test:all": "npm run test:db && npm run test:auth && npm run test:admin && npm run test:assessment && npm run test:engine && npm run test:result && npm run test:initial && npm run test:ai && npm run test:dashboard && npm run test:pdf && npm run test:billing && npm run test:seo && npm run test:seo-audit && npm run test:cms && npm run test:notifications && npm run test:email && npm run test:analytics && npm run test:control-center && npm run test:launch && npm run test:growth && npm run test:guest && npm run test:import-export && npm run test:category && npm run test:ai-experience && npm run test:pdf-quality && npm run test:question-experience && npm run test:one-time-credits && npm run test:i18n && npm run test:admin-ai-translate"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
