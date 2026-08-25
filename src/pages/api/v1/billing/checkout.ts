@@ -33,40 +33,31 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     }
 
     const body = (await request.json().catch(() => ({}))) as {
+      packageId?: string;
+      packageSlug?: string;
       planId?: string;
       planSlug?: string;
     };
 
-    const targetPlanId = body.planId;
-    const targetPlanSlug = body.planSlug;
+    const targetPkgId = body.packageId || body.planId;
+    const targetPkgSlug = body.packageSlug || body.planSlug;
 
-    if (!targetPlanId && !targetPlanSlug) {
-      throw new ValidationError('Plan ID or Slug is required');
+    const { CreditService } = await import('@/services/credit.service');
+    const creditService = new CreditService(db as any);
+
+    let creditPkg = targetPkgId
+      ? await creditService.getPackageById(targetPkgId)
+      : targetPkgSlug
+      ? await creditService.getPackageBySlug(targetPkgSlug)
+      : null;
+
+    if (!creditPkg) {
+      const activePackages = await creditService.getPackages(true);
+      creditPkg = activePackages[0] || null;
     }
 
-    const planService = new PlanService(db);
-    const plan = targetPlanId
-      ? await planService.getPlanById(targetPlanId)
-      : await planService.getPlanBySlug(targetPlanSlug!);
-
-    if (!plan || plan.status !== 'active') {
-      throw new NotFoundError('Selected subscription plan does not exist or is currently inactive');
-    }
-
-    if (plan.price === 0 || !plan.lemon_squeezy_variant_id) {
-      // Free plan does not need checkout redirect
-      return new Response(
-        JSON.stringify({
-          success: true,
-          data: {
-            checkoutUrl: '/dashboard/subscription?status=activated&plan=free'
-          }
-        }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+    if (!creditPkg) {
+      throw new NotFoundError('Selected credit package does not exist or is currently inactive');
     }
 
     const lsService = new LemonSqueezyService({
@@ -76,13 +67,15 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     });
 
     const origin = url.origin;
+    const variantId = creditPkg.lemon_squeezy_variant_id || 'var_credits_20';
+
     const checkoutResult = await lsService.createCheckout({
-      variantId: plan.lemon_squeezy_variant_id,
+      variantId,
       userEmail: user.email,
       userName: user.profile?.displayName || undefined,
       userId: user.id,
-      planId: plan.id,
-      successUrl: `${origin}/dashboard/subscription?status=success`,
+      planId: creditPkg.id,
+      successUrl: `${origin}/dashboard/credits?status=success`,
       cancelUrl: `${origin}/pricing?status=cancelled`
     });
 

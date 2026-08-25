@@ -1,7 +1,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { BaseService } from '../base.service';
 import { executeQuery, fetchFirst } from '@/lib/db/query';
-import { NotFoundError, ForbiddenError, ValidationError, ExternalServiceError } from '@/lib/errors';
+import { NotFoundError, ForbiddenError, ValidationError, ExternalServiceError, UnauthorizedError } from '@/lib/errors';
 import { ResultService } from '../result.service';
 import { CreditService } from '../credit.service';
 import { AuditService } from '../audit.service';
@@ -55,7 +55,11 @@ export class AIService extends BaseService {
   ): Promise<AIReportData> {
     if (!this.db) throw new Error('Database unavailable');
 
-    // 1. Verify Attempt & Ownership
+    // 1. Verify Attempt & Strict Authentication Requirement
+    if (!userId) {
+      throw new UnauthorizedError('Authentication required: Please sign in or create an account with credits to generate an AI narrative report.');
+    }
+
     const attempt = await fetchFirst<AssessmentAttemptRow>(
       this.db,
       'SELECT * FROM assessment_attempts WHERE id = ?',
@@ -150,7 +154,7 @@ export class AIService extends BaseService {
       creditsDeducted = true;
     }
 
-    // 8. Execute LLM Call with Automatic Fallback
+    // 8. Execute LLM Call with Automatic Fallback Chain
     const genId = crypto.randomUUID();
     const startTime = Date.now();
     let generationResponse: AIGenerationResponse | null = null;
@@ -158,21 +162,25 @@ export class AIService extends BaseService {
     let errorCategory: string | null = null;
     let errorMessage: string | null = null;
 
-    try {
-      generationResponse = await this.executeProviderCall(primaryConfig, fullUserPrompt, systemPrompt);
-    } catch (primaryErr: any) {
-      this.logger.warn(`Primary provider (${primaryConfig.provider}) failed: ${primaryErr.message}. Trying fallback...`);
-      if (fallbackConfig) {
-        try {
-          usedConfig = fallbackConfig;
-          generationResponse = await this.executeProviderCall(fallbackConfig, fullUserPrompt, systemPrompt);
-        } catch (fallbackErr: any) {
-          errorCategory = 'provider_fallback_failure';
-          errorMessage = `Both primary (${primaryErr.message}) and fallback (${fallbackErr.message}) failed`;
-        }
-      } else {
-        errorCategory = 'primary_provider_failure';
-        errorMessage = primaryErr.message;
+    // Build candidate provider chain starting with primaryConfig followed by other enabled configs
+    const candidateConfigs: AiConfigurationRow[] = [primaryConfig];
+    for (const c of configs) {
+      if (c.id !== primaryConfig.id && !candidateConfigs.some((existing) => existing.id === c.id)) {
+        candidateConfigs.push(c);
+      }
+    }
+
+    for (let i = 0; i < candidateConfigs.length; i++) {
+      const currentCandidate = candidateConfigs[i];
+      try {
+        generationResponse = await this.executeProviderCall(currentCandidate, fullUserPrompt, systemPrompt);
+        usedConfig = currentCandidate;
+        errorMessage = null;
+        break; // Success!
+      } catch (providerErr: any) {
+        this.logger.warn(`AI Provider (${currentCandidate.provider} - ${currentCandidate.model}) failed: ${providerErr.message}.`);
+        errorMessage = providerErr.message;
+        errorCategory = i === 0 ? 'primary_provider_failure' : 'provider_fallback_failure';
       }
     }
 
@@ -620,6 +628,7 @@ export class AIService extends BaseService {
       model: config.model,
       temperature: config.temperature,
       maxTokens: config.token_limit,
+      timeoutMs: 90000,
       apiKey
     });
   }
@@ -629,37 +638,211 @@ export class AIService extends BaseService {
    */
   private generateMockResponse(provider: AIProviderType, model: string): AIGenerationResponse {
     const mockJson = JSON.stringify({
+      headline: 'Balanced intellectual agility grounded by structured pragmatic execution and calm emotional composure.',
       summary:
-        'Your comprehensive psychometric evaluation reveals a balanced and reflective psychological profile. You exhibit strong cognitive clarity, healthy self-regulation, and an aptitude for synthesizing complex emotional and analytical signals in daily interactions.',
+        'Your comprehensive psychometric evaluation reveals a sophisticated, multidimensional psychological configuration. Your score pattern reflects a high degree of cognitive curiosity, balanced emotional self-regulation, and intentional interpersonal presence. Across evaluated scenarios, you demonstrate an ability to oscillate effectively between high-level conceptual ideation and disciplined, task-oriented execution.\n\nRather than leaning solely into rigid orthodoxy or unrestrained abstraction, your profile suggests a stable equilibrium. You approach complex dilemmas with measured analytical curiosity, synthesizing divergent viewpoints before committing to a course of action. In interpersonal environments, you project calm reliability and thoughtful boundaries, creating psychological safety for collaborators while preserving your internal bandwidth.\n\nThis pattern may indicate an adaptive mental model that thrives in environments characterized by intellectual autonomy, moderate ambiguity, and opportunities for continuous skill acquisition. By intentionally pairing your creative curiosity with structured accountability, you maximize both innovation and sustainable execution.',
       key_traits: [
-        'Strategic and structured thinking',
-        'Grounded emotional composure under acute stress',
-        'Empathetic and active interpersonal listening'
+        'Strategic and structured divergent ideation',
+        'Grounded emotional composure under acute pressure',
+        'Empathetic and active perspective-taking',
+        'Deliberate boundary regulation and self-direction'
       ],
+      dimension_analyses: [
+        {
+          dimension_name: 'Openness to Experience',
+          score_percent: 78,
+          level: 'High',
+          what_it_measures: 'Receptivity to novel ideas, intellectual curiosity, and creative exploration.',
+          personalized_interpretation:
+            'Your score indicates high intellectual receptivity and an expansive cognitive appetite. You enjoy engaging with complex theoretical concepts, exploring cross-disciplinary insights, and questioning conventional assumptions. This trait allows you to navigate ambiguity with confidence and generate innovative solutions.',
+          behavioral_expression: 'Actively seeks out new books, ideas, creative methodologies, and varied cultural perspectives.',
+          key_strength: 'Agile conceptual synthesis and inventive problem solving.',
+          potential_challenge: 'Occasional restlessness with repetitive or overly rigid procedural routines.',
+          practical_reflection: 'Where in your weekly schedule can you deliberately cultivate unstructured ideation?'
+        },
+        {
+          dimension_name: 'Conscientiousness',
+          score_percent: 72,
+          level: 'High',
+          what_it_measures: 'Goal-directed persistence, methodical organization, and accountability.',
+          personalized_interpretation:
+            'You demonstrate a strong capacity for self-regulation, disciplined planning, and systematic follow-through. When committed to a project, you establish clear milestones and hold yourself to rigorous standards of craftsmanship and reliability.',
+          behavioral_expression: 'Maintains structured workflows, prioritizes key objectives, and meets commitments reliably.',
+          key_strength: 'Dependable execution and long-range strategic focus.',
+          potential_challenge: 'Perfectionist tendencies or difficulty shifting gears when plans change suddenly.',
+          practical_reflection: 'How might defining "good enough" on secondary tasks protect your creative energy?'
+        },
+        {
+          dimension_name: 'Emotional Stability',
+          score_percent: 68,
+          level: 'Moderate-High',
+          what_it_measures: 'Resilience against acute stressors, emotional equilibrium, and composure.',
+          personalized_interpretation:
+            'Your responses reflect solid emotional composure and resilience under everyday pressures. While you experience normal situational stress, you possess healthy coping mechanisms that allow you to recover equilibrium and maintain clear perspective.',
+          behavioral_expression: 'Remains grounded during group tension and uses rational reframing to manage setbacks.',
+          key_strength: 'Steady, non-reactive presence in high-stakes discussions.',
+          potential_challenge: 'May occasionally internalize subtle chronic fatigue rather than expressing early discomfort.',
+          practical_reflection: 'What bodily signals indicate that you need a deliberate restorative pause?'
+        }
+      ],
+      cross_dimension_interactions: {
+        core_pattern:
+          'The intersection between your High Openness (78%) and High Conscientiousness (72%) forms a powerful creative-executor engine. While high openness alone can produce theoretical ideas without follow-through, and high conscientiousness alone can favor traditional routines, combining both allows you to innovate boldly and execute systematically.',
+        trait_synergies: [
+          'Visionary Ideation + Disciplined Execution: Ideas are rapidly converted into structured roadmaps.',
+          'Intellectual Curiosity + Methodical Research: Deep-dive exploration is paired with rigorous fact-checking.'
+        ],
+        trait_tensions: [
+          'Novelty Exploration vs. Milestone Deadlines: The desire to explore exciting new angles can occasionally challenge structured timelines.'
+        ],
+        situational_differences:
+          'In low-pressure autonomous settings, your curiosity takes the lead, exploring expansive possibilities. Under high-stakes deadlines, your conscientiousness activates, streamlining focus and prioritizing core deliverables.'
+      },
       strengths: [
-        'High capacity for abstract conceptualization and innovative problem solving',
-        'Resilient boundary setting while preserving positive relationships',
-        'Deliberate, goal-oriented milestone execution'
+        {
+          title: 'Strategic Synthesis & Abstract Thinking',
+          description:
+            'You readily grasp the big picture, identifying subtle patterns across disparate data points and translating complex ideas into clear mental models.',
+          context: 'System design, strategy formulation, and multifaceted problem resolution.'
+        },
+        {
+          title: 'Composed & Grounded Presence',
+          description:
+            'Your emotional stability provides an anchor during turbulent situations, enabling you to make objective decisions without emotional distortion.',
+          context: 'Crisis navigation, team mediation, and high-stakes decision moments.'
+        },
+        {
+          title: 'Disciplined Autonomy',
+          description:
+            'You operate with high internal accountability, managing your schedule and driving outcomes without requiring continuous external oversight.',
+          context: 'Independent research, remote workflows, and self-directed initiatives.'
+        }
       ],
       challenges: [
-        'Tendency to over-analyze straightforward decisions during fatigue',
-        'Occasional reluctance to delegate mission-critical tasks'
+        'Occasional cognitive overload from pursuing too many fascinating intellectual tangents simultaneously.',
+        'Hesitation to delegate critical responsibilities due to high self-imposed quality standards.'
+      ],
+      growth_blindspots: [
+        {
+          title: 'The Perfectionist Delegation Trap',
+          manifestation: 'Reluctance to hand off tasks because you anticipate needing to refine the output yourself.',
+          impact: 'Bottlenecks in workflow throughput and subtle cumulative exhaustion.',
+          constructive_response: 'Establish explicit "80/20 definition of done" criteria and empower peers with iterative feedback cycles.'
+        },
+        {
+          title: 'Analysis Paralysis on Multivariable Decisions',
+          manifestation: 'Excessive information gathering when faced with ambiguous tradeoffs.',
+          impact: 'Delayed decision momentum on reversible, low-risk choices.',
+          constructive_response: 'Apply a timeboxed 15-minute decision rule for two-way door decisions.'
+        }
       ],
       communication:
-        'You communicate with calm assertiveness and transparent clarity. You prefer direct, evidence-based dialogue while honoring the perspectives and emotional boundaries of your interlocutors.',
+        'You communicate with calm clarity, respectful inquiry, and structured articulation. You naturally synthesize points of agreement before addressing differences, ensuring collaborative alignment.',
       relationships:
-        'In close interpersonal dynamics, you value deep mutual trust, consistent follow-through, and emotional safety. You provide steady stability during relational turbulence.',
+        'In personal and professional relationships, you value deep authenticity, intellectual reciprocity, and consistent follow-through. You are a steady, supportive sounding board for those around you.',
+      relationships_communication: {
+        relational_style:
+          'You build secure, trust-centered connections based on mutual respect and shared growth. You prefer meaningful, deep interactions over superficial socializing.',
+        communication_style:
+          'Your communication is articulate, measured, and open-minded. You state your perspective transparently while actively soliciting opposing viewpoints.',
+        listening_conflict:
+          'You practice reflective listening, seeking to understand the underlying emotional and logical roots of disagreements before advocating for a resolution.',
+        partner_dynamics:
+          'You deeply value partners and peers who are intellectually curious, emotionally grounded, and reliable in their commitments.',
+        relationship_tips: [
+          'Express emotional needs directly rather than expecting others to deduce them through subtext.',
+          'Schedule regular unstructured check-ins with key partners to nurture relational connection.',
+          'Acknowledge and celebrate small collaborative milestones along the journey.'
+        ]
+      },
       work_style:
-        'Your professional approach combines methodical organization with creative experimentation. You thrive in autonomous environments where you can establish clear milestones.',
+        'Your work style is characterized by strategic planning, thoughtful iteration, and high self-discipline. You thrive in environments that grant intellectual autonomy and respect focused deep work.',
+      work_leadership: {
+        work_environment:
+          'Optimal in quiet, autonomous, outcome-oriented settings that reward deep analytical focus and creative experimentation.',
+        collaboration_teamwork:
+          'Collaborative and respectful. You excel as a strategic synthesizer who helps teams harmonize complex inputs.',
+        decision_problem_solving:
+          'Evidence-based and hypothesis-driven. You balance intuition with empirical evaluation.',
+        leadership_mentorship:
+          'Empowering and consultative. You lead by modeling high craftsmanship, clear thinking, and empathetic mentorship.',
+        workplace_strengths: [
+          'Translating ambiguous goals into structured milestones',
+          'Objective problem diagnosis and root-cause analysis',
+          'Fostering a culture of intellectual safety and thoughtful debate'
+        ],
+        workplace_challenges: [
+          'Frustration with bureaucratic, micromanaged processes',
+          'Managing energy across prolonged periods of reactive context-switching'
+        ]
+      },
+      stress_adaptability: {
+        pressure_patterns:
+          'Under acute pressure, you tend to retreat inward into deep analytical mode to dissect the situation before acting. This protects against rash impulses but can temporarily delay verbal communication.',
+        adaptability_change:
+          'You welcome evolutionary change that is supported by clear rationale, adapting quickly when given autonomy to architect the transition.',
+        recovery_equilibrium:
+          'Decompress through solitary intellectual pursuits, immersion in nature, physical exercise, or structured mental detachment from digital demands.'
+      },
       growth_opportunities: [
-        'Practice rapid low-stakes decision making to reduce cognitive fatigue',
-        'Incorporate intentional collaborative delegation in complex workflows'
+        'Practice rapid low-stakes decision making to conserve valuable cognitive bandwidth.',
+        'Incorporate intentional collaborative delegation in complex workflows.'
       ],
       practical_suggestions: [
-        'Dedicate 10 minutes each morning to reflective goal prioritization',
-        'Conduct a weekly boundary audit to preserve personal cognitive bandwidth',
-        'Engage in active perspective-taking during high-stakes discussions'
-      ]
+        'Dedicate 15 minutes each morning to uninterrupted strategic prioritization.',
+        'Conduct a weekly boundary audit to protect deep focus blocks.',
+        'Engage in active perspective-taking during high-stakes discussions.'
+      ],
+      action_plan: [
+        {
+          goal: 'Streamline Low-Stakes Decision Speed',
+          why_it_matters: 'Frees mental bandwidth for high-leverage strategic creative tasks.',
+          action: 'Apply a 5-minute limit to daily operational choices (email sorting, scheduling, minor formatting).',
+          frequency: 'Daily'
+        },
+        {
+          goal: 'Cultivate Proactive Delegation Habits',
+          why_it_matters: 'Prevents burnout and elevates team capability.',
+          action: 'Delegate at least one complete project component per week with written success criteria.',
+          frequency: 'Weekly'
+        },
+        {
+          goal: 'Protect Dedicated Deep Work Sanctuaries',
+          why_it_matters: 'Enables deep cognitive flow and sustained innovation.',
+          action: 'Block two 90-minute distraction-free focus blocks on your calendar each week.',
+          frequency: 'Twice Weekly'
+        },
+        {
+          goal: 'Direct Emotional Communication Check-In',
+          why_it_matters: 'Strengthens relational intimacy and prevents unspoken assumptions.',
+          action: 'Express one explicit appreciation and one personal boundary openly with a trusted peer/partner.',
+          frequency: 'Weekly'
+        }
+      ],
+      final_synthesis: {
+        top_takeaways: [
+          'High cognitive curiosity paired with structured execution drives balanced problem solving.',
+          'Grounded emotional composure provides psychological stability during acute stress.',
+          'Empathetic perspective-taking enhances collaboration while intentional boundaries preserve bandwidth.',
+          'A preference for autonomy and low friction allows for maximum creative flow.',
+          'Practicing decisive delegation prevents over-functioning and sustains high-value output.'
+        ],
+        strongest_pattern: 'Your profile reflects a powerful synergy between intellectual exploration and methodical execution.',
+        biggest_growth_opportunity: 'Developing proactive delegation habits and accelerating low-stakes decision cycles.',
+        notable_trait: 'The harmonious pairing of creative curiosity and systematic execution.',
+        primary_advantage: 'The ability to transform abstract ideas into structured, high-value outcomes.',
+        growth_frontier: 'Empowering others through delegation and accelerating low-stakes decisions.',
+        relationship_insight: 'Direct, vulnerable communication deepens your already solid trust foundation.',
+        work_insight: 'Protecting deep focus time is essential for sustaining your highest-quality output.',
+        next_step: 'Identify one task today where 80% completion is optimal, and ship it without hesitation.',
+        reflection_questions: [
+          'In which areas of your life are you currently holding back from delegating or sharing responsibility?',
+          'How can you design your daily environment to reduce unnecessary cognitive friction?',
+          'What ambitious creative project would you initiate if you knew your execution discipline would guarantee its completion?'
+        ],
+        closing_summary:
+          'Your profile reflects a rare and powerful synergy of visionary exploration and grounded discipline. By honoring your natural boundaries, cultivating decisive delegation, and protecting your creative focus, you can sustain long-term growth and high-impact fulfillment.'
+      }
     });
 
     return {

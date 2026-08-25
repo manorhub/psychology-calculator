@@ -240,6 +240,8 @@ INSERT OR REPLACE INTO profiles (user_id, display_name, timezone, locale, create
 INSERT OR REPLACE INTO credit_balances (user_id, balance, updated_at) VALUES
 ('admin_master_1', 9999, CURRENT_TIMESTAMP);
 -- 5-Point Likert Options & Scoring Rules Seed Migration
+DELETE FROM scoring_rules WHERE id LIKE 'sr_att%' OR id LIKE 'sr_ll%' OR id LIKE 'sr_eq%' OR id LIKE 'sr_ie%' OR id LIKE 'sr_se%' OR id LIKE 'sr_comm%' OR id LIKE 'sr_conf%';
+DELETE FROM question_options WHERE id LIKE 'opt_att%' OR id LIKE 'opt_ll%' OR id LIKE 'opt_eq%' OR id LIKE 'opt_ie%' OR id LIKE 'opt_se%' OR id LIKE 'opt_comm%' OR id LIKE 'opt_conf%';
 
 INSERT OR REPLACE INTO question_options (id, question_id, option_text, option_value, display_order, status) VALUES ('opt_q_att_1_1', 'q_att_1', 'Strongly Disagree', '1', 1, 'active');
 INSERT OR REPLACE INTO question_options (id, question_id, option_text, option_value, display_order, status) VALUES ('opt_q_att_1_2', 'q_att_1', 'Disagree', '2', 2, 'active');

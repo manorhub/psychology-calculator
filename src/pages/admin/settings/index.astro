@@ -108,6 +108,32 @@ const settings = await adminService.getAllSettings();
         </div>
       </Card>
 
+      <!-- User Registration & Credits -->
+      <Card title="User Onboarding & Free Credits" subtitle="Configure initial trial / launch credits for newly registered users">
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+            <div>
+              <Input
+                id="signup_bonus_credits"
+                name="signup_bonus_credits"
+                type="number"
+                label="New User Signup Bonus Credits"
+                value={settings.signup_bonus_credits || settings.new_user_initial_credits || '10'}
+                min="0"
+                max="1000"
+                required={true}
+              />
+              <p class="text-[11px] text-slate-500 mt-1">
+                Number of free credits granted automatically to each newly registered user.
+              </p>
+            </div>
+            <div class="p-3 bg-teal-50 rounded-xl border border-teal-200/80 text-[11px] text-teal-900 leading-relaxed">
+              💡 <strong>Tip:</strong> While waiting for Lemon Squeezy payment approval, keep this set to <strong>10</strong> (or any desired amount) so users can test AI reports. Once live billing is active, you can set this to <strong>0</strong> to require purchases.
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <!-- Operational State & Maintenance Mode -->
       <Card title="Site Operations & Announcements" subtitle="Control maintenance window and public notices">
         <div class="space-y-4">
@@ -184,6 +210,7 @@ const settings = await adminService.getAllSettings();
       site_description: String(formData.get('site_description') || ''),
       default_currency: String(formData.get('default_currency') || 'USD'),
       timezone: String(formData.get('timezone') || 'UTC'),
+      signup_bonus_credits: String(formData.get('signup_bonus_credits') || '10'),
       maintenance_mode: formData.get('maintenance_mode') === 'true' ? 'true' : 'false',
       announcement_enabled: formData.get('announcement_enabled') === 'true' ? 'true' : 'false',
       announcement_text: String(formData.get('announcement_text') || '')

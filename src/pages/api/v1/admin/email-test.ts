@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const result = await emailService.sendTestEmail(testEmail);
+      const result = await emailService.sendTestEmail(testEmail, config);
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 400,
         headers: { 'Content-Type': 'application/json' }

@@ -226,9 +226,9 @@ async function runAdminTests() {
 
   // Test manual credit adjustments
   const newBalance = await adminService.adjustUserCredits('usr_alice', 50, 'Bonus promo credits', 'admin_999');
-  assert.strictEqual(newBalance, 50, 'Alice balance should be 50 credits');
+  assert.strictEqual(newBalance, 60, 'Alice balance should be 60 credits (10 initial + 50 adjustment)');
   const userDetail = await adminService.getUserDetail('usr_alice');
-  assert.strictEqual(userDetail.creditBalance, 50, 'UserDetail should reflect updated credit balance');
+  assert.strictEqual(userDetail.creditBalance, 60, 'UserDetail should reflect updated credit balance');
 
   console.log('✔ Admin user actions: Suspend, reactivate, manual email verification, role elevation, and credit adjustments verified with self-protection');
 

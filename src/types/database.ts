@@ -91,7 +91,7 @@ export interface AuditLogRow {
 }
 
 // --- Assessment Categories & Assessments ---
-export type CategoryStatus = 'active' | 'inactive' | 'draft';
+export type CategoryStatus = 'active' | 'inactive' | 'draft' | 'archived';
 export type AssessmentStatus = 'draft' | 'published' | 'archived';
 export type AssessmentAccessType = 'free' | 'free_guest' | 'premium' | 'credit_only' | 'registered' | 'authenticated';
 export type QuestionType = 'likert' | 'multiple_choice' | 'yes_no' | 'ranking';
@@ -100,12 +100,21 @@ export interface AssessmentCategoryRow {
   id: string;
   name: string;
   slug: string;
+  short_description?: string | null;
   description: string | null;
   icon: string | null;
+  image?: string | null;
   display_order: number;
+  sort_order?: number; // Alias for display_order
   status: CategoryStatus;
+  featured?: number; // 0 or 1
   seo_title: string | null;
   seo_description: string | null;
+  canonical?: string | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  assessment_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -368,13 +377,64 @@ export interface CreditBalanceRow {
   updated_at: string;
 }
 
+export interface CreditWalletRow {
+  id: string;
+  user_id: string;
+  balance: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreditPackageRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  short_description?: string | null;
+  price: number;
+  currency: string;
+  credits: number;
+  billing_type: 'one_time';
+  lemon_squeezy_product_id: string | null;
+  lemon_squeezy_variant_id: string | null;
+  is_active: number;
+  is_featured: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderRow {
+  id: string;
+  user_id: string;
+  provider: string;
+  provider_order_id: string;
+  provider_transaction_id: string | null;
+  package_id: string | null;
+  product_id: string | null;
+  variant_id: string | null;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'paid' | 'refunded' | 'failed';
+  credits_granted: number;
+  receipt_url: string | null;
+  metadata: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreditTransactionRow {
   id: string;
   user_id: string;
+  wallet_id?: string | null;
   amount: number;
   transaction_type: CreditTransactionType;
   source: string;
+  reference_type?: string | null;
   reference_id: string | null;
+  description?: string | null;
+  balance_before?: number;
+  balance_after?: number;
   metadata: string | null; // JSON
   created_at: string;
 }
@@ -472,6 +532,7 @@ export interface SnapshotDimensionScore {
   dimensionId: string;
   dimensionName: string;
   dimensionSlug: string;
+  description?: string | null;
   rawScore: number;
   maxScore: number;
   normalizedScore: number;
@@ -531,16 +592,101 @@ export interface AIGenerationRow {
   updated_at: string;
 }
 
+export interface AIDimensionAnalysis {
+  dimension_name: string;
+  score_percent: number;
+  level: string;
+  what_it_measures: string;
+  personalized_interpretation: string;
+  behavioral_expression: string;
+  key_strength: string;
+  potential_challenge: string;
+  practical_reflection: string;
+}
+
+export interface AIStrengthItem {
+  title: string;
+  description: string;
+  context?: string;
+}
+
+export interface AIGrowthBlindspot {
+  title: string;
+  manifestation: string;
+  impact: string;
+  constructive_response: string;
+}
+
+export interface AIActionPlanItem {
+  goal: string;
+  why_it_matters: string;
+  action: string;
+  frequency: string;
+}
+
+export interface AICrossDimensionInteractions {
+  core_pattern: string;
+  trait_synergies: string[];
+  trait_tensions: string[];
+  situational_differences: string;
+}
+
+export interface AIRelationshipsCommunication {
+  relational_style: string;
+  communication_style: string;
+  listening_conflict: string;
+  partner_dynamics: string;
+  relationship_tips: string[];
+}
+
+export interface AIWorkLeadership {
+  work_environment: string;
+  collaboration_teamwork: string;
+  decision_problem_solving: string;
+  leadership_mentorship: string;
+  workplace_strengths: string[];
+  workplace_challenges: string[];
+}
+
+export interface AIStressAdaptability {
+  pressure_patterns: string;
+  adaptability_change: string;
+  recovery_equilibrium: string;
+}
+
+export interface AIFinalSynthesis {
+  top_takeaways?: string[];
+  strongest_pattern?: string;
+  biggest_growth_opportunity?: string;
+  notable_trait: string;
+  primary_advantage: string;
+  growth_frontier: string;
+  relationship_insight: string;
+  work_insight: string;
+  next_step: string;
+  reflection_questions: string[];
+  closing_summary: string;
+}
+
 export interface AIReportContent {
-  summary: string;
+  headline?: string;
+  summary: string; // Executive psychological summary (500-700 words)
   key_traits: string[];
-  strengths: string[];
+  dimension_analyses?: AIDimensionAnalysis[];
+  cross_dimension_interactions?: AICrossDimensionInteractions;
+  strengths: string[] | AIStrengthItem[];
   challenges: string[];
+  growth_blindspots?: AIGrowthBlindspot[];
   communication: string;
   relationships: string;
+  relationships_communication?: AIRelationshipsCommunication;
   work_style: string;
+  work_leadership?: AIWorkLeadership;
+  stress_adaptability?: AIStressAdaptability;
   growth_opportunities: string[];
   practical_suggestions: string[];
+  action_plan?: AIActionPlanItem[];
+  final_synthesis?: AIFinalSynthesis;
 }
 
 export interface AIReportData {
@@ -816,7 +962,36 @@ export interface PostVersionRow {
 // PHASE 14: EMAIL, NOTIFICATIONS & USER COMMUNICATION
 // ============================================================================
 
+export type EmailEventCategory =
+  | 'auth_security'
+  | 'assessments'
+  | 'reports'
+  | 'credits_billing'
+  | 'system_optional';
+
 export type EmailEventKey =
+  | 'user.signup'
+  | 'user.email_verification'
+  | 'user.password_reset'
+  | 'user.password_changed'
+  | 'user.account_ready'
+  | 'assessment.completed'
+  | 'report.generation_started'
+  | 'report.ready'
+  | 'report.failed'
+  | 'credits.purchase_success'
+  | 'credits.purchase_failed'
+  | 'credits.low_balance'
+  | 'credits.receipt'
+  | 'account.deletion_requested'
+  | 'account.deleted'
+  | 'assessment.reminder'
+  | 'incomplete_assessment.reminder'
+  | 'report.view_reminder'
+  | 'credits.expiring'
+  | 'product.announcement'
+  | 'feature.announcement'
+  | 'security.alert'
   | 'welcome'
   | 'email_verification'
   | 'password_reset'
@@ -839,11 +1014,22 @@ export interface EmailTemplateRow {
   id: string;
   event_key: EmailEventKey;
   name: string;
+  category: EmailEventCategory;
   subject: string;
+  preview_text?: string | null;
+  headline?: string | null;
+  body_content?: string | null;
+  button_text?: string | null;
+  button_url?: string | null;
+  footer_note?: string | null;
+  sender_name?: string | null;
+  sender_email?: string | null;
+  reply_to?: string | null;
   html_body: string;
   text_body: string;
   status: 'active' | 'inactive';
   allowed_variables: string; // JSON string array
+  is_system_default?: number;
   updated_at: string;
   created_at: string;
 }
@@ -860,6 +1046,8 @@ export interface EmailJobRow {
   attempts: number;
   max_attempts: number;
   last_error: string | null;
+  provider_message_id?: string | null;
+  idempotency_key?: string | null;
   scheduled_at: string;
   sent_at: string | null;
   created_at: string;

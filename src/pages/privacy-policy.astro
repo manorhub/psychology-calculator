@@ -1,0 +1,434 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Badge from '@/components/ui/Badge.astro';
+
+export const prerender = false;
+
+const lastUpdated = "August 24, 2026";
+---
+
+<PublicLayout
+  title="Privacy Policy"
+  description="Learn how PsychologyCalculator.com collects, uses, protects, and manages personal information, assessment data, AI reports, cookies, and third-party services."
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 space-y-12">
+    <!-- Header Section -->
+    <div class="space-y-4 border-b border-slate-200 pb-8">
+      <div class="flex items-center gap-2">
+        <Badge variant="success" size="sm">Active Policy</Badge>
+        <span class="text-xs text-slate-500 font-medium">Last Updated: {lastUpdated}</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+        Privacy Policy
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
+        Your privacy matters to us. This policy explains what information we collect, why we use it, how your assessment data is handled, and the choices available to you when using <strong>PsychologyCalculator.com</strong>.
+      </p>
+    </div>
+
+    <!-- Quick Navigation Table of Contents -->
+    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-3">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+        Table of Contents
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-teal-700 font-medium">
+        <a href="#introduction" class="hover:underline">1. Introduction & Context</a>
+        <a href="#information-we-collect" class="hover:underline">2. Information We Collect</a>
+        <a href="#assessment-data" class="hover:underline">3. Assessment & Questionnaire Data</a>
+        <a href="#sensitive-information" class="hover:underline">4. Sensitive Information & Non-Clinical Notice</a>
+        <a href="#account-data" class="hover:underline">5. Account Information & Authentication</a>
+        <a href="#ai-reports" class="hover:underline">6. AI-Generated Reports & Minimization</a>
+        <a href="#payments-credits" class="hover:underline">7. Payment & Credit Information</a>
+        <a href="#cookies-analytics" class="hover:underline">8. Cookies, Local Storage & Analytics</a>
+        <a href="#how-we-use" class="hover:underline">9. How We Use Information</a>
+        <a href="#data-sharing" class="hover:underline">10. How We Share Information</a>
+        <a href="#third-parties" class="hover:underline">11. Third-Party Service Providers</a>
+        <a href="#data-retention" class="hover:underline">12. Data Retention</a>
+        <a href="#data-security" class="hover:underline">13. Data Security</a>
+        <a href="#user-rights" class="hover:underline">14. Your Privacy Rights</a>
+        <a href="#account-deletion" class="hover:underline">15. Account & Data Deletion</a>
+        <a href="#international-users" class="hover:underline">16. International Users</a>
+        <a href="#children" class="hover:underline">17. Children's Privacy</a>
+        <a href="#disclaimer" class="hover:underline">18. Educational & Psychological Disclaimer</a>
+        <a href="#changes" class="hover:underline">19. Changes to This Policy</a>
+        <a href="#contact" class="hover:underline">20. Contact Us</a>
+      </div>
+    </div>
+
+    <!-- Policy Content Body -->
+    <div class="prose prose-slate max-w-none space-y-10 text-sm sm:text-base text-slate-700 leading-relaxed">
+      
+      <!-- 1. Introduction -->
+      <section id="introduction" class="space-y-3 pt-2">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          1. Introduction & Context
+        </h2>
+        <p>
+          Welcome to <strong>PsychologyCalculator.com</strong> ("we", "our", or "us"). We provide an online psychometric and self-reflection platform offering structured psychology assessments, personality tests, emotional wellbeing evaluations, relationship questionnaires, and personalized interpretative reports.
+        </p>
+        <p>
+          We aim to handle personal information responsibly, transparently, and with privacy-first principles. This Privacy Policy describes the actual technical mechanisms and policies regarding the collection, processing, storage, and protection of information when you interact with our website, use our calculators, create an account, purchase AI report credits, or request customer support.
+        </p>
+      </section>
+
+      <!-- 2. Information We Collect -->
+      <section id="information-we-collect" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          2. Information We Collect
+        </h2>
+        <p>
+          We categorize the information processed on our platform into three distinct groups:
+        </p>
+        <div class="space-y-4">
+          <div class="p-4 bg-white rounded-xl border border-slate-200 space-y-1">
+            <h3 class="text-sm font-bold text-slate-900">A. Information You Voluntarily Provide</h3>
+            <ul class="list-disc pl-5 text-xs sm:text-sm space-y-1 text-slate-600">
+              <li><strong>Account Credentials:</strong> Email address, password (stored in cryptographic hash form), and optional profile display name.</li>
+              <li><strong>Third-Party OAuth Data:</strong> When signing in with Google, we receive your basic public profile identifier and verified email address.</li>
+              <li><strong>Assessment Responses:</strong> Selected Likert-scale answers (e.g. 1 to 5) and questionnaire option choices submitted during an assessment.</li>
+              <li><strong>Communication Details:</strong> Message content and contact email provided when contacting support or submitting feedback.</li>
+            </ul>
+          </div>
+
+          <div class="p-4 bg-white rounded-xl border border-slate-200 space-y-1">
+            <h3 class="text-sm font-bold text-slate-900">B. Information Generated Through Platform Use</h3>
+            <ul class="list-disc pl-5 text-xs sm:text-sm space-y-1 text-slate-600">
+              <li><strong>Psychometric Scores:</strong> Raw scores, dimension percentages, and mapped result archetypes (e.g., Big Five facets, attachment styles).</li>
+              <li><strong>AI Synthesis Dossiers:</strong> Structured narrative interpretations generated when you request an AI assessment report.</li>
+              <li><strong>Wallet & Credit Records:</strong> Purchased credit balance, consumption timestamps, and report unlock history.</li>
+              <li><strong>Transaction References:</strong> Order identifiers and payment verification metadata received from our payment processor.</li>
+            </ul>
+          </div>
+
+          <div class="p-4 bg-white rounded-xl border border-slate-200 space-y-1">
+            <h3 class="text-sm font-bold text-slate-900">C. Automatically Collected Technical Information</h3>
+            <ul class="list-disc pl-5 text-xs sm:text-sm space-y-1 text-slate-600">
+              <li><strong>Device & Network Data:</strong> IP address, browser type, operating system, screen dimensions, and referring URL.</li>
+              <li><strong>Approximate Location:</strong> Country or city-level location derived from IP address for regional routing and localized currency display.</li>
+              <li><strong>Session Identifiers:</strong> Randomly generated cryptographic tokens used to maintain authenticated state and guest assessment progress.</li>
+              <li><strong>Server Logs:</strong> HTTP status codes, request timestamps, and system error diagnostics.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Assessment & Questionnaire Data -->
+      <section id="assessment-data" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          3. Assessment & Questionnaire Data
+        </h2>
+        <p>
+          Our platform hosts self-assessments covering diverse psychological constructs, including personality traits, emotional intelligence, relationship communication, cognitive styles, and workplace dispositions.
+        </p>
+        <p>
+          When you complete an assessment, your responses are processed through our standardized psychometric calculation engine to compute dimensional scores and identify corresponding archetypes.
+        </p>
+        <div class="bg-teal-50/70 border border-teal-200/80 rounded-xl p-4 text-xs sm:text-sm text-teal-900 space-y-2">
+          <strong>Guest Usage vs. Registered Accounts:</strong>
+          <p>
+            You are welcome to take assessments as a guest without creating an account. In guest mode, your assessment attempt is temporarily associated with an ephemeral browser session. When logged into a registered account, completed assessments and calculated scores are saved to your private User Dashboard for your future reference and report unlocking.
+          </p>
+        </div>
+      </section>
+
+      <!-- 4. Sensitive Information Notice -->
+      <section id="sensitive-information" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          4. Sensitive Information & Non-Clinical Notice
+        </h2>
+        <p>
+          Some assessment topics relate to personal feelings, relational dynamics, behavioral tendencies, or self-perception. These assessments are intended solely for educational, personal insight, and self-reflection purposes.
+        </p>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs sm:text-sm text-amber-900">
+          <p class="font-bold">⚠️ Important Guidance on Sensitive Data:</p>
+          <p class="mt-1">
+            PsychologyCalculator.com is not a medical provider and does not collect health insurance information, clinical records, or prescription data. Please avoid entering sensitive personal health records, government identification numbers, or confidential third-party details into any free-text support fields.
+          </p>
+        </div>
+      </section>
+
+      <!-- 5. Account Information & Authentication -->
+      <section id="account-data" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          5. Account Information & Authentication
+        </h2>
+        <p>
+          If you choose to create an account, we store your email address and an encrypted hash of your password using secure one-way cryptographic algorithms. We do not have access to your plaintext password.
+        </p>
+        <p>
+          If you authenticate using Google OAuth, authentication is verified directly by Google. We receive a token confirming your identity along with your primary email address and name. Authentication sessions are managed using encrypted HTTP-only session cookies and distributed edge key-value storage.
+        </p>
+      </section>
+
+      <!-- 6. AI-Generated Reports -->
+      <section id="ai-reports" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          6. AI-Generated Reports & Data Minimization
+        </h2>
+        <p>
+          We offer optional, in-depth psychological synthesis reports unlocked via AI report credits. To generate these reports, our application compiles your calculated dimension scores, test metadata, and archetype classifications into a structured prompt sent to configured large language model inference providers (e.g., OpenRouter, Cloudflare Workers AI, Anthropic, or OpenAI).
+        </p>
+        <div class="space-y-2 text-xs sm:text-sm text-slate-600">
+          <p><strong>Strict Data Minimization:</strong> We transmit only the psychometric scores and dimension profiles required to synthesize the analysis. We do not transmit your account password, payment card data, or billing address to AI inference APIs.</p>
+          <p><strong>Nature of AI Synthesis:</strong> AI reports provide synthesized educational commentary and communication frameworks based on psychometric models. AI output may not always be exhaustive and must not be treated as clinical psychological diagnosis, medical evaluation, legal counsel, or psychiatric advice.</p>
+        </div>
+      </section>
+
+      <!-- 7. Payment & Credit Information -->
+      <section id="payments-credits" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          7. Payment & Credit Information
+        </h2>
+        <p>
+          PsychologyCalculator.com operates on a <strong>pay-as-you-go credit system</strong> with no recurring monthly subscriptions for MVP reports. All credit packages (Starter, Growth, Pro) are one-time purchases.
+        </p>
+        <p>
+          Payments are processed securely by our third-party Merchant of Record, <strong>Lemon Squeezy</strong>.
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li><strong>No Credit Card Storage:</strong> We do NOT collect, receive, or store your full credit card number, CVV code, or banking credentials on our servers.</li>
+          <li><strong>Transaction Records:</strong> Upon successful checkout, we receive a secure webhook notification containing the order ID, purchased package identifier, credit quantity, currency, and payment confirmation status, which is recorded in your account credit wallet.</li>
+        </ul>
+      </section>
+
+      <!-- 8. Cookies, Local Storage & Analytics -->
+      <section id="cookies-analytics" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          8. Cookies, Local Storage & Analytics
+        </h2>
+        <p>
+          We use cookies and browser storage strictly for necessary site operations and aggregate analytics:
+        </p>
+        <div class="space-y-3">
+          <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+            <h4 class="text-xs font-bold text-slate-900">Essential / Functional Cookies:</h4>
+            <p class="text-xs text-slate-600 mt-0.5">
+              Secure HTTP-only session cookies (<code class="text-slate-800 bg-slate-200 px-1 py-0.5 rounded">session_id</code>) used to maintain your login state, verify CSRF tokens, and prevent session hijacking.
+            </p>
+          </div>
+          <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+            <h4 class="text-xs font-bold text-slate-900">Browser Local Storage:</h4>
+            <p class="text-xs text-slate-600 mt-0.5">
+              Used to remember temporary question navigation states during active assessment completion so your progress is not lost if the page reloads.
+            </p>
+          </div>
+          <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+            <h4 class="text-xs font-bold text-slate-900">Analytics (Google Analytics 4):</h4>
+            <p class="text-xs text-slate-600 mt-0.5">
+              We use Google Analytics 4 (<code class="text-slate-800 bg-slate-200 px-1 py-0.5 rounded">G-D70LGC3MQB</code>) to understand aggregate page interaction, popular assessments, referral paths, and device compatibility. Google Analytics collects anonymized interaction metrics and does not receive your specific questionnaire answers.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. Advertising Status -->
+      <section id="advertising" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          9. Advertising Status
+        </h2>
+        <p>
+          PsychologyCalculator.com does not currently display third-party behavioral advertisements or run advertising networks (such as Google AdSense). We do not track your activity across unrelated third-party websites to serve targeted behavioral ads.
+        </p>
+      </section>
+
+      <!-- 10. How We Use Information -->
+      <section id="how-we-use" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          10. How We Use Information
+        </h2>
+        <p>We process information only for legitimate, transparent purposes, including:</p>
+        <ul class="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-600">
+          <li>Delivering online assessments, calculating dimensional scores, and presenting immediate results.</li>
+          <li>Generating personalized AI psychological reports when requested using credits.</li>
+          <li>Maintaining user accounts, authentication security, and personal assessment history.</li>
+          <li>Crediting user wallets following completed one-time package purchases.</li>
+          <li>Diagnosing technical issues, mitigating DDoS attacks, and ensuring server uptime.</li>
+          <li>Responding to user support inquiries, bug reports, and data requests.</li>
+          <li>Complying with applicable accounting and legal obligations.</li>
+        </ul>
+      </section>
+
+      <!-- 11. Data Sharing & Third-Party Service Providers -->
+      <section id="third-parties" class="space-y-4 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          11. Third-Party Service Providers
+        </h2>
+        <p>
+          <strong>We do not sell personal information for monetary consideration.</strong> We share data only with verified service providers necessary to operate our infrastructure:
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse border border-slate-200 text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-900 font-bold border-b border-slate-200">
+                <th class="p-3">Provider</th>
+                <th class="p-3">Category</th>
+                <th class="p-3">Data Processed</th>
+                <th class="p-3">Purpose</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-slate-600">
+              <tr>
+                <td class="p-3 font-semibold text-slate-900">Cloudflare</td>
+                <td class="p-3">Cloud Hosting & Database</td>
+                <td class="p-3">IP address, request logs, D1 database rows, KV session tokens</td>
+                <td class="p-3">Edge hosting, data storage, DDoS protection, and routing.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-slate-900">Lemon Squeezy</td>
+                <td class="p-3">Merchant of Record</td>
+                <td class="p-3">Order identifiers, billing email, credit package ID, payment status</td>
+                <td class="p-3">Payment processing, tax compliance, and credit fulfilment.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-slate-900">Google LLC</td>
+                <td class="p-3">Auth & Analytics</td>
+                <td class="p-3">OAuth profile/email (sign-in) and aggregated pageview analytics</td>
+                <td class="p-3">User login authentication and site performance metrics.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-slate-900">AI Model Providers</td>
+                <td class="p-3">AI Report Inference</td>
+                <td class="p-3">Anonymized dimension scores, test metadata, and archetype keys</td>
+                <td class="p-3">Synthesizing personalized assessment interpretation reports.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-slate-900">Search Protocols</td>
+                <td class="p-3">IndexNow & Search Verification</td>
+                <td class="p-3">Public page URLs submitted to Bing / Yandex / IndexNow</td>
+                <td class="p-3">Instant discovery and indexing of published public assessments.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12. Data Retention -->
+      <section id="data-retention" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          12. Data Retention
+        </h2>
+        <p>
+          We retain information for as long as reasonably necessary to provide services, maintain your active account, preserve your assessment and report history, and satisfy legal or accounting obligations.
+        </p>
+        <p>
+          Guest assessment sessions without an account expire automatically from temporary cache storage. If you delete your account, personal identifiers are permanently scrubbed from our active database.
+        </p>
+      </section>
+
+      <!-- 13. Data Security -->
+      <section id="data-security" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          13. Data Security
+        </h2>
+        <p>
+          We employ administrative, technical, and physical safeguards designed to protect personal data against unauthorized access, loss, misuse, or alteration:
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li>All network communication is strictly encrypted in transit using modern TLS (HTTPS).</li>
+          <li>Account passwords are protected with salted one-way cryptographic hashing.</li>
+          <li>Database queries utilize parameterized bindings to prevent injection vulnerabilities.</li>
+          <li>Administrative and database access is restricted with role-based authentication and rate limiting.</li>
+        </ul>
+        <p class="text-xs text-slate-500">
+          While we follow rigorous security standards, no method of transmission or electronic storage over the Internet can be guaranteed 100% immune from unexpected security incidents.
+        </p>
+      </section>
+
+      <!-- 14. Your Privacy Rights -->
+      <section id="user-rights" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          14. Your Privacy Rights
+        </h2>
+        <p>
+          Depending on your location and applicable privacy laws, you may have the following rights regarding your personal information:
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li><strong>Right of Access:</strong> Review the personal information and assessment history associated with your account.</li>
+          <li><strong>Right to Rectification:</strong> Request correction of inaccurate profile information.</li>
+          <li><strong>Right to Erasure / Deletion:</strong> Request the deletion of your account and personal assessment records.</li>
+          <li><strong>Right to Restriction or Objection:</strong> Limit or object to specific processing of your personal information.</li>
+        </ul>
+      </section>
+
+      <!-- 15. Account & Data Deletion -->
+      <section id="account-deletion" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          15. Account & Data Deletion
+        </h2>
+        <p>
+          We provide clear mechanisms for account and data deletion:
+        </p>
+        <div class="space-y-2 text-xs sm:text-sm text-slate-600">
+          <p>
+            <strong>Self-Service Deletion:</strong> Logged-in users can initiate account deletion via their account settings or via our deletion API. Upon confirmation, your account status is updated, personal email is anonymized, password hash is cleared, and active authentication tokens are destroyed.
+          </p>
+          <p>
+            <strong>Email Deletion Request:</strong> You may also email <a href="mailto:support@psychologycalculator.com" class="text-teal-700 font-bold hover:underline">support@psychologycalculator.com</a> with the subject "Data Deletion Request" from your registered email address, and our team will process your request.
+          </p>
+        </div>
+      </section>
+
+      <!-- 16. International Users -->
+      <section id="international-users" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          16. International Users & Global Processing
+        </h2>
+        <p>
+          PsychologyCalculator.com is globally accessible. Our infrastructure leverages Cloudflare's distributed edge network and secure servers located across multiple jurisdictions. By accessing the website or submitting assessment data, you acknowledge that your information may be processed in countries other than your country of residence, where data protection standards may differ.
+        </p>
+      </section>
+
+      <!-- 17. Children's Privacy -->
+      <section id="children" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          17. Children's Privacy
+        </h2>
+        <p>
+          PsychologyCalculator.com is intended for general audiences and self-reflective adults. We do not knowingly collect or solicit personal information from children under the age of 13 (or 16 where applicable by law). If you believe a child has provided us with personal information without parental consent, please contact us immediately, and we will delete the information promptly.
+        </p>
+      </section>
+
+      <!-- 18. Non-Clinical Disclaimer -->
+      <section id="disclaimer" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          18. Educational & Psychological Disclaimer
+        </h2>
+        <p>
+          Assessments and AI reports provided on PsychologyCalculator.com are intended for personal exploration and educational self-awareness only. They are not psychological diagnoses, psychotherapy, clinical assessments, or medical treatments. If you are experiencing distress or require clinical mental health support, please consult a licensed psychologist, psychiatrist, or qualified healthcare professional.
+        </p>
+      </section>
+
+      <!-- 19. Changes to This Policy -->
+      <section id="changes" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          19. Changes to This Privacy Policy
+        </h2>
+        <p>
+          We may update this Privacy Policy periodically to reflect enhancements to our platform, changes in legal obligations, or new service integrations. When updates occur, we will revise the "Last Updated" date at the top of this page. We encourage you to review this policy periodically.
+        </p>
+      </section>
+
+      <!-- 20. Contact Us -->
+      <section id="contact" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          20. Contact Us
+        </h2>
+        <p>
+          If you have questions, feedback, or privacy-related requests regarding this Privacy Policy, please contact us:
+        </p>
+        <div class="p-5 bg-white rounded-2xl border border-slate-200 space-y-2">
+          <div class="text-xs text-slate-500 font-bold uppercase tracking-wider">Privacy & Data Protection</div>
+          <div class="text-sm font-bold text-slate-900">PsychologyCalculator.com</div>
+          <div class="text-xs text-slate-600">
+            Email: <a href="mailto:support@psychologycalculator.com" class="text-teal-700 font-bold hover:underline">support@psychologycalculator.com</a>
+          </div>
+          <div class="text-xs text-slate-600">
+            Website: <a href="https://psychologycalculator.com/about" class="text-teal-700 font-bold hover:underline">https://psychologycalculator.com/about</a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</PublicLayout>

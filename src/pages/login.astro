@@ -106,7 +106,7 @@ if (verifiedParam === 'true') {
 
           <!-- Google OAuth Button -->
           <Button
-            href="/auth/google"
+            href={redirectParam ? `/auth/google?redirect=${encodeURIComponent(redirectParam)}` : '/auth/google'}
             variant="outline"
             size="md"
             class="w-full flex items-center justify-center gap-3 text-slate-700 hover:bg-slate-50 border-slate-300"

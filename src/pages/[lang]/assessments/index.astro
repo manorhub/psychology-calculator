@@ -1,0 +1,125 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import { AssessmentService } from '@/services/assessment.service';
+import { getD1Database } from '@/lib/db/client';
+import {
+  type SupportedLocale,
+  isValidLocale,
+  useTranslations,
+  getLocalizedPath
+} from '@/i18n';
+import { TranslationsService } from '@/i18n/translations.service';
+
+export const prerender = false;
+
+const { lang } = Astro.params;
+if (!isValidLocale(lang)) {
+  return Astro.redirect('/404');
+}
+
+const currentLocale = lang as SupportedLocale;
+const { t } = useTranslations(currentLocale);
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const assessmentService = new AssessmentService(db);
+const transService = new TranslationsService(db);
+
+const rawCategories = await assessmentService.getCategories();
+const rawAssessments = await assessmentService.getPublishedAssessments();
+
+// Localize Categories
+const categories = await Promise.all(
+  rawCategories.map(async (cat) => {
+    const loc = await transService.getLocalizedCategory(cat.id, currentLocale);
+    return {
+      ...cat,
+      name: loc?.name || cat.name,
+      description: loc?.description || cat.description
+    };
+  })
+);
+
+// Localize Assessments
+const assessments = await Promise.all(
+  rawAssessments.map(async (asm) => {
+    const loc = await transService.getLocalizedAssessment(asm.id, currentLocale);
+    return {
+      ...asm,
+      name: loc?.name || asm.name,
+      short_description: loc?.shortDescription || asm.short_description
+    };
+  })
+);
+---
+
+<PublicLayout
+  title={`${t.nav.assessments} | PsychologyCalculator.com`}
+  description={t.hero.subtitle}
+  locale={currentLocale}
+>
+  <div class="max-w-7xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-12">
+    <div class="space-y-4">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 text-teal-800 text-xs font-bold rounded-full border border-teal-200">
+        <span>Ψ</span> {t.nav.assessments}
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {t.common.exploreAssessments}
+      </h1>
+      <p class="text-sm sm:text-base text-slate-600 max-w-2xl leading-relaxed">
+        {t.hero.subtitle}
+      </p>
+    </div>
+
+    <!-- Category Filters -->
+    <div class="flex flex-wrap items-center gap-2 pt-2 border-b border-slate-200 pb-4">
+      <span class="text-xs font-bold text-slate-400 mr-2">{t.nav.categories}:</span>
+      {categories.map((cat) => (
+        <a
+          href={getLocalizedPath(`/assessments/category/${cat.slug}`, currentLocale)}
+          class="px-3.5 py-1.5 bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-900 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
+        >
+          {cat.name}
+        </a>
+      ))}
+    </div>
+
+    <!-- Assessments Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {assessments.map((asm) => (
+        <div class="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-5 group">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 bg-teal-50 text-teal-800 text-[11px] font-bold rounded-lg border border-teal-200/60">
+                {asm.category_name || t.common.freeAssessment}
+              </span>
+              <span class="text-xs text-slate-400 font-mono">~{asm.estimated_minutes || 6} {t.common.minutes}</span>
+            </div>
+
+            <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+              <a href={getLocalizedPath(`/assessments/${asm.slug}`, currentLocale)}>
+                {asm.name}
+              </a>
+            </h3>
+
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-3">
+              {asm.short_description}
+            </p>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500">✓ {t.common.freeAssessment}</span>
+            <a
+              href={getLocalizedPath(`/assessments/${asm.slug}`, currentLocale)}
+              class="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-teal-700 hover:text-white bg-teal-50 hover:bg-teal-600 rounded-xl transition-all"
+            >
+              <span>{t.common.continue}</span>
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</PublicLayout>

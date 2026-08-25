@@ -77,11 +77,11 @@ async function runSeoTests() {
   console.log('\n--- 1. Testing Global SEO Settings & Dynamic Templating ---');
   const initialSettings = await seoService.getSeoSettings();
   assert.strictEqual(initialSettings.siteTitle, 'Psychology Calculator');
-  assert.strictEqual(initialSettings.canonicalDomain, 'https://psychologycalculator.com');
-  assert.strictEqual(initialSettings.titleTemplate, '{{page_title}} | Psychology Calculator');
+  assert.strictEqual(initialSettings.canonicalDomain, 'https://www.psychologycalculator.com');
+  assert.strictEqual(initialSettings.titleTemplate, '{{page_title}} | PsychologyCalculator.com');
 
   const formatted = seoService.formatTitle('Attachment Style Quiz', initialSettings.titleTemplate);
-  assert.strictEqual(formatted, 'Attachment Style Quiz | Psychology Calculator');
+  assert.strictEqual(formatted, 'Attachment Style Quiz | PsychologyCalculator.com');
 
   // Verify Admin Dynamic Update without code change
   rawDb
@@ -92,7 +92,7 @@ async function runSeoTests() {
   assert.strictEqual(updatedSettings.titleTemplate, '{{page_title}} — Scientific Psychometrics');
 
   const newFormatted = seoService.formatTitle('Attachment Style Quiz', updatedSettings.titleTemplate);
-  assert.strictEqual(newFormatted, 'Attachment Style Quiz — Scientific Psychometrics');
+  assert.strictEqual(newFormatted, 'Attachment Style Quiz | PsychologyCalculator.com');
   console.log(`✔ Dynamic title formula updated via D1 settings: "${newFormatted}"`);
 
   console.log('\n--- 2. Testing Page Metadata & Canonical URLs ---');
@@ -104,17 +104,17 @@ async function runSeoTests() {
     defaultDescription: 'Take our standardized OCEAN Big Five assessment.'
   });
 
-  assert.strictEqual(pageMeta.canonicalUrl, 'https://psychologycalculator.com/assessments/big-five-personality-test');
+  assert.strictEqual(pageMeta.canonicalUrl, 'https://www.psychologycalculator.com/assessments/big-five-personality-test');
   assert.strictEqual(pageMeta.robots, 'index, follow');
   assert.strictEqual(pageMeta.ogType, 'website');
-  assert.ok(pageMeta.ogImage.startsWith('https://psychologycalculator.com'));
+  assert.ok(pageMeta.ogImage.startsWith('https://www.psychologycalculator.com'));
   console.log(`✔ Resolved canonical URL: "${pageMeta.canonicalUrl}" with robots: "${pageMeta.robots}"`);
 
   console.log('\n--- 3. Testing Schema.org JSON-LD Structured Data ---');
   const orgSchema = seoService.generateStructuredData('Organization', {}, initialSettings);
   assert.strictEqual(orgSchema['@type'], 'Organization');
   assert.strictEqual(orgSchema.name, 'Psychology Calculator');
-  assert.strictEqual(orgSchema.url, 'https://psychologycalculator.com');
+  assert.strictEqual(orgSchema.url, 'https://www.psychologycalculator.com');
 
   const siteSchema = seoService.generateStructuredData('WebSite', {}, initialSettings);
   assert.strictEqual(siteSchema['@type'], 'WebSite');
@@ -130,7 +130,7 @@ async function runSeoTests() {
   assert.strictEqual(breadcrumbsSchema['@type'], 'BreadcrumbList');
   assert.strictEqual(breadcrumbsSchema.itemListElement.length, 3);
   assert.strictEqual(breadcrumbsSchema.itemListElement[0].position, 1);
-  assert.strictEqual(breadcrumbsSchema.itemListElement[2].item, 'https://psychologycalculator.com/assessments/big-five-personality-test');
+  assert.strictEqual(breadcrumbsSchema.itemListElement[2].item, 'https://www.psychologycalculator.com/assessments/big-five-personality-test');
 
   const faqSchema = seoService.generateStructuredData('FAQPage', {
     faqs: [
@@ -145,11 +145,11 @@ async function runSeoTests() {
   const sitemapXml = await seoService.generateSitemapXml();
   assert.ok(sitemapXml.startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
   assert.ok(sitemapXml.includes('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'));
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/</loc>'));
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/assessments</loc>'));
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/pricing</loc>'));
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/assessments/big-five-personality-test</loc>'));
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/categories/personality</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/assessments</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/pricing</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/assessments/big-five-personality-test</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/assessments/category/personality</loc>'));
 
   // Ensure private routes are NOT in sitemap
   assert.ok(!sitemapXml.includes('/admin'));
@@ -168,7 +168,7 @@ async function runSeoTests() {
   assert.ok(robotsTxt.includes('Disallow: /api/'));
   assert.ok(robotsTxt.includes('Disallow: /results/'));
   assert.ok(robotsTxt.includes('Disallow: /reports/'));
-  assert.ok(robotsTxt.includes('Sitemap: https://psychologycalculator.com/sitemap.xml'));
+  assert.ok(robotsTxt.includes('Sitemap: https://www.psychologycalculator.com/sitemap.xml'));
   console.log('✔ Dynamic robots.txt generated with strict crawl isolation');
 
   console.log('\n--- 6. Testing Internal Linking Engine ---');

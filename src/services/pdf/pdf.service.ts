@@ -233,22 +233,29 @@ export class PdfService extends BaseService {
       try {
         aiContent = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
       } catch {
-        aiContent = { executive_summary: rawContent };
+        aiContent = { summary: rawContent };
       }
     }
 
-    const executiveSummary = aiContent.executive_summary || report.summary || 'Comprehensive psychological narrative report.';
+    const executiveSummary = aiContent.summary || aiContent.executive_summary || report.summary || 'Comprehensive psychological narrative report.';
+    const headline = aiContent.headline || snapshot.primaryResultType?.description || undefined;
     const keyTraits: string[] = Array.isArray(aiContent.key_traits) ? aiContent.key_traits : [];
-    const cognitiveStrengths: string[] = Array.isArray(aiContent.cognitive_strengths) ? aiContent.cognitive_strengths : [];
-    const growthOpportunities: string[] = Array.isArray(aiContent.growth_opportunities) ? aiContent.growth_opportunities : [];
-    const dailyPractices: string[] = Array.isArray(aiContent.daily_practices) ? aiContent.daily_practices : [];
+    const dimensionAnalyses = Array.isArray(aiContent.dimension_analyses) ? aiContent.dimension_analyses : [];
+    const interactions = aiContent.cross_dimension_interactions;
+    const strengths = Array.isArray(aiContent.strengths) ? aiContent.strengths : [];
+    const growthBlindspots = Array.isArray(aiContent.growth_blindspots) ? aiContent.growth_blindspots : [];
+    const relComm = aiContent.relationships_communication;
+    const workLead = aiContent.work_leadership;
+    const stressAdapt = aiContent.stress_adaptability;
+    const actionPlan = Array.isArray(aiContent.action_plan) ? aiContent.action_plan : [];
+    const finalSynth = aiContent.final_synthesis;
 
-    // 3. Build PDF Document
+    // 3. Build Full-Length PDF Document
     const builder = new PdfDocumentBuilder({
       brandName: settings.pdf_brand_name || 'Psychology Calculator',
       brandDomain: settings.pdf_brand_domain || 'psychologycalculator.com',
-      primaryColor: settings.pdf_primary_color || '#4f46e5',
-      secondaryColor: settings.pdf_secondary_color || '#0ea5e9',
+      primaryColor: settings.pdf_primary_color || '#0f766e',
+      secondaryColor: settings.pdf_secondary_color || '#4338ca',
       footerText: settings.pdf_footer_text || 'Psychology Calculator — Official Psychometric Evaluation Report',
       disclaimerText: snapshot.disclaimer || settings.pdf_disclaimer
     });
@@ -260,64 +267,234 @@ export class PdfService extends BaseService {
 
     await builder.initialize(`${snapshot.assessmentName} - Detailed AI Psychological Report`, 'Psychology Calculator');
 
-    // Header & Title
-    builder.addHeader('Comprehensive AI Evaluation', snapshot.assessmentName);
-    builder.addTitleBlock(
-      `${snapshot.assessmentName} — Detailed Interpretation Report`,
-      'Comprehensive AI Evaluation',
+    // ==========================================
+    // PAGE 1: COVER & RESULT IDENTITY
+    // ==========================================
+    builder.addHeader('PERSONALIZED ASSESSMENT REPORT', snapshot.assessmentName);
+    builder.addCoverHeader(
+      snapshot.assessmentName,
+      snapshot.assessmentCategoryName || 'Psychological Assessment',
       displayName,
-      reportDate
-    );
-
-    // Primary Outcome Card
-    builder.addOutcomeCard(
-      snapshot.primaryResultType?.name || 'Psychological Classification',
+      reportDate,
+      snapshot.primaryResultType?.name || 'Assessed Psychological Profile',
       snapshot.totalNormalizedScore || 0,
-      snapshot.primaryResultType?.description || 'Standardized baseline assessment outcome.'
+      headline
     );
 
-    // Executive Summary
-    builder.addSectionHeader('Executive Psychological Synthesis');
-    builder.addContentSections([{ title: '', content: executiveSummary }]);
-
-    // Key Trait Pills
     if (keyTraits.length > 0) {
+      builder.addSectionHeader('Core Profile Signatures', 'Key behavioral tendencies and cognitive strengths deduced from your responses');
       builder.addTraitPills(keyTraits);
     }
 
-    // Dimensional Scores Breakdown
+    // ==========================================
+    // SECTION 2: EXECUTIVE PSYCHOLOGICAL SUMMARY
+    // ==========================================
+    builder.forcePageBreak();
+    builder.addHeader('EXECUTIVE PSYCHOLOGICAL SUMMARY', snapshot.assessmentName);
+    builder.addSectionHeader('Executive Psychological Synthesis', 'Comprehensive analysis of cognitive patterns and baseline tendencies');
+    builder.addParagraphs(executiveSummary, 10, 15);
+
+    // ==========================================
+    // SECTION 3: SCORE & DIMENSION PROFILE + PROFILE AT A GLANCE
+    // ==========================================
     if (snapshot.dimensionScores && snapshot.dimensionScores.length > 0) {
+      builder.ensureSpace(240);
+      builder.addSectionHeader('Construct Scores & Dimensional Breakdown', 'Standardized psychometric measurements across all evaluated domains');
+      
       const dimData: DimensionScoreData[] = snapshot.dimensionScores.map((d) => ({
         name: d.dimensionName,
         normalizedScore: d.normalizedScore,
         rawScore: d.rawScore,
-        maxScore: d.maxScore
+        maxScore: d.maxScore,
+        level: d.resultTypeName || (d.normalizedScore >= 70 ? 'High' : d.normalizedScore >= 35 ? 'Moderate' : 'Low'),
+        description: d.description || undefined
       }));
       builder.addDimensionScores(dimData);
+      builder.addProfileAtAGlance(dimData);
     }
 
-    // Cognitive Strengths
-    if (cognitiveStrengths.length > 0) {
-      builder.addBulletListCard('Core Cognitive & Behavioral Strengths', cognitiveStrengths, 'strengths');
+    // ==========================================
+    // SECTION 4: DETAILED DIMENSION ANALYSIS
+    // ==========================================
+    if (dimensionAnalyses.length > 0) {
+      builder.ensureSpace(180);
+      builder.addSectionHeader('Detailed Dimension Evaluations', 'Individual construct manifestations, behavioral indicators, and personalized interpretations');
+      
+      for (const dim of dimensionAnalyses) {
+        builder.addDimensionDeepDive(dim);
+      }
     }
 
-    // Growth Opportunities & Potential Blindspots
-    if (growthOpportunities.length > 0) {
-      builder.addBulletListCard('Growth Opportunities & Stress Vulnerabilities', growthOpportunities, 'challenges');
+    // ==========================================
+    // SECTION 5: CROSS-DIMENSION PATTERNS & INTERACTIONS
+    // ==========================================
+    if (interactions) {
+      builder.ensureSpace(180);
+      builder.addSectionHeader('Cross-Dimension Patterns & Dynamic Synergies', 'How your evaluated dimensions interact and influence behavior across varying environments');
+      
+      if (interactions.core_pattern) {
+        builder.addParagraphs(interactions.core_pattern, 9.5, 14.5);
+      }
+      if (interactions.trait_synergies && interactions.trait_synergies.length > 0) {
+        builder.addBulletListCard('Construct Synergies & Natural Multipliers', interactions.trait_synergies, 'strengths');
+      }
+      if (interactions.trait_tensions && interactions.trait_tensions.length > 0) {
+        builder.addBulletListCard('Internal Tensions & Situational Trade-Offs', interactions.trait_tensions, 'challenges');
+      }
+      if (interactions.situational_differences) {
+        builder.addSectionHeader('Situational Behavioral Shifts');
+        builder.addParagraphs(interactions.situational_differences, 9.5, 14);
+      }
     }
 
-    // Relational / Communication Domains
-    if (aiContent.relational_patterns) {
-      builder.addSectionHeader('Interpersonal & Communication Dynamics');
-      builder.addContentSections([{ title: '', content: aiContent.relational_patterns }]);
+    // ==========================================
+    // SECTION 6: KEY STRENGTHS & NATURAL TENDENCIES
+    // ==========================================
+    if (strengths.length > 0) {
+      builder.ensureSpace(160);
+      builder.addSectionHeader('Key Strengths & Natural Tendencies', 'Core cognitive strengths, relational assets, and natural advantages');
+      builder.addStrengthCards(strengths);
     }
 
-    // Actionable Recommendations
-    if (dailyPractices.length > 0) {
-      builder.addBulletListCard('Actionable Daily Practices & Recommendations', dailyPractices, 'recommendations');
+    // ==========================================
+    // SECTION 7: CONSTRUCTIVE GROWTH OPPORTUNITIES & REFLECTION
+    // ==========================================
+    if (growthBlindspots.length > 0) {
+      builder.ensureSpace(160);
+      builder.addSectionHeader('Constructive Growth Opportunities & Reflection', 'Constructive self-awareness frontiers and actionable navigation strategies');
+      builder.addGrowthBlindspotCards(growthBlindspots);
+    } else if (Array.isArray(aiContent.challenges) && aiContent.challenges.length > 0) {
+      builder.addBulletListCard('Growth Frontiers & Areas for Reflection', aiContent.challenges, 'challenges');
     }
 
-    // Disclaimer
+    // ==========================================
+    // SECTION 8: DOMAIN-SPECIFIC DEEP DIVE (RELATIONSHIP / WORK / STRESS)
+    // ==========================================
+    const slug = (snapshot.assessmentSlug || '').toLowerCase();
+    const isRelational = slug.includes('attachment') || slug.includes('love') || slug.includes('relationship') || slug.includes('couple');
+    const isWork = slug.includes('career') || slug.includes('work') || slug.includes('leadership') || slug.includes('disc');
+
+    if (isRelational && (relComm || aiContent.communication || aiContent.relationships)) {
+      builder.ensureSpace(180);
+      builder.addSectionHeader('Relationships, Intimacy & Communication Style', 'Interpersonal bonding, conversational expression, listening tendencies, and conflict navigation');
+      
+      if (relComm?.relational_style) builder.addParagraphs(relComm.relational_style, 9.5, 14);
+      else if (aiContent.relationships) builder.addParagraphs(aiContent.relationships, 9.5, 14);
+
+      if (relComm?.communication_style) {
+        builder.addSectionHeader('Conversational Style & Boundaries');
+        builder.addParagraphs(relComm.communication_style, 9.5, 14);
+      } else if (aiContent.communication) {
+        builder.addParagraphs(aiContent.communication, 9.5, 14);
+      }
+
+      if (relComm?.listening_conflict) {
+        builder.addSectionHeader('Listening Habits & Conflict Navigation');
+        builder.addParagraphs(relComm.listening_conflict, 9.5, 14);
+      }
+      if (relComm?.partner_dynamics) {
+        builder.addSectionHeader('Interpersonal Values & Potential Misunderstandings');
+        builder.addParagraphs(relComm.partner_dynamics, 9.5, 14);
+      }
+      if (relComm?.relationship_tips && relComm.relationship_tips.length > 0) {
+        builder.addBulletListCard('Actionable Relationship Practices', relComm.relationship_tips, 'recommendations');
+      }
+    } else if (isWork && (workLead || aiContent.work_style)) {
+      builder.ensureSpace(180);
+      builder.addSectionHeader('Professional & Workplace Execution Dynamics', 'Optimal environments, collaboration, decision-making style, and leadership approach');
+      
+      if (workLead?.work_environment) builder.addParagraphs(workLead.work_environment, 9.5, 14);
+      else if (aiContent.work_style) builder.addParagraphs(aiContent.work_style, 9.5, 14);
+
+      if (workLead?.collaboration_teamwork) {
+        builder.addSectionHeader('Collaboration & Team Dynamics');
+        builder.addParagraphs(workLead.collaboration_teamwork, 9.5, 14);
+      }
+      if (workLead?.decision_problem_solving) {
+        builder.addSectionHeader('Decision-Making & Problem-Solving Approach');
+        builder.addParagraphs(workLead.decision_problem_solving, 9.5, 14);
+      }
+      if (workLead?.leadership_mentorship) {
+        builder.addSectionHeader('Leadership & Influence Style');
+        builder.addParagraphs(workLead.leadership_mentorship, 9.5, 14);
+      }
+      if (workLead?.workplace_strengths && workLead.workplace_strengths.length > 0) {
+        builder.addBulletListCard('Workplace Superpowers', workLead.workplace_strengths, 'strengths');
+      }
+      if (workLead?.workplace_challenges && workLead.workplace_challenges.length > 0) {
+        builder.addBulletListCard('Workplace Friction Points', workLead.workplace_challenges, 'challenges');
+      }
+    } else {
+      // General / Multidimensional Assessments
+      if (relComm?.relational_style || relComm?.communication_style) {
+        builder.ensureSpace(160);
+        builder.addSectionHeader('Interpersonal & Communication Dynamics', 'Interpersonal bonding, conversational expression, and conflict navigation');
+        if (relComm.relational_style) builder.addParagraphs(relComm.relational_style, 9.5, 14);
+        if (relComm.communication_style) builder.addParagraphs(relComm.communication_style, 9.5, 14);
+        if (relComm.relationship_tips && relComm.relationship_tips.length > 0) {
+          builder.addBulletListCard('Interpersonal Growth Suggestions', relComm.relationship_tips, 'recommendations');
+        }
+      }
+
+      if (workLead?.work_environment || workLead?.collaboration_teamwork) {
+        builder.ensureSpace(160);
+        builder.addSectionHeader('Workplace & Execution Preferences', 'Cognitive problem-solving, collaboration, and optimal work settings');
+        if (workLead.work_environment) builder.addParagraphs(workLead.work_environment, 9.5, 14);
+        if (workLead.decision_problem_solving) builder.addParagraphs(workLead.decision_problem_solving, 9.5, 14);
+      }
+
+      if (stressAdapt?.pressure_patterns || stressAdapt?.recovery_equilibrium) {
+        builder.ensureSpace(160);
+        builder.addSectionHeader('Stress Response & Adaptability Patterns', 'Pressure dynamics, response to ambiguity, and restorative equilibrium');
+        if (stressAdapt.pressure_patterns) builder.addParagraphs(stressAdapt.pressure_patterns, 9.5, 14);
+        if (stressAdapt.recovery_equilibrium) builder.addParagraphs(stressAdapt.recovery_equilibrium, 9.5, 14);
+      }
+    }
+
+    // ==========================================
+    // SECTION 9: 30-DAY PERSONALIZED GROWTH ROADMAP
+    // ==========================================
+    if (actionPlan.length > 0) {
+      builder.ensureSpace(160);
+      builder.addSectionHeader('Personalized Action Plan', 'Practical self-mastery practices tailored to your specific results');
+      builder.addActionPlanCards(actionPlan);
+    } else if (Array.isArray(aiContent.practical_suggestions) && aiContent.practical_suggestions.length > 0) {
+      builder.ensureSpace(140);
+      builder.addSectionHeader('Actionable Daily Practices', 'Practical daily reflection practices and recommendations');
+      builder.addBulletListCard('Recommended Self-Development Practices', aiContent.practical_suggestions, 'recommendations');
+    }
+
+    // ==========================================
+    // SECTION 10: FINAL PROFILE SYNTHESIS & REFLECTION
+    // ==========================================
+    builder.ensureSpace(200);
+    builder.addSectionHeader('Final Profile Synthesis', 'Core takeaways, reflective inquiries, and concluding perspective');
+    
+    if (finalSynth) {
+      if (finalSynth.top_takeaways && finalSynth.top_takeaways.length > 0) {
+        builder.addSectionHeader('Your Top 5 Key Takeaways');
+        builder.addTopTakeaways(finalSynth.top_takeaways);
+      }
+
+      builder.addSynthesisCallouts(
+        finalSynth.strongest_pattern,
+        finalSynth.biggest_growth_opportunity,
+        finalSynth.next_step
+      );
+
+      builder.addFinalSynthesisGrid(finalSynth);
+
+      if (finalSynth.reflection_questions && finalSynth.reflection_questions.length > 0) {
+        builder.addSectionHeader('Metacognitive Reflection Prompts');
+        builder.addReflectionQuestions(finalSynth.reflection_questions);
+      }
+      if (finalSynth.closing_summary) {
+        builder.addSectionHeader('Concluding Perspective');
+        builder.addParagraphs(finalSynth.closing_summary, 9.5, 14);
+      }
+    }
+
+    // Educational / Self-Reflection Disclaimer
     builder.addDisclaimer(snapshot.disclaimer || undefined);
 
     // Compile Bytes

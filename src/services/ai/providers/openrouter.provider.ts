@@ -18,8 +18,9 @@ export class OpenRouterProvider implements AIProvider {
     }
 
     try {
+      const timeoutMs = options.timeoutMs || 90000;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || 30000);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -67,7 +68,8 @@ export class OpenRouterProvider implements AIProvider {
       };
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        throw new ExternalServiceError('OpenRouter request timed out after 30 seconds');
+        const seconds = Math.round((options.timeoutMs || 90000) / 1000);
+        throw new ExternalServiceError(`OpenRouter request timed out after ${seconds} seconds`);
       }
       throw err instanceof ExternalServiceError ? err : new ExternalServiceError(err.message || 'OpenRouter generation failed');
     }

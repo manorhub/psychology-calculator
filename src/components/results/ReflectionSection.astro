@@ -1,0 +1,44 @@
+---
+interface Props {
+  assessmentName: string;
+  archetypeName?: string | null;
+}
+
+const { assessmentName, archetypeName = 'your profile' } = Astro.props;
+
+const prompts = [
+  `In which recurring situations does your natural tendency toward ${archetypeName} serve as your greatest asset?`,
+  `Are there specific environments or moments of pressure where taking a deliberate step back could reveal new perspectives?`,
+  `How can you communicate your core preferences and working style more transparently to collaborators or loved ones?`,
+  `What small, intentional adjustment could help you maintain balanced energy across the upcoming week?`
+];
+---
+
+<section id="reflection" class="bg-gradient-to-br from-teal-900/5 via-slate-900/5 to-teal-900/10 rounded-3xl p-6 sm:p-10 border border-teal-200/80 shadow-2xs space-y-6">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-lg font-bold">
+      🧠
+    </div>
+    <div>
+      <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+        Try Reflecting On
+      </h2>
+      <p class="text-xs sm:text-sm text-slate-500">
+        Educational questions to deepen your psychological self-awareness for {assessmentName}
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {prompts.map((prompt, idx) => (
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2 hover:border-teal-400 transition-all flex items-start gap-3.5">
+        <span class="w-6 h-6 rounded-full bg-teal-50 text-teal-800 font-mono font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5 border border-teal-200">
+          {idx + 1}
+        </span>
+        <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
+          {prompt}
+        </p>
+      </div>
+    ))}
+  </div>
+</section>

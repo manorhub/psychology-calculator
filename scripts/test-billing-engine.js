@@ -204,7 +204,9 @@ async function runBillingTests() {
   const canAlicePdf = await entitlementService.canDownloadPdf(userIdA, 'ai_report');
   assert.strictEqual(canAlicePdf.allowed, true);
 
-  // User B (Free Member)
+  // User B (Free Member with 0 credits)
+  rawDb.prepare("INSERT INTO credit_wallets (id, user_id, balance) VALUES ('wlt_' || ?, ?, 0) ON CONFLICT(user_id) DO UPDATE SET balance = 0").run(userIdB, userIdB);
+  rawDb.prepare("INSERT INTO credit_balances (user_id, balance) VALUES (?, 0) ON CONFLICT(user_id) DO UPDATE SET balance = 0").run(userIdB);
   const canBobFree = await entitlementService.canTakeAssessment(userIdB, 'free');
   assert.strictEqual(canBobFree.allowed, true);
 

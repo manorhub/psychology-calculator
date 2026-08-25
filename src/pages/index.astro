@@ -1,47 +1,65 @@
 ---
 import PublicLayout from '@/layouts/PublicLayout.astro';
-import Button from '@/components/ui/Button.astro';
-import Card from '@/components/ui/Card.astro';
 import Badge from '@/components/ui/Badge.astro';
-import Alert from '@/components/ui/Alert.astro';
 import { ConfigService } from '@/services/config.service';
 import { AssessmentService } from '@/services/assessment.service';
-import { ContentService } from '@/services/content.service';
+import { CreditService } from '@/services/credit.service';
 import { getD1Database } from '@/lib/db/client';
+
+export const prerender = false;
 
 const env = Astro.locals.runtime?.env;
 const db = getD1Database(env);
 
-// 1. Dynamic Config
+// 1. Dynamic Site Config
 const configService = new ConfigService(db);
 const config = await configService.getSiteConfig();
 
-// 2. Dynamic Categories & Featured Assessments
+// 2. Dynamic Categories & Published/Featured Assessments
 const assessmentService = new AssessmentService(db);
 const categories = await assessmentService.getCategories();
 let featuredAssessments = await assessmentService.getFeaturedAssessments();
 
-// Fallback preview cards if DB is not seeded yet
+// Fallback published assessments if DB has not populated featured flags
+if (featuredAssessments.length === 0) {
+  const allAssessments = await assessmentService.getPublishedAssessments();
+  featuredAssessments = allAssessments.slice(0, 6);
+}
+
+// Fallback seed assessments for safe rendering
 if (featuredAssessments.length === 0) {
   featuredAssessments = [
     {
       id: 'asm_big_five',
       category_id: 'cat_personality',
       category_name: 'Personality',
-      name: 'Big Five (OCEAN) Personality',
-      slug: 'big-five-personality',
-      short_description: 'Measures Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism using empirically validated scoring.',
-      long_description: null,
-      instructions: null,
-      estimated_minutes: 10,
-      question_count: 50,
+      name: 'Big Five (OCEAN) Personality Test',
+      slug: 'big-five-personality-test',
+      short_description: 'Explore your tendencies across Openness, Conscientiousness, Extraversion, Agreeableness, and Emotional Stability.',
+      estimated_minutes: 6,
+      question_count: 25,
       access_type: 'free',
       status: 'published',
       featured: 1,
       display_order: 1,
       version: 1,
-      disclaimer: null,
-      published_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_openness',
+      category_id: 'cat_personality',
+      category_name: 'Personality',
+      name: 'Openness to Experience Test',
+      slug: 'openness-to-experience-test',
+      short_description: 'Explore how you tend to approach new ideas, imagination, intellectual curiosity, and creative pursuits.',
+      estimated_minutes: 6,
+      question_count: 25,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 2,
+      version: 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -49,20 +67,16 @@ if (featuredAssessments.length === 0) {
       id: 'asm_attachment',
       category_id: 'cat_relationships',
       category_name: 'Relationships',
-      name: 'Adult Attachment Style',
+      name: 'Adult Attachment Style Test',
       slug: 'adult-attachment-style',
-      short_description: 'Identifies relational patterns across Secure, Anxious-Preoccupied, Dismissive-Avoidant, and Fearful-Avoidant styles.',
-      long_description: null,
-      instructions: null,
-      estimated_minutes: 8,
-      question_count: 36,
+      short_description: 'Reflect on how you relate to closeness, emotional security, communication, and independence in relationships.',
+      estimated_minutes: 6,
+      question_count: 25,
       access_type: 'free',
       status: 'published',
       featured: 1,
-      display_order: 2,
+      display_order: 3,
       version: 1,
-      disclaimer: null,
-      published_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -70,194 +84,1014 @@ if (featuredAssessments.length === 0) {
       id: 'asm_eq',
       category_id: 'cat_eq',
       category_name: 'Emotional Intelligence',
-      name: 'Emotional Intelligence (EQ)',
+      name: 'Emotional Intelligence (EQ) Test',
       slug: 'emotional-intelligence-eq',
-      short_description: 'Evaluates self-awareness, emotional regulation, empathy, and social agility across everyday interactions.',
-      long_description: null,
-      instructions: null,
-      estimated_minutes: 10,
-      question_count: 40,
+      short_description: 'Examine your emotional awareness, empathy, self-reflection, and social adaptability in daily life.',
+      estimated_minutes: 6,
+      question_count: 25,
       access_type: 'free',
       status: 'published',
       featured: 1,
-      display_order: 3,
+      display_order: 4,
       version: 1,
-      disclaimer: null,
-      published_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_career',
+      category_id: 'cat_career',
+      category_name: 'Career & Work',
+      name: 'Workplace Motivation & Style Test',
+      slug: 'work-style-test',
+      short_description: 'Understand what energizes your work, leadership instincts, problem-solving, and professional collaboration.',
+      estimated_minutes: 6,
+      question_count: 25,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 5,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_mindset',
+      category_id: 'cat_mindset',
+      category_name: 'Self-Development',
+      name: 'Resilience & Adaptability Test',
+      slug: 'resilience-test',
+      short_description: 'Gain perspective on how you navigate setbacks, handle uncertainty, and maintain constructive focus under stress.',
+      estimated_minutes: 5,
+      question_count: 20,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 6,
+      version: 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
   ];
 }
 
-// 3. Dynamic FAQs
-const contentService = new ContentService(db);
-const faqs = await contentService.getFaqs({ entityType: 'global' });
+// 3. Dynamic Credit Economics
+const creditService = new CreditService(db);
+const reportCost = await creditService.getReportCreditCost();
+
+// 4. Structured Data Schemas
+const siteUrl = config.siteUrl || 'https://psychologycalculator.com';
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Psychology Calculator',
+  url: siteUrl,
+  description: 'Online psychology tests and personality assessments designed for structured, practical self-reflection.',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${siteUrl}/assessments?q={search_term_string}`,
+    'query-input': 'required name=search_term_string'
+  }
+};
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Psychology Calculator',
+  url: siteUrl,
+  logo: `${siteUrl}/favicon.svg`
+};
+
+const itemListSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Popular Psychology & Personality Assessments',
+  itemListElement: featuredAssessments.slice(0, 6).map((asm, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    url: `${siteUrl}/assessments/${asm.slug}`,
+    name: asm.name,
+    description: asm.short_description
+  }))
+};
+
+const faqsData = [
+  {
+    q: 'What is a psychology test?',
+    a: 'A psychology test on PsychologyCalculator.com is a structured self-assessment questionnaire with standardized statements. It helps you reflect on specific behavioral traits, emotional tendencies, or relational patterns across multiple dimensions.'
+  },
+  {
+    q: 'Are the personality tests free?',
+    a: 'Yes. All assessments on PsychologyCalculator.com are 100% free to take. You will receive an immediate dimensional score breakdown and basic interpretation without paying anything.'
+  },
+  {
+    q: 'Can I take a personality test without creating an account?',
+    a: 'Yes. You can start and complete any assessment as a guest without creating an account or providing a credit card. Your basic result is generated immediately.'
+  },
+  {
+    q: 'How long do the assessments take?',
+    a: 'Most assessments consist of 20 to 25 focused questions and take approximately 5 to 7 minutes to complete at a comfortable pace.'
+  },
+  {
+    q: 'What can I learn from a personality test?',
+    a: 'You can discover your relative tendencies across specific dimensions—such as intellectual curiosity, emotional regulation, conscientiousness, or communication style—and understand how these patterns interact in everyday situations.'
+  },
+  {
+    q: 'What is a personality assessment?',
+    a: 'A personality assessment is a structured psychological tool that evaluates different facets of your behavioral style, decision-making preferences, and natural strengths rather than reducing you to a simplistic label.'
+  },
+  {
+    q: 'Are these tests a clinical diagnosis?',
+    a: 'No. Assessments on PsychologyCalculator.com are provided strictly for educational and personal self-reflection purposes. They are not clinical diagnoses and are not a substitute for professional mental health care.'
+  },
+  {
+    q: 'How do detailed AI reports work?',
+    a: 'If you want deeper narrative interpretation beyond your free basic score, you can optionally unlock a comprehensive AI report. It synthesizes cross-dimension patterns, strengths, blind spots, and communication tendencies, and includes a downloadable vector PDF.'
+  },
+  {
+    q: 'Do I need a monthly subscription?',
+    a: 'No. PsychologyCalculator.com uses a simple pay-as-you-go credit system with no recurring billing. You only purchase one-time credits when you want a detailed report.'
+  },
+  {
+    q: 'Do credits expire?',
+    a: 'No. Purchased credits never expire. A credit package bought today can be used whenever you choose.'
+  }
+];
+
+const faqPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqsData.map((faq) => ({
+    '@type': 'Question',
+    name: faq.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.a
+    }
+  }))
+};
 ---
 
-<PublicLayout title="Home">
-  <!-- Hero Section -->
-  <section class="relative overflow-hidden wellness-gradient py-20 sm:py-28 border-b border-slate-200/60">
+<PublicLayout
+  title="Psychology Tests & Personality Assessments | PsychologyCalculator.com"
+  description="Explore thoughtful psychology tests and personality assessments online. Free to start, no account required for basic results. Get clear insights into your patterns and tendencies."
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(faqPageSchema)} />
+  </Fragment>
+
+  <!-- 1. Hero Section -->
+  <section class="relative overflow-hidden bg-gradient-to-b from-slate-50 via-teal-50/20 to-white pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-slate-200/70">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="max-w-3xl mx-auto text-center space-y-6">
-        <div class="inline-flex items-center gap-2">
-          <Badge variant="info" size="md">
-            <span slot="prefix">✦</span>
-            Evidence-Based Psychological Metrics
-          </Badge>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <!-- Left Hero Copy -->
+        <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 border border-teal-200/80 rounded-full text-teal-800 text-[11px] font-bold tracking-wider uppercase">
+            <span>✦</span>
+            <span>Understand Yourself A Little Better</span>
+          </div>
+
+          <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12] text-balance">
+            Psychology Tests That Turn Your Answers Into <span class="text-teal-700">Useful Insights</span>
+          </h1>
+
+          <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+            Explore personality, relationships, emotional intelligence, career, and self-development assessments designed to help you understand your patterns, preferences, and tendencies.
+          </p>
+
+          <div class="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <a
+              href="/assessments/big-five-personality-test"
+              class="w-full sm:w-auto px-7 py-3.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-extrabold rounded-2xl shadow-md hover:shadow-lg transition-all text-center flex items-center justify-center gap-2 group"
+            >
+              <span>Take a Free Test</span>
+              <span class="group-hover:translate-x-0.5 transition-transform">→</span>
+            </a>
+            <a
+              href="#categories"
+              class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-2xl text-sm font-bold transition-all text-center"
+            >
+              Explore Assessments
+            </a>
+          </div>
+
+          <!-- Micro-Trust Line -->
+          <div class="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-xs text-slate-500 font-medium">
+            <span class="flex items-center gap-1.5">
+              <span class="text-teal-600 font-bold">✓</span> Free to start
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="text-teal-600 font-bold">✓</span> No account required for basic results
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="text-teal-600 font-bold">✓</span> Takes only a few minutes
+            </span>
+          </div>
         </div>
 
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight text-balance leading-tight">
-          Understand Yourself with <span class="text-teal-700">Scientific Clarity</span>
-        </h1>
+        <!-- Right Hero Interactive Visual (Assessment & Dimension Preview) -->
+        <div class="lg:col-span-5 flex justify-center">
+          <div class="relative w-full max-w-md bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-7 space-y-5">
+            <!-- Header of Preview Card -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 block">Assessment Preview</span>
+                <h3 class="text-sm font-black text-slate-900">Personality & Curiosity Profile</h3>
+              </div>
+              <span class="px-2.5 py-1 text-[10px] font-mono font-bold bg-teal-50 text-teal-800 border border-teal-200/60 rounded-full">
+                78% Alignment
+              </span>
+            </div>
 
-        <p class="text-lg sm:text-xl text-slate-600 leading-relaxed text-balance">
-          {config.siteTagline}
-        </p>
+            <!-- Active Question Sample -->
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+              <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span>Question 7 of 25</span>
+                <span class="text-teal-700">Intellectual Curiosity</span>
+              </div>
+              <p class="text-xs font-semibold text-slate-800 leading-snug">
+                "I enjoy exploring ideas and perspectives that challenge conventional thinking."
+              </p>
+              <div class="flex gap-1.5 pt-1">
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-teal-500"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+              </div>
+            </div>
 
-        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button href={config.primaryCtaLink} variant="primary" size="lg" class="w-full sm:w-auto shadow-md shadow-slate-900/10">
-            {config.primaryCtaText}
-            <span slot="suffix">&rarr;</span>
-          </Button>
-          <Button href="#how-it-works" variant="outline" size="lg" class="w-full sm:w-auto">
-            Explore Methodology
-          </Button>
-        </div>
+            <!-- Dimensional Breakdown Bars -->
+            <div class="space-y-3 pt-1">
+              <span class="text-[11px] font-bold text-slate-700 block">Dimensional Breakdown</span>
+              
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-slate-700 font-semibold">Intellectual Curiosity</span>
+                  <span class="text-teal-700 font-mono font-bold">82%</span>
+                </div>
+                <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-teal-500 rounded-full" style="width: 82%"></div>
+                </div>
+              </div>
 
-        <!-- Trust Indicators -->
-        <div class="pt-8 grid grid-cols-3 gap-4 border-t border-slate-200/60 max-w-xl mx-auto text-center">
-          <div>
-            <div class="text-xl sm:text-2xl font-bold text-slate-900">100%</div>
-            <div class="text-xs text-slate-500 font-medium mt-0.5">Privacy First</div>
-          </div>
-          <div>
-            <div class="text-xl sm:text-2xl font-bold text-teal-700">Edge SSR</div>
-            <div class="text-xs text-slate-500 font-medium mt-0.5">Cloudflare Native</div>
-          </div>
-          <div>
-            <div class="text-xl sm:text-2xl font-bold text-slate-900">Dynamic D1</div>
-            <div class="text-xs text-slate-500 font-medium mt-0.5">Database Driven</div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-slate-700 font-semibold">Self-Awareness</span>
+                  <span class="text-teal-700 font-mono font-bold">74%</span>
+                </div>
+                <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-teal-500 rounded-full" style="width: 74%"></div>
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs font-medium">
+                  <span class="text-slate-700 font-semibold">Adaptability & Novelty</span>
+                  <span class="text-teal-700 font-mono font-bold">69%</span>
+                </div>
+                <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-teal-500 rounded-full" style="width: 69%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Badge -->
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span>✓ Instant Free Result</span>
+              <span class="text-teal-700 font-bold">Explore Dimension Patterns →</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Dynamic Assessments Catalog Section -->
-  <section id="assessments" class="py-16 sm:py-24 bg-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-      <div class="text-center max-w-2xl mx-auto space-y-3">
-        <Badge variant="default" size="sm">Assessment Catalog</Badge>
-        <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
-          Validated Psychological Assessments
+  <!-- 2. Trust / Value Strip -->
+  <section class="py-10 bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> FREE TO START
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Take assessments and see your basic results without creating an account.
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> CLEAR RESULTS
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Understand what your scores may mean across distinct psychological dimensions.
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> PRIVATE BY DESIGN
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Your personal responses and results are kept private and never published.
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> DETAILED REPORTS
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Optional deeper AI-assisted synthesis with PDF reports when you want them.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Why Use PsychologyCalculator.com -->
+  <section id="about" class="py-16 sm:py-24 bg-slate-50/60 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-4 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">A Thoughtful Approach</Badge>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          A Better Way to Explore Your Personality
         </h2>
-        <p class="text-slate-600 text-sm sm:text-base">
-          Explore validated instruments designed with psychological rigor for deep personal, relational, and emotional insight.
+        <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+          Many people take an online quiz, receive a rigid label, and have no idea what to do with it. We focus on nuanced dimensions so you can see your real tendencies in context.
         </p>
       </div>
 
-      <!-- Categories Pills -->
-      {categories.length > 0 && (
-        <div class="flex items-center justify-center flex-wrap gap-2 pt-2 pb-4">
-          <Badge variant="info" size="md" class="cursor-pointer">All Categories</Badge>
-          {categories.map((cat) => (
-            <span class="px-3 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer">
-              {cat.name}
-            </span>
-          ))}
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 text-center">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
+          <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center mx-auto">1</div>
+          <h3 class="text-xs font-bold text-slate-900">Take Assessment</h3>
+          <p class="text-[11px] text-slate-500">Answer focused questions at your own pace.</p>
         </div>
-      )}
 
-      <!-- Dynamic Assessment Cards Grid -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
+          <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center mx-auto">2</div>
+          <h3 class="text-xs font-bold text-slate-900">Understand Scores</h3>
+          <p class="text-[11px] text-slate-500">See your raw and normalized percentiles.</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
+          <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center mx-auto">3</div>
+          <h3 class="text-xs font-bold text-slate-900">Explore Dimensions</h3>
+          <p class="text-[11px] text-slate-500">Examine specific traits, facets, and strengths.</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
+          <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center mx-auto">4</div>
+          <h3 class="text-xs font-bold text-slate-900">Reflect on Patterns</h3>
+          <p class="text-[11px] text-slate-500">Notice how your tendencies shape decisions.</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
+          <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center mx-auto">5</div>
+          <h3 class="text-xs font-bold text-slate-900">Optional AI Report</h3>
+          <p class="text-[11px] text-slate-500">Unlock deep synthesis whenever you choose.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Assessment Categories Section -->
+  <section id="categories" class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="info" size="sm">Browse By Topic</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          Explore Psychology Tests by Topic
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600">
+          Find structured assessments across personality traits, relational styles, emotional awareness, and career preferences.
+        </p>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {featuredAssessments.map((assessment) => (
-          <Card hoverEffect={true} class="flex flex-col justify-between">
-            <div slot="header" class="flex items-center justify-between">
-              <Badge variant="info" size="sm">
-                {assessment.category_name || 'Psychology'}
-              </Badge>
-              <Badge variant={assessment.access_type === 'free' ? 'success' : 'warning'} size="sm">
-                {assessment.access_type.toUpperCase()}
-              </Badge>
+        <!-- Category 1: Personality Tests -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🧠</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                Core Traits
+              </span>
             </div>
-            <div class="space-y-2 my-2">
-              <h3 class="text-lg font-bold text-slate-900 leading-snug">{assessment.name}</h3>
-              <p class="text-sm text-slate-600 leading-relaxed">
-                {assessment.short_description}
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                Personality Tests
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                Explore core personality traits, behavioral tendencies, intellectual curiosity, and decision-making preferences.
               </p>
             </div>
-            <div slot="footer" class="w-full flex items-center justify-between text-xs text-slate-500">
-              <span>{assessment.question_count} Questions</span>
-              <span class="text-teal-700 font-semibold">{assessment.estimated_minutes} mins</span>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              <li class="flex items-center gap-1.5"><span>•</span> Big Five Personality Test</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Openness to Experience Test</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Conscientiousness & Focus Test</li>
+            </ul>
+          </div>
+          <a
+            href="/assessments/category/personality"
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>Explore Personality Tests</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 2: Relationship Tests -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🤝</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                Connection
+              </span>
             </div>
-          </Card>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                Relationship Tests
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                Explore communication patterns, adult attachment styles, emotional boundaries, and interpersonal compatibility.
+              </p>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              <li class="flex items-center gap-1.5"><span>•</span> Adult Attachment Style Test</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Communication Style Assessment</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Relational Boundaries Test</li>
+            </ul>
+          </div>
+          <a
+            href="/assessments/category/relationships"
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>Explore Relationship Tests</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 3: Emotional Intelligence -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🌱</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                Awareness
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                Emotional Intelligence Tests
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                Examine emotional self-awareness, empathy, regulation during stress, and social perception.
+              </p>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              <li class="flex items-center gap-1.5"><span>•</span> Emotional Intelligence (EQ) Test</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Empathy & Perspective Test</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Self-Awareness Assessment</li>
+            </ul>
+          </div>
+          <a
+            href="/assessments/category/emotional-intelligence"
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>Explore Emotional Intelligence</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 4: Career & Work Style -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">💼</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                Professional
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                Career & Work Style
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                Explore work motivation, leadership tendencies, collaboration styles, and task focus.
+              </p>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              <li class="flex items-center gap-1.5"><span>•</span> Career Personality Assessment</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Leadership Style Exploration</li>
+              <li class="flex items-center gap-1.5"><span>•</span> Collaboration & Work Preferences</li>
+            </ul>
+          </div>
+          <a
+            href="/assessments/category/career-work"
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>Explore Career Tests</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 5: Self-Development & Resilience -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group md:col-span-2">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🎯</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                Growth & Resilience
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                Self-Development & Resilience
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                Reflect on resilience, assertiveness, motivation, cognitive flexibility, and personal boundaries.
+              </p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 pt-1 border-t border-slate-200/60">
+              <span class="flex items-center gap-1.5">• Resilience & Adaptability Test</span>
+              <span class="flex items-center gap-1.5">• Constructive Mindset Exploration</span>
+              <span class="flex items-center gap-1.5">• Stress Response & Recovery</span>
+              <span class="flex items-center gap-1.5">• Assertiveness & Communication</span>
+            </div>
+          </div>
+          <a
+            href="/assessments/category/self-development"
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>Explore Self-Development Tests</span>
+            <span>→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Popular Assessments Grid -->
+  <section id="assessments" class="py-16 sm:py-24 bg-slate-50/50 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div class="space-y-2">
+          <Badge variant="default" size="sm">Featured Tests</Badge>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            Popular Assessments
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500">
+            Real, structured self-assessments designed for thoughtful self-reflection.
+          </p>
+        </div>
+        <a
+          href="/assessments"
+          class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1"
+        >
+          <span>View All Assessments</span>
+          <span>→</span>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {featuredAssessments.map((asm) => (
+          <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-5 group">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200/60">
+                  {asm.category_name || 'Assessment'}
+                </span>
+                <span class="text-[11px] font-medium text-slate-400">
+                  ~{asm.estimated_minutes || 6} min
+                </span>
+              </div>
+
+              <h3 class="text-base font-bold text-slate-900 group-hover:text-teal-700 transition-colors leading-snug">
+                <a href={`/assessments/${asm.slug}`}>
+                  {asm.name}
+                </a>
+              </h3>
+
+              <p class="text-xs text-slate-500 leading-relaxed">
+                {asm.short_description}
+              </p>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs text-slate-400 font-medium">
+                {asm.question_count || 25} questions
+              </span>
+              <a
+                href={`/assessments/${asm.slug}`}
+                class="px-4 py-1.5 bg-teal-50 hover:bg-teal-600 text-teal-800 hover:text-white text-xs font-bold rounded-xl transition-all"
+              >
+                Take Test →
+              </a>
+            </div>
+          </div>
         ))}
       </div>
     </div>
   </section>
 
-  <!-- How It Works Section -->
-  <section id="how-it-works" class="py-16 sm:py-24 bg-slate-50 border-t border-slate-200/80">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-      <div class="text-center max-w-2xl mx-auto space-y-3">
-        <Badge variant="info" size="sm">How It Works</Badge>
-        <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
-          From Question Items to Deep Insight
+  <!-- 6. How It Works -->
+  <section id="how-it-works" class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="info" size="sm">Simple Process</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          How It Works
         </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          From first question to dimensional insight in four simple steps.
+        </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 card-shadow space-y-3">
-          <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-base border border-teal-100">
-            1
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Take Assessment</h3>
-          <p class="text-sm text-slate-600 leading-relaxed">
-            Answer scientifically structured items on a frictionless, mobile-optimized assessment runner.
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+          <span class="text-2xl font-black text-teal-600 font-mono">01</span>
+          <h3 class="text-sm font-bold text-slate-900">Choose an assessment</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Select a topic in personality, relationships, career, or emotional intelligence that you are curious about.
           </p>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 card-shadow space-y-3">
-          <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-base border border-teal-100">
-            2
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Deterministic Scoring</h3>
-          <p class="text-sm text-slate-600 leading-relaxed">
-            Our Cloudflare Worker scoring engine calculates normalized dimension metrics with instant accuracy.
+        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+          <span class="text-2xl font-black text-teal-600 font-mono">02</span>
+          <h3 class="text-sm font-bold text-slate-900">Answer honestly</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Respond to clear, focused statements on a simple 5-point scale at your own comfortable pace.
           </p>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 card-shadow space-y-3">
-          <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-base border border-teal-100">
-            3
-          </div>
-          <h3 class="text-base font-bold text-slate-900">AI Deep Dive</h3>
-          <p class="text-sm text-slate-600 leading-relaxed">
-            Receive personalized synthesis reports, growth pathways, and relationship insights powered by LLMs.
+        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+          <span class="text-2xl font-black text-teal-600 font-mono">03</span>
+          <h3 class="text-sm font-bold text-slate-900">See your results</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Instantly view your overall score and multi-dimensional breakdown for free without needing an account.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+          <span class="text-2xl font-black text-teal-600 font-mono">04</span>
+          <h3 class="text-sm font-bold text-slate-900">Go deeper if you want</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Optionally unlock in-depth AI psychological narrative synthesis and vector PDF reports using one-time credits.
           </p>
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- Dynamic FAQs if available -->
-      {faqs.length > 0 && (
-        <div class="pt-8 max-w-3xl mx-auto space-y-4">
-          <h3 class="text-xl font-bold text-slate-900 text-center mb-6">Frequently Asked Questions</h3>
-          <div class="space-y-3">
-            {faqs.map((faq) => (
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 card-shadow space-y-2">
-                <h4 class="font-semibold text-slate-900 text-sm">{faq.question}</h4>
-                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">{faq.answer}</p>
+  <!-- 7. Free-First Value Proposition -->
+  <section class="py-16 sm:py-20 bg-teal-900 text-white border-b border-teal-950">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        <div class="md:col-span-7 space-y-4 text-center md:text-left">
+          <span class="text-xs font-bold uppercase tracking-wider text-teal-300">Free-First Experience</span>
+          <h2 class="text-3xl sm:text-4xl font-black tracking-tight text-white">
+            Start Free. Decide Later.
+          </h2>
+          <p class="text-xs sm:text-sm text-teal-100 leading-relaxed max-w-xl">
+            You don't have to pay to take a test. You don't have to create an account before starting. Take an assessment, view your free basic result, and decide for yourself whether you want a deeper report.
+          </p>
+          <div class="pt-2">
+            <a
+              href="/assessments/big-five-personality-test"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all"
+            >
+              <span>Take Your First Test Free</span>
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="md:col-span-5 bg-white/10 backdrop-blur-xs rounded-3xl p-6 border border-white/15 space-y-3 text-xs">
+          <div class="font-bold text-teal-200 uppercase tracking-wider text-[10px]">What's Included Free</div>
+          <ul class="space-y-2 text-slate-100">
+            <li class="flex items-center gap-2"><span>✓</span> 100% Free assessment completion</li>
+            <li class="flex items-center gap-2"><span>✓</span> Instant score calculation & percentiles</li>
+            <li class="flex items-center gap-2"><span>✓</span> Dimensional breakdown visualization</li>
+            <li class="flex items-center gap-2"><span>✓</span> Basic psychological summary</li>
+            <li class="flex items-center gap-2 text-teal-200"><span>•</span> Optional: In-depth AI Dossier ({reportCost} credits)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Want to Go Beyond the Score? (AI Reports & One-Time Credits) -->
+  <section class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">Optional In-Depth Layer</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          Want to Go Beyond the Score?
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+          Your free basic result gives you the essential foundation. A detailed report looks closer at your dimensions, cross-pattern synthesis, strengths, blind spots, and communication style.
+        </p>
+      </div>
+
+      <!-- 3 Packages Mini-Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="p-6 rounded-3xl border border-slate-200 bg-slate-50/50 space-y-3 text-center">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Starter</span>
+          <div class="text-3xl font-black text-slate-900 font-mono">$4 <span class="text-xs font-normal text-slate-400">USD</span></div>
+          <div class="text-xs font-bold text-teal-700">20 Credits • Up to 4 reports</div>
+          <p class="text-[11px] text-slate-500">One-time payment. Credits never expire.</p>
+        </div>
+
+        <div class="p-6 rounded-3xl border-2 border-teal-500 bg-teal-900 text-white space-y-3 text-center shadow-lg relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-teal-400 text-slate-950 font-black text-[9px] uppercase tracking-wider px-3 py-0.5 rounded-full">
+            Most Popular
+          </div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-teal-300">Growth</span>
+          <div class="text-3xl font-black text-white font-mono">$9 <span class="text-xs font-normal text-teal-200">USD</span></div>
+          <div class="text-xs font-bold text-teal-300">50 Credits • Up to 10 reports</div>
+          <p class="text-[11px] text-teal-100/80">One-time payment. Credits never expire.</p>
+        </div>
+
+        <div class="p-6 rounded-3xl border border-slate-200 bg-slate-50/50 space-y-3 text-center">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pro</span>
+          <div class="text-3xl font-black text-slate-900 font-mono">$19 <span class="text-xs font-normal text-slate-400">USD</span></div>
+          <div class="text-xs font-bold text-teal-700">120 Credits • Up to 24 reports</div>
+          <p class="text-[11px] text-slate-500">One-time payment. Credits never expire.</p>
+        </div>
+      </div>
+
+      <div class="text-center pt-2">
+        <a
+          href="/pricing"
+          class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-teal-700 hover:text-teal-800 underline underline-offset-4"
+        >
+          <span>See How Detailed Reports Work & View All Packages</span>
+          <span>→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. Why Results Are Different & Example Result Visual -->
+  <section class="py-16 sm:py-24 bg-slate-50/50 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <!-- Text Column -->
+        <div class="lg:col-span-6 space-y-5">
+          <Badge variant="info" size="sm">Dimensional Depth</Badge>
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            Your Score Is Only the Starting Point
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            A single number rarely captures how human personality works. PsychologyCalculator.com breaks assessments down into their constituent dimensions so you can see where your tendencies are stronger, balanced, or less prominent.
+          </p>
+          <div class="space-y-2.5 text-xs text-slate-600 pt-2">
+            <div class="flex items-start gap-2">
+              <span class="text-teal-600 font-bold">✓</span>
+              <span><strong>Nuance over labels:</strong> Understand specific traits rather than fitting into a rigid four-letter box.</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-teal-600 font-bold">✓</span>
+              <span><strong>Cross-dimension patterns:</strong> Observe how high curiosity combined with balanced focus shapes creative problem solving.</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-teal-600 font-bold">✓</span>
+              <span><strong>Constructive language:</strong> Thoughtful, non-diagnostic observations designed to encourage self-reflection.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Example Result Visual Column -->
+        <div class="lg:col-span-6">
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 rounded-md">
+                EXAMPLE RESULT
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">Profile Synthesis</span>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-baseline justify-between">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-slate-400">Overall Alignment</span>
+                  <div class="text-2xl font-black text-slate-900 font-mono">78%</div>
+                </div>
+                <Badge variant="success" size="sm">High Intellectual Curiosity</Badge>
               </div>
-            ))}
+
+              <!-- Dimension Profile Bars -->
+              <div class="space-y-2.5 pt-1">
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>Curiosity</span>
+                    <span class="text-teal-700 font-mono">82%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 82%"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>Creativity & Ideas</span>
+                    <span class="text-teal-700 font-mono">76%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 76%"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>Novelty Seeking</span>
+                    <span class="text-teal-700 font-mono">71%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 71%"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>Perspective Flexibility</span>
+                    <span class="text-teal-700 font-mono">79%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 79%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interpretive Callout -->
+              <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1 text-xs">
+                <span class="font-bold text-slate-800 block text-[11px]">What this may suggest:</span>
+                <p class="text-slate-600 leading-relaxed text-[11px]">
+                  Your responses indicate an active preference for exploring unfamiliar concepts, conceptual thinking, and open-minded inquiry when evaluating everyday challenges.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  </section>
 
-      <div class="max-w-3xl mx-auto pt-6">
-        <Alert variant="info" title="Psychological Disclaimer">
-          {config.disclaimerText}
-        </Alert>
+  <!-- 10. Privacy / Trust Section -->
+  <section class="py-16 sm:py-20 bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">Privacy & Security</Badge>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          Your Results Are Personal
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          We treat assessment answers with the respect and boundaries personal reflection deserves.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs">
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+          <span class="font-bold text-slate-900 block">You own your data</span>
+          <p class="text-slate-500 leading-relaxed">Your results belong to you. Personal dossiers require user authorization to view.</p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+          <span class="font-bold text-slate-900 block">No public exposure</span>
+          <p class="text-slate-500 leading-relaxed">Public assessment catalog pages never expose user responses or private result data.</p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+          <span class="font-bold text-slate-900 block">Never indexed</span>
+          <p class="text-slate-500 leading-relaxed">Personal result and report pages contain strict noindex tags for search engines.</p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+          <span class="font-bold text-slate-900 block">Encrypted billing</span>
+          <p class="text-slate-500 leading-relaxed">Payments are processed securely via Lemon Squeezy Merchant of Record.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. Who Is It For? -->
+  <section class="py-16 sm:py-20 bg-slate-50/50 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="info" size="sm">Community</Badge>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          Who Uses PsychologyCalculator.com?
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          Designed for anyone seeking structured, grounded self-reflection.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <div class="text-lg">🧭</div>
+          <h3 class="font-bold text-slate-900">Curious Individuals</h3>
+          <p class="text-slate-500 leading-relaxed">People who want to understand their personality traits, tendencies, and natural motivations.</p>
+        </div>
+
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <div class="text-lg">💬</div>
+          <h3 class="font-bold text-slate-900">Partners & Couples</h3>
+          <p class="text-slate-500 leading-relaxed">Couples exploring adult attachment styles, communication tendencies, and emotional boundaries.</p>
+        </div>
+
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <div class="text-lg">📚</div>
+          <h3 class="font-bold text-slate-900">Students & Learners</h3>
+          <p class="text-slate-500 leading-relaxed">Learners studying psychometric frameworks and cognitive styles for academic or personal interest.</p>
+        </div>
+
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <div class="text-lg">💼</div>
+          <h3 class="font-bold text-slate-900">Professionals & Leaders</h3>
+          <p class="text-slate-500 leading-relaxed">Professionals reflecting on leadership styles, workplace communication, and collaboration patterns.</p>
+        </div>
+
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <div class="text-lg">🌱</div>
+          <h3 class="font-bold text-slate-900">Self-Development Seekers</h3>
+          <p class="text-slate-500 leading-relaxed">Individuals working on emotional intelligence, stress resilience, and self-awareness.</p>
+        </div>
+
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <div class="text-lg">💡</div>
+          <h3 class="font-bold text-slate-900">Reflective Thinkers</h3>
+          <p class="text-slate-500 leading-relaxed">Anyone who appreciates structured questions that prompt meaningful self-examination.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. FAQ Section -->
+  <section class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">Questions & Answers</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          Frequently Asked Questions
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          Everything you need to know about taking tests, viewing results, and detailed reports.
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        {faqsData.map((faq) => (
+          <details class="group bg-slate-50 rounded-2xl border border-slate-200/80 p-5 open:bg-white open:shadow-xs transition-all">
+            <summary class="flex items-center justify-between font-bold text-slate-900 text-xs sm:text-sm cursor-pointer list-none select-none">
+              <span>{faq.q}</span>
+              <span class="text-slate-400 group-open:rotate-180 transition-transform text-xs">▼</span>
+            </summary>
+            <p class="text-xs text-slate-600 leading-relaxed pt-3 border-t border-slate-100 mt-3">
+              {faq.a}
+            </p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Educational Disclaimer Banner -->
+  <section class="py-6 bg-slate-100 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-[11px] text-slate-500 leading-relaxed">
+      <strong class="text-slate-700">Educational & Self-Reflection Notice:</strong> PsychologyCalculator.com provides self-assessments for educational and personal reflection purposes. Results are not a clinical psychological or psychiatric diagnosis and should not replace advice from a qualified mental health professional.
+    </div>
+  </section>
+
+  <!-- 14. Final CTA -->
+  <section class="py-16 sm:py-24 bg-gradient-to-b from-slate-50 to-white text-center">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <h2 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        Ready to Explore Your Results?
+      </h2>
+      <p class="text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl mx-auto">
+        Choose an assessment, answer at your own pace, and see what your responses reveal about your patterns, strengths, and preferences.
+      </p>
+      <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a
+          href="/assessments/big-five-personality-test"
+          class="w-full sm:w-auto px-8 py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-sm rounded-2xl shadow-md transition-all"
+        >
+          Take a Free Test →
+        </a>
+        <a
+          href="/assessments"
+          class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-sm rounded-2xl transition-all"
+        >
+          Browse All Assessments
+        </a>
       </div>
     </div>
   </section>

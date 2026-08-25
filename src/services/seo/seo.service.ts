@@ -22,6 +22,7 @@ export interface SeoSettings {
   orgLogo: string;
   gscVerification: string;
   bingVerification: string;
+  yandexVerification: string;
   ga4MeasurementId: string;
 }
 
@@ -48,17 +49,18 @@ export class SeoService extends BaseService {
   public async getSeoSettings(): Promise<SeoSettings> {
     const defaults: SeoSettings = {
       siteTitle: 'Psychology Calculator',
-      titleTemplate: '{{page_title}} | Psychology Calculator',
-      defaultDescription: 'Scientifically validated psychological assessments, personality evaluations, and deep psychometric interpretations.',
-      canonicalDomain: 'https://psychologycalculator.com',
+      titleTemplate: '{{page_title}} | PsychologyCalculator.com',
+      defaultDescription: 'Explore evidence-based psychology tests and personality assessments online. Free to start with instant scoring and detailed psychometric insights.',
+      canonicalDomain: 'https://www.psychologycalculator.com',
       defaultRobots: 'index, follow',
       defaultOgImage: '/images/og-default.png',
       twitterHandle: '@PsychCalculator',
       orgName: 'Psychology Calculator',
       orgLogo: '/images/logo.png',
-      gscVerification: '',
-      bingVerification: '',
-      ga4MeasurementId: ''
+      gscVerification: 'D31rYIDvdWj0qVMkNlIUtEEK66FJJYRtJIK7erAITlw',
+      bingVerification: '2A730A2FAF8DA672C0BDBCC548BEB4FA',
+      yandexVerification: '0dbd2107b6f660d6',
+      ga4MeasurementId: 'G-D70LGC3MQB'
     };
 
     if (!this.db) return defaults;
@@ -81,9 +83,10 @@ export class SeoService extends BaseService {
         twitterHandle: map.get('seo_twitter_handle') || defaults.twitterHandle,
         orgName: map.get('seo_org_name') || defaults.orgName,
         orgLogo: map.get('seo_org_logo') || defaults.orgLogo,
-        gscVerification: map.get('seo_gsc_verification') || '',
-        bingVerification: map.get('seo_bing_verification') || '',
-        ga4MeasurementId: map.get('seo_ga4_measurement_id') || ''
+        gscVerification: map.get('seo_gsc_verification') || defaults.gscVerification,
+        bingVerification: map.get('seo_bing_verification') || defaults.bingVerification,
+        yandexVerification: map.get('seo_yandex_verification') || defaults.yandexVerification,
+        ga4MeasurementId: map.get('seo_ga4_measurement_id') || defaults.ga4MeasurementId
       };
     } catch {
       return defaults;
@@ -91,12 +94,31 @@ export class SeoService extends BaseService {
   }
 
   /**
-   * Formats page title using the dynamic title template
+   * Formats page title cleanly with exactly one PsychologyCalculator.com brand suffix
    */
-  public formatTitle(pageTitle: string, template: string): string {
-    if (!pageTitle) return 'Psychology Calculator';
-    if (!template.includes('{{page_title}}')) return pageTitle;
-    return template.replace('{{page_title}}', pageTitle.trim());
+  public formatTitle(pageTitle: string, template?: string): string {
+    if (!pageTitle || typeof pageTitle !== 'string') {
+      return 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+    }
+
+    // Strip any existing duplicate or historical branding suffixes
+    let clean = pageTitle
+      .replace(/\s*(\||—|-)\s*(Psychology\s*Calculator|PsychologyCalculator\.com|MindMetrics)(\.com)?/gi, '')
+      .trim();
+
+    if (
+      !clean ||
+      clean.toLowerCase() === 'psychology calculator' ||
+      clean.toLowerCase() === 'psychologycalculator.com'
+    ) {
+      return 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+    }
+
+    if (clean === 'Psychology Tests & Personality Assessments') {
+      return 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+    }
+
+    return `${clean} | PsychologyCalculator.com`;
   }
 
   /**
@@ -116,7 +138,8 @@ export class SeoService extends BaseService {
   }): Promise<PageMetadata> {
     const settings = await this.getSeoSettings();
     const cleanPath = options.path.startsWith('/') ? options.path : `/${options.path}`;
-    const canonicalUrl = `${settings.canonicalDomain}${cleanPath === '/' ? '' : cleanPath}`;
+    const normalizedPath = cleanPath === '/' ? '/' : cleanPath.replace(/\/+$/, '');
+    const canonicalUrl = `${settings.canonicalDomain}${normalizedPath}`;
 
     let title = options.rawTitle || settings.siteTitle;
     let description = options.defaultDescription || settings.defaultDescription;
@@ -139,10 +162,7 @@ export class SeoService extends BaseService {
       }
     }
 
-    const formattedTitle =
-      options.path === '/' || title === settings.siteTitle
-        ? title
-        : this.formatTitle(title, settings.titleTemplate);
+    const formattedTitle = this.formatTitle(title, settings.titleTemplate);
 
     return {
       title: formattedTitle,
@@ -275,36 +295,106 @@ export class SeoService extends BaseService {
       changefreq: 'weekly',
       priority: '0.8'
     });
+    urls.push({
+      loc: `${domain}/about`,
+      lastmod: now,
+      changefreq: 'monthly',
+      priority: '0.7'
+    });
+    urls.push({
+      loc: `${domain}/privacy-policy`,
+      lastmod: now,
+      changefreq: 'monthly',
+      priority: '0.5'
+    });
+    urls.push({
+      loc: `${domain}/terms-of-service`,
+      lastmod: now,
+      changefreq: 'monthly',
+      priority: '0.5'
+    });
+    urls.push({
+      loc: `${domain}/disclaimer`,
+      lastmod: now,
+      changefreq: 'monthly',
+      priority: '0.5'
+    });
+
+    // Add Multilingual Static Pages (es, fr, de, pt, hi)
+    const activeLocales = ['es', 'fr', 'de', 'pt', 'hi'] as const;
+    const staticPages = [
+      '',
+      '/assessments',
+      '/pricing',
+      '/about',
+      '/contact',
+      '/privacy-policy',
+      '/terms-of-service',
+      '/disclaimer'
+    ];
+
+    for (const loc of activeLocales) {
+      for (const page of staticPages) {
+        urls.push({
+          loc: `${domain}/${loc}${page}`,
+          lastmod: now,
+          changefreq: page === '' || page === '/assessments' ? 'daily' : 'weekly',
+          priority: page === '' ? '0.9' : page === '/assessments' || page === '/pricing' ? '0.8' : '0.6'
+        });
+      }
+    }
 
     if (this.db) {
-      // 3. Published Assessments
+      // 3. Published Assessments (strictly published, non-archived)
       const assessments = await executeQuery<AssessmentRow>(
         this.db,
         `SELECT slug, updated_at FROM assessments WHERE status = 'published' ORDER BY updated_at DESC`
       );
 
       for (const asm of assessments) {
+        const lastmod = asm.updated_at ? new Date(asm.updated_at).toISOString() : now;
         urls.push({
           loc: `${domain}/assessments/${asm.slug}`,
-          lastmod: asm.updated_at ? new Date(asm.updated_at).toISOString() : now,
+          lastmod,
           changefreq: 'weekly',
           priority: '0.9'
         });
+
+        // Add localized assessment URLs
+        for (const loc of activeLocales) {
+          urls.push({
+            loc: `${domain}/${loc}/assessments/${asm.slug}`,
+            lastmod,
+            changefreq: 'weekly',
+            priority: '0.8'
+          });
+        }
       }
 
-      // 4. Active Assessment Categories
+      // 4. Active Assessment Categories (canonical path)
       const categories = await executeQuery<AssessmentCategoryRow>(
         this.db,
         `SELECT slug, updated_at FROM assessment_categories WHERE status = 'active' ORDER BY display_order ASC`
       );
 
       for (const cat of categories) {
+        const lastmod = cat.updated_at ? new Date(cat.updated_at).toISOString() : now;
         urls.push({
-          loc: `${domain}/categories/${cat.slug}`,
-          lastmod: cat.updated_at ? new Date(cat.updated_at).toISOString() : now,
+          loc: `${domain}/assessments/category/${cat.slug}`,
+          lastmod,
           changefreq: 'weekly',
           priority: '0.8'
         });
+
+        // Add localized category URLs
+        for (const loc of activeLocales) {
+          urls.push({
+            loc: `${domain}/${loc}/assessments/category/${cat.slug}`,
+            lastmod,
+            changefreq: 'weekly',
+            priority: '0.7'
+          });
+        }
       }
 
       // 5. Blog Index & Published Articles
@@ -376,7 +466,9 @@ ${urlElements}
         "SELECT value FROM site_settings WHERE key = 'robots_custom_directives'"
       );
       if (customRow && customRow.value) {
-        return customRow.value.trim() + '\n';
+        return customRow.value
+          .replace(/https?:\/\/(www\.)?psychologycalculator\.com/gi, domain)
+          .trim() + '\n';
       }
     }
 

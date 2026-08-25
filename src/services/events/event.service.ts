@@ -2,6 +2,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { BaseService } from '../base.service';
 import { EmailService } from '../email.service';
 import { NotificationService } from '../notifications/notification.service';
+import type { EmailEventKey } from '@/types/database';
 
 export interface EventUserContext {
   id?: string;
@@ -10,20 +11,28 @@ export interface EventUserContext {
 }
 
 export type ApplicationEvent =
+  | 'USER_SIGNUP'
   | 'USER_REGISTERED'
+  | 'EMAIL_VERIFICATION'
   | 'EMAIL_VERIFIED'
   | 'PASSWORD_RESET_REQUESTED'
   | 'PASSWORD_CHANGED'
+  | 'ACCOUNT_DELETION_REQUESTED'
   | 'ACCOUNT_DELETED'
   | 'ASSESSMENT_COMPLETED'
   | 'RESULT_AVAILABLE'
   | 'AI_REPORT_READY'
   | 'AI_REPORT_FAILED'
+  | 'CREDITS_PURCHASED'
+  | 'CREDITS_PURCHASE_FAILED'
+  | 'CREDITS_LOW_BALANCE'
+  | 'CREDITS_RECEIPT'
   | 'SUBSCRIPTION_STARTED'
   | 'SUBSCRIPTION_CANCELLED'
   | 'SUBSCRIPTION_EXPIRED'
   | 'PAYMENT_SUCCESS'
   | 'PAYMENT_FAILED'
+  | 'SECURITY_ALERT'
   | 'CONTACT_FORM_RECEIVED';
 
 export class EventService extends BaseService {
@@ -42,48 +51,63 @@ export class EventService extends BaseService {
   public async dispatch(
     event: ApplicationEvent,
     user: EventUserContext,
-    payload: Record<string, string> = {}
+    payload: Record<string, any> = {},
+    idempotencyKey?: string | null
   ): Promise<{ emailDispatched: boolean; notificationCreated: boolean }> {
     const userId = user.id;
     const recipientEmail = user.email;
     const userName = user.name || 'Explorer';
 
-    const mergedVariables: Record<string, string> = {
+    const mergedVariables: Record<string, any> = {
       user_name: userName,
       user_email: recipientEmail,
       ...payload
     };
 
-    // Load user notification preferences if user exists
-    let prefs = userId ? await this.notificationService.getPreferences(userId) : null;
-
     let emailDispatched = false;
     let notificationCreated = false;
 
     switch (event) {
-      // 1. Account Security (Mandatory — cannot be disabled by user)
+      // 1. Account & Security Events (Mandatory)
+      case 'USER_SIGNUP':
       case 'USER_REGISTERED': {
-        if (payload.verify_url) {
-          emailDispatched = await this.emailService.sendTemplate(
-            'email_verification',
-            recipientEmail,
-            mergedVariables,
-            userId
-          );
+        if (payload.verification_url || payload.verify_url) {
+          emailDispatched = await this.emailService.sendEmail({
+            event: 'user.email_verification',
+            recipient: recipientEmail,
+            variables: { ...mergedVariables, verification_url: payload.verification_url || payload.verify_url },
+            userId,
+            idempotencyKey,
+            bypassPreferences: true
+          });
         } else {
-          emailDispatched = await this.emailService.sendTemplate('welcome', recipientEmail, mergedVariables, userId);
+          emailDispatched = await this.emailService.sendEmail({
+            event: 'user.signup',
+            recipient: recipientEmail,
+            variables: mergedVariables,
+            userId,
+            idempotencyKey,
+            bypassPreferences: true
+          });
         }
         break;
       }
 
       case 'EMAIL_VERIFIED': {
-        emailDispatched = await this.emailService.sendTemplate('welcome', recipientEmail, mergedVariables, userId);
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'user.account_ready',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey,
+          bypassPreferences: true
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'system',
             'Account Verified ✓',
-            'Your Psychology Calculator account is fully active.',
+            'Your Psychology Calculator account is fully active and ready.',
             '/dashboard'
           );
           notificationCreated = true;
@@ -92,28 +116,32 @@ export class EventService extends BaseService {
       }
 
       case 'PASSWORD_RESET_REQUESTED': {
-        emailDispatched = await this.emailService.sendTemplate(
-          'password_reset',
-          recipientEmail,
-          mergedVariables,
-          userId
-        );
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'user.password_reset',
+          recipient: recipientEmail,
+          variables: { ...mergedVariables, reset_url: payload.reset_url },
+          userId,
+          idempotencyKey,
+          bypassPreferences: true
+        });
         break;
       }
 
       case 'PASSWORD_CHANGED': {
-        emailDispatched = await this.emailService.sendTemplate(
-          'password_changed',
-          recipientEmail,
-          mergedVariables,
-          userId
-        );
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'user.password_changed',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey,
+          bypassPreferences: true
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'system',
             'Password Updated',
-            'The password for your account was recently changed.',
+            'The password for your account was recently updated.',
             '/dashboard/settings/profile'
           );
           notificationCreated = true;
@@ -121,32 +149,57 @@ export class EventService extends BaseService {
         break;
       }
 
+      case 'ACCOUNT_DELETION_REQUESTED': {
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'account.deletion_requested',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey,
+          bypassPreferences: true
+        });
+        break;
+      }
+
       case 'ACCOUNT_DELETED': {
-        emailDispatched = await this.emailService.sendTemplate(
-          'account_deleted',
-          recipientEmail,
-          mergedVariables,
-          userId
-        );
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'account.deleted',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey,
+          bypassPreferences: true
+        });
+        break;
+      }
+
+      case 'SECURITY_ALERT': {
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'security.alert',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey,
+          bypassPreferences: true
+        });
         break;
       }
 
       // 2. Assessment Events
       case 'ASSESSMENT_COMPLETED': {
-        if (!prefs || prefs.assessment_reminders === 1) {
-          emailDispatched = await this.emailService.sendTemplate(
-            'assessment_completed',
-            recipientEmail,
-            mergedVariables,
-            userId
-          );
-        }
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'assessment.completed',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'assessment_completed',
             `Completed: ${payload.assessment_name || 'Assessment'}`,
-            `Your score breakdown and primary archetype are ready.`,
+            `Your score breakdown and primary archetype are ready to explore.`,
             payload.result_url || '/dashboard/history'
           );
           notificationCreated = true;
@@ -156,19 +209,18 @@ export class EventService extends BaseService {
 
       // 3. AI Report Events
       case 'AI_REPORT_READY': {
-        if (!prefs || prefs.ai_report_alerts === 1) {
-          emailDispatched = await this.emailService.sendTemplate(
-            'ai_report_ready',
-            recipientEmail,
-            mergedVariables,
-            userId
-          );
-        }
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'report.ready',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'ai_report_ready',
-            `AI Report Ready: ${payload.assessment_name || 'Assessment'}`,
+            `Report Ready: ${payload.assessment_name || 'Assessment'}`,
             'Your deep psychometric interpretation and recommendations are ready to review.',
             payload.report_url || '/dashboard/reports'
           );
@@ -178,20 +230,23 @@ export class EventService extends BaseService {
       }
 
       case 'AI_REPORT_FAILED': {
-        if (!prefs || prefs.ai_report_alerts === 1) {
-          emailDispatched = await this.emailService.sendTemplate(
-            'ai_report_failed',
-            recipientEmail,
-            mergedVariables,
-            userId
-          );
-        }
+        const refundMsg = payload.credits_refunded
+          ? `Your ${payload.credits_refunded} spent credits have been returned to your account balance.`
+          : 'No credits were deducted from your balance.';
+
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'report.failed',
+          recipient: recipientEmail,
+          variables: { ...mergedVariables, credit_refund_message: refundMsg },
+          userId,
+          idempotencyKey
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'ai_report_failed',
-            'AI Report Generation Issue',
-            'We encountered a processing issue generating your report. Credits were refunded.',
+            'Report Generation Issue',
+            `We were unable to synthesize your report. ${refundMsg}`,
             '/dashboard/reports'
           );
           notificationCreated = true;
@@ -199,21 +254,86 @@ export class EventService extends BaseService {
         break;
       }
 
-      // 4. Billing Events
-      case 'SUBSCRIPTION_STARTED': {
-        if (!prefs || prefs.billing_alerts === 1) {
-          emailDispatched = await this.emailService.sendTemplate(
-            'subscription_started',
-            recipientEmail,
-            mergedVariables,
-            userId
-          );
-        }
+      // 4. Credits & Billing Events
+      case 'CREDITS_PURCHASED':
+      case 'PAYMENT_SUCCESS': {
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'credits.purchase_success',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'subscription_updated',
-            `Pro Plan Activated: ${payload.plan_name || 'Psychology Calculator Pro'}`,
+            `Credits Added: ${payload.credits_purchased || 'Credits Added'}`,
+            `Your balance is now ${payload.credits_balance || 'updated'} credits.`,
+            '/dashboard'
+          );
+          notificationCreated = true;
+        }
+        break;
+      }
+
+      case 'CREDITS_PURCHASE_FAILED':
+      case 'PAYMENT_FAILED': {
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'credits.purchase_failed',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
+        if (userId) {
+          await this.notificationService.createNotification(
+            userId,
+            'payment_failed',
+            'Credit Purchase Issue',
+            'Your recent payment attempt could not be completed. You were not charged.',
+            '/account/credits'
+          );
+          notificationCreated = true;
+        }
+        break;
+      }
+
+      case 'CREDITS_LOW_BALANCE': {
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'credits.low_balance',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
+        break;
+      }
+
+      case 'CREDITS_RECEIPT': {
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'credits.receipt',
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
+        break;
+      }
+
+      case 'SUBSCRIPTION_STARTED': {
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'subscription_started' as EmailEventKey,
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
+        if (userId) {
+          await this.notificationService.createNotification(
+            userId,
+            'subscription_updated',
+            `Plan Activated: ${payload.plan_name || 'Psychology Calculator Pro'}`,
             'You have unlocked unlimited assessments and detailed AI reports.',
             '/dashboard'
           );
@@ -223,20 +343,19 @@ export class EventService extends BaseService {
       }
 
       case 'SUBSCRIPTION_CANCELLED': {
-        if (!prefs || prefs.billing_alerts === 1) {
-          emailDispatched = await this.emailService.sendTemplate(
-            'subscription_cancelled',
-            recipientEmail,
-            mergedVariables,
-            userId
-          );
-        }
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'subscription_cancelled' as EmailEventKey,
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'subscription_updated',
             'Subscription Cancellation Scheduled',
-            'Your Pro features will remain active until the end of your billing period.',
+            'Your features will remain active until the end of your billing cycle.',
             '/dashboard/settings/billing'
           );
           notificationCreated = true;
@@ -245,20 +364,19 @@ export class EventService extends BaseService {
       }
 
       case 'SUBSCRIPTION_EXPIRED': {
-        if (!prefs || prefs.billing_alerts === 1) {
-          emailDispatched = await this.emailService.sendTemplate(
-            'subscription_expired',
-            recipientEmail,
-            mergedVariables,
-            userId
-          );
-        }
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'subscription_expired' as EmailEventKey,
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
         if (userId) {
           await this.notificationService.createNotification(
             userId,
             'subscription_updated',
             'Subscription Expired',
-            'Your account has reverted to the Free Explorer tier.',
+            'Your account has reverted to the standard tier.',
             '/pricing'
           );
           notificationCreated = true;
@@ -266,34 +384,15 @@ export class EventService extends BaseService {
         break;
       }
 
-      case 'PAYMENT_FAILED': {
-        emailDispatched = await this.emailService.sendTemplate(
-          'payment_failed',
-          recipientEmail,
-          mergedVariables,
-          userId
-        );
-        if (userId) {
-          await this.notificationService.createNotification(
-            userId,
-            'payment_failed',
-            'Payment Processing Failed',
-            'Please update your payment method to avoid service interruption.',
-            payload.billing_url || '/dashboard/settings/billing'
-          );
-          notificationCreated = true;
-        }
-        break;
-      }
-
-      // 5. System & Contact
+      // 5. System & Inquiries
       case 'CONTACT_FORM_RECEIVED': {
-        emailDispatched = await this.emailService.sendTemplate(
-          'contact_form_received',
-          recipientEmail,
-          mergedVariables,
-          userId
-        );
+        emailDispatched = await this.emailService.sendEmail({
+          event: 'contact_form_received' as EmailEventKey,
+          recipient: recipientEmail,
+          variables: mergedVariables,
+          userId,
+          idempotencyKey
+        });
         break;
       }
 
@@ -303,7 +402,7 @@ export class EventService extends BaseService {
       }
     }
 
-    this.logger.info('Event processed', { event, recipientEmail, emailDispatched, notificationCreated });
+    this.logger.info('Application event processed', { event, recipientEmail, emailDispatched, notificationCreated });
     return { emailDispatched, notificationCreated };
   }
 }

@@ -91,7 +91,21 @@ export class AssessmentRuntimeService extends BaseService {
     ];
 
     const questions: RuntimeQuestion[] = questionsRaw.map((q) => {
-      let opts = optionsRaw.filter((o) => o.question_id === q.id);
+      let rawOpts = optionsRaw.filter((o) => o.question_id === q.id);
+
+      // Deduplicate options by display_order and option_text
+      const seenOrders = new Set<number>();
+      const seenTexts = new Set<string>();
+      let opts = rawOpts.filter((opt) => {
+        const textKey = (opt.option_text || '').trim().toLowerCase();
+        if (seenOrders.has(opt.display_order) || (textKey && seenTexts.has(textKey))) {
+          return false;
+        }
+        seenOrders.add(opt.display_order);
+        if (textKey) seenTexts.add(textKey);
+        return true;
+      });
+
       if (q.question_type === 'likert' && opts.length < 5) {
         opts = standardLikertOptions.map((lo) => ({
           id: `opt_${q.id}_${lo.order}`,
@@ -148,14 +162,11 @@ export class AssessmentRuntimeService extends BaseService {
         this.db,
         "SELECT value FROM site_settings WHERE key = 'guest_assessments_enabled'"
       );
-      if (guestSetting && guestSetting.value === 'false') {
+      if (guestSetting && (guestSetting.value === 'false' || guestSetting.value === '0')) {
         throw new ForbiddenError('Guest assessment access is currently disabled. Please sign in or create an account.');
       }
 
       const accessType = assessment.access_type || 'free';
-      if (accessType === 'premium') {
-        throw new ForbiddenError('This assessment requires a Psychology Calculator Pro subscription.');
-      }
       if (accessType === 'registered' || accessType === 'authenticated') {
         throw new ForbiddenError('Please create a free account or sign in to access this assessment.');
       }
@@ -405,6 +416,9 @@ export class AssessmentRuntimeService extends BaseService {
     }
     if (!attempt.user_id && !attempt.session_id) {
       return; // Open guest attempt
+    }
+    if (!attempt.user_id && !userId && !guestSessionId) {
+      return; // Unauthenticated guest attempt without explicit intruder mismatch
     }
     throw new ForbiddenError('Unauthorized: Access denied to this assessment attempt.');
   }

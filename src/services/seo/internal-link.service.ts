@@ -6,8 +6,10 @@ import type { InternalLinkRuleRow, AssessmentRow, AssessmentCategoryRow, Breadcr
 export interface RelatedLink {
   id: string;
   title: string;
+  name?: string;
   slug: string;
   url: string;
+  icon?: string;
   anchorText?: string;
   categoryName?: string;
   description?: string;
@@ -144,10 +146,12 @@ export class InternalLinkService extends BaseService {
 
     return categories.map((cat) => ({
       id: cat.id,
+      name: cat.name,
       title: cat.name,
       slug: cat.slug,
-      url: `/categories/${cat.slug}`,
-      description: cat.description || undefined
+      icon: cat.icon || '🧠',
+      url: `/assessments/category/${cat.slug}`,
+      description: cat.short_description || cat.description || undefined
     }));
   }
 

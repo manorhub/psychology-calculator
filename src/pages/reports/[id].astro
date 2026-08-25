@@ -3,6 +3,12 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import Card from '@/components/ui/Card.astro';
 import { getD1Database } from '@/lib/db/client';
 import { AIService } from '@/services/ai/ai.service';
+import type {
+  AIDimensionAnalysis,
+  AIStrengthItem,
+  AIGrowthBlindspot,
+  AIActionPlanItem
+} from '@/types/database';
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/');
@@ -26,272 +32,786 @@ try {
 }
 
 const { content, assessmentName, primaryArchetype, generatedAt, disclaimer } = reportData;
+
+const dimensionAnalyses = (content.dimension_analyses || []) as AIDimensionAnalysis[];
+const interactions = content.cross_dimension_interactions;
+const strengths = (content.strengths || []) as Array<string | AIStrengthItem>;
+const growthBlindspots = (content.growth_blindspots || []) as AIGrowthBlindspot[];
+const relComm = content.relationships_communication;
+const workLead = content.work_leadership;
+const stressAdapt = content.stress_adaptability;
+const actionPlan = (content.action_plan || []) as AIActionPlanItem[];
+const finalSynth = content.final_synthesis;
 ---
 
 <BaseLayout
-  title={`AI Detailed Report: ${assessmentName}`}
-  description={`In-depth AI psychological narrative synthesis for ${assessmentName}`}
+  title={`AI Psychological Dossier: ${assessmentName} | Psychology Calculator`}
+  description={`Comprehensive in-depth psychological narrative synthesis for ${assessmentName}`}
 >
-  <!-- SEO Privacy: Strictly Noindex for personalized AI reports -->
+  <!-- SEO Privacy: Strictly Noindex for personal AI psychological dossiers -->
   <Fragment slot="head">
     <meta name="robots" content="noindex, nofollow" />
   </Fragment>
 
-  <div class="max-w-4xl mx-auto py-8 sm:py-12 px-4 sm:px-6 space-y-8">
-    <!-- Breadcrumb & Back to Dashboard Navigation -->
+  <div class="max-w-4xl mx-auto py-8 sm:py-12 px-4 sm:px-6 space-y-8 sm:space-y-12">
+    <!-- Breadcrumb & Top Navigation Bar -->
     <div class="flex flex-wrap items-center justify-between gap-3 no-print">
       <div class="flex flex-wrap items-center gap-2">
         <a
           href="/dashboard"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
         >
           <span>📊</span>
           <span>Back to Dashboard</span>
         </a>
         <a
           href={`/results/${reportData.attemptId}`}
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
         >
           <span>🎯</span>
           <span>Score Summary</span>
         </a>
       </div>
+
       <a
-        href="/assessments"
-        class="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1"
+        href={`/api/v1/reports/${id}/pdf`}
+        download
+        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
       >
-        <span>Browse All Tests</span>
-        <span>→</span>
+        <span>📑</span>
+        <span>Download Full PDF Dossier</span>
       </a>
     </div>
 
-    <!-- Header Banner -->
-    <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl space-y-6">
+    <!-- 1. Header Banner & Identity Hero -->
+    <header class="relative overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl border border-indigo-800/40 space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-900/70 border border-indigo-700/50 rounded-full text-xs font-bold text-indigo-200">
-          <span>✨ In-Depth AI Synthesis</span>
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-900/80 border border-indigo-700/60 rounded-full text-xs font-bold text-indigo-200">
+          <span>✨ IN-DEPTH PSYCHOMETRIC DOSSIER</span>
         </div>
         <span class="text-xs font-mono text-indigo-300">
-          Generated: {new Date(generatedAt).toLocaleDateString()}
+          Generated: {new Date(generatedAt).toLocaleDateString(undefined, { dateStyle: 'long' })}
         </span>
       </div>
 
       <div class="space-y-2">
-        <span class="text-xs font-bold tracking-wider uppercase text-indigo-300">Comprehensive Report</span>
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+        <span class="text-xs font-bold uppercase tracking-widest text-indigo-400 block font-mono">
           {assessmentName}
+        </span>
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+          {primaryArchetype}
         </h1>
-        <p class="text-sm sm:text-base text-indigo-100 font-semibold pt-1">
-          Primary Classification: <span class="text-white font-bold">{primaryArchetype}</span>
-        </p>
+        {content.headline && (
+          <p class="text-sm sm:text-base text-indigo-200 font-medium pt-1 max-w-2xl leading-relaxed">
+            {content.headline}
+          </p>
+        )}
       </div>
 
       <!-- Action Row -->
-      <div class="pt-4 border-t border-indigo-800/60 flex flex-wrap items-center justify-between gap-4">
-        <div class="text-xs text-indigo-200/80">
-          Official personalized interpretation document ready for export:
+      <div class="pt-5 border-t border-indigo-800/60 flex flex-wrap items-center justify-between gap-4">
+        <div class="text-xs text-indigo-200/80 flex items-center gap-2">
+          <span>📄</span>
+          <span>Comprehensive 10–12 page personalized synthesis report</span>
         </div>
         <a
           href={`/api/v1/reports/${id}/pdf`}
           download
-          class="px-4 py-2.5 text-xs font-bold bg-white hover:bg-indigo-50 text-slate-950 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+          class="px-5 py-3 text-xs font-black bg-white hover:bg-indigo-50 text-slate-950 rounded-xl shadow-md transition-all flex items-center gap-2"
         >
           <span>📑</span>
-          <span>Download Detailed PDF</span>
+          <span>Export Official PDF Report</span>
         </a>
       </div>
-    </div>
+    </header>
 
-    <!-- Executive Summary -->
-    <Card class="p-8 space-y-4 border-indigo-100">
-      <h2 class="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-        <span>📖</span> Executive Psychological Summary
-      </h2>
-      <div class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line space-y-3">
+    <!-- 2. Executive Psychological Summary -->
+    <section class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xs space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-lg border border-indigo-200">
+          📖
+        </div>
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            Executive Psychological Synthesis
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500">
+            Comprehensive baseline analysis of cognitive patterns, balance between constructs, and environmental preferences
+          </p>
+        </div>
+      </div>
+
+      <div class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line space-y-4 pt-2">
         {content.summary}
       </div>
-    </Card>
 
-    <!-- Prominent Behavioral Traits -->
-    {content.key_traits.length > 0 && (
-      <div class="space-y-3">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Core Trait Signatures</h3>
-        <div class="flex flex-wrap gap-2">
-          {content.key_traits.map((trait) => (
-            <span class="px-3.5 py-1.5 bg-indigo-50 text-indigo-900 border border-indigo-200 rounded-xl text-xs font-bold">
-              ✦ {trait}
-            </span>
-          ))}
+      <!-- Core Profile Signatures -->
+      {content.key_traits.length > 0 && (
+        <div class="pt-4 border-t border-slate-100 space-y-2.5">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Core Profile Signatures
+          </span>
+          <div class="flex flex-wrap gap-2">
+            {content.key_traits.map((trait) => (
+              <span class="px-3 py-1 bg-indigo-50/80 text-indigo-900 border border-indigo-200 rounded-xl text-xs font-bold">
+                ✦ {trait}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
-    )}
+      )}
+    </section>
 
-    <!-- Strengths vs Challenges Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <!-- Strengths -->
-      <Card class="p-6 sm:p-8 space-y-4 border-emerald-200 bg-emerald-50/30">
-        <div class="flex items-center gap-2 text-emerald-900 font-extrabold text-lg">
-          <span>🌟</span> Key Strengths & Assets
+    <!-- 3. Construct Scores Breakdown & Profile At A Glance -->
+    {dimensionAnalyses.length > 0 && (
+      <section class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xs space-y-6">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            Construct Scores & Dimensional Breakdown
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            Standardized psychometric measurements across all evaluated domains
+          </p>
         </div>
-        <ul class="space-y-2.5 text-xs sm:text-sm text-slate-700">
-          {content.strengths.map((s) => (
-            <li class="flex items-start gap-2">
-              <span class="text-emerald-600 font-bold">✓</span>
-              <span>{s}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
 
-      <!-- Challenges -->
-      <Card class="p-6 sm:p-8 space-y-4 border-amber-200 bg-amber-50/30">
-        <div class="flex items-center gap-2 text-amber-900 font-extrabold text-lg">
-          <span>⚠️</span> Growth Blindspots & Stress Triggers
-        </div>
-        <ul class="space-y-2.5 text-xs sm:text-sm text-slate-700">
-          {content.challenges.map((c) => (
-            <li class="flex items-start gap-2">
-              <span class="text-amber-600 font-bold">•</span>
-              <span>{c}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
-    </div>
-
-    <!-- Deep-Dive Domains -->
-    <div class="space-y-6">
-      <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-        Domain-Specific Insights
-      </h2>
-
-      <div class="grid grid-cols-1 gap-4">
-        {content.communication && (
-          <Card class="p-6 sm:p-8 space-y-2">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-sky-800 flex items-center gap-2">
-              <span>💬</span> Interpersonal & Communication Style
-            </h3>
-            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-              {content.communication}
-            </p>
-          </Card>
-        )}
-
-        {content.relationships && (
-          <Card class="p-6 sm:p-8 space-y-2">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-rose-800 flex items-center gap-2">
-              <span>❤️</span> Relational & Intimacy Dynamics
-            </h3>
-            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-              {content.relationships}
-            </p>
-          </Card>
-        )}
-
-        {content.work_style && (
-          <Card class="p-6 sm:p-8 space-y-2">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-indigo-800 flex items-center gap-2">
-              <span>💼</span> Professional & Work Execution Style
-            </h3>
-            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-              {content.work_style}
-            </p>
-          </Card>
-        )}
-      </div>
-    </div>
-
-    <!-- Practical Daily Suggestions -->
-    {content.practical_suggestions.length > 0 && (
-      <Card class="p-8 space-y-4 border-teal-200 bg-teal-50/20">
-        <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <span>🎯</span> Actionable Daily Exercises & Reflection Practices
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {content.practical_suggestions.map((sug, i) => (
-            <div class="p-4 bg-white rounded-2xl border border-teal-100 shadow-xs text-xs sm:text-sm text-slate-700">
-              <span class="font-bold text-teal-700 block mb-1">Practice #{i + 1}</span>
-              {sug}
+        <!-- Horizontal Score Bars -->
+        <div class="space-y-4">
+          {dimensionAnalyses.map((d) => (
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs sm:text-sm">
+                <span class="font-bold text-slate-800">{d.dimension_name}</span>
+                <span class="font-bold text-indigo-700">[{d.level}] {d.score_percent}%</span>
+              </div>
+              <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  class={`h-full rounded-full ${d.score_percent >= 70 ? 'bg-emerald-500' : d.score_percent >= 35 ? 'bg-indigo-600' : 'bg-amber-500'}`}
+                  style={`width: ${Math.max(4, Math.min(100, d.score_percent))}%`}
+                ></div>
+              </div>
             </div>
           ))}
         </div>
-      </Card>
+
+        <!-- Profile At A Glance Card -->
+        {dimensionAnalyses.length >= 2 && (() => {
+          const sorted = [...dimensionAnalyses].sort((a, b) => b.score_percent - a.score_percent);
+          const strongest = sorted[0];
+          const lowest = sorted[sorted.length - 1];
+          const balanced = [...dimensionAnalyses].sort((a, b) => Math.abs(a.score_percent - 50) - Math.abs(b.score_percent - 50))[0];
+          const spread = strongest.score_percent - lowest.score_percent;
+          const patternText = spread >= 35 
+            ? `Pronounced differentiation with primary orientation in ${strongest.dimension_name}.`
+            : spread >= 20
+            ? `Focused profile with clear cognitive anchor in ${strongest.dimension_name}.`
+            : 'Balanced profile showing stable dimensional equilibrium across evaluated domains.';
+
+          return (
+            <div class="mt-6 p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-700">
+                Your Profile At A Glance
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div class="p-3 bg-white rounded-xl border border-slate-200">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Strongest Dimension</span>
+                  <span class="font-bold text-slate-900">{strongest.dimension_name} ({strongest.score_percent}% — {strongest.level})</span>
+                </div>
+                <div class="p-3 bg-white rounded-xl border border-slate-200">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Lowest Dimension</span>
+                  <span class="font-bold text-slate-900">{lowest.dimension_name} ({lowest.score_percent}% — {lowest.level})</span>
+                </div>
+                <div class="p-3 bg-white rounded-xl border border-slate-200">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Most Balanced Area</span>
+                  <span class="font-bold text-slate-900">{balanced.dimension_name} ({balanced.score_percent}%)</span>
+                </div>
+                <div class="p-3 bg-white rounded-xl border border-slate-200">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Overall Pattern</span>
+                  <span class="font-bold text-slate-900">{patternText}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </section>
     )}
 
-    <!-- Clinical Disclaimer -->
-    <div class="p-5 bg-slate-100 border border-slate-200 rounded-2xl text-[11px] text-slate-500 text-center leading-relaxed space-y-1">
-      <strong class="text-slate-700 block">Psychological & Educational Disclaimer</strong>
-      <p>{disclaimer || 'This AI-generated analysis is intended solely for educational reflection and personal growth. It is not a clinical psychological evaluation or medical diagnosis.'}</p>
+    <!-- 3. In-Depth Dimension Analysis (150-250 words per dimension) -->
+    {dimensionAnalyses.length > 0 && (
+      <section class="space-y-6">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Detailed Construct & Dimension Analysis
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            Personalized construct evaluations, behavioral indicators, strengths, and mindful challenges
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+          {dimensionAnalyses.map((dim) => (
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs space-y-4 hover:border-indigo-300 transition-all">
+              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <h3 class="text-lg font-bold text-slate-900">{dim.dimension_name}</h3>
+                  {dim.what_it_measures && (
+                    <p class="text-xs text-slate-500 italic mt-0.5">{dim.what_it_measures}</p>
+                  )}
+                </div>
+                <span class="px-3 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full text-xs font-extrabold">
+                  {dim.level} ({dim.score_percent}%)
+                </span>
+              </div>
+
+              <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                {dim.personalized_interpretation}
+              </p>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {dim.key_strength && (
+                  <div class="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 text-xs">
+                    <span class="font-bold text-emerald-900 block mb-1">✓ Primary Asset:</span>
+                    <span class="text-slate-700">{dim.key_strength}</span>
+                  </div>
+                )}
+                {dim.potential_challenge && (
+                  <div class="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 text-xs">
+                    <span class="font-bold text-amber-900 block mb-1">⚠️ Growth Focus:</span>
+                    <span class="text-slate-700">{dim.potential_challenge}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- 4. Personality Patterns & Cross-Trait Interactions -->
+    {interactions && (
+      <section class="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-10 border border-indigo-800/50 shadow-lg space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-800 text-indigo-200 flex items-center justify-center text-lg font-bold">
+            🔄
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+              Personality Patterns & Trait Interactions
+            </h2>
+            <p class="text-xs sm:text-sm text-indigo-200/80">
+              How your dimensions interact dynamically rather than in isolation
+            </p>
+          </div>
+        </div>
+
+        {interactions.core_pattern && (
+          <p class="text-xs sm:text-sm text-indigo-100 leading-relaxed">
+            {interactions.core_pattern}
+          </p>
+        )}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          {interactions.trait_synergies?.length > 0 && (
+            <div class="bg-indigo-900/40 p-5 rounded-2xl border border-indigo-700/50 space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                <span>⚡</span> Trait Synergies & Multipliers
+              </h3>
+              <ul class="space-y-1.5 text-xs text-indigo-100">
+                {interactions.trait_synergies.map((syn) => (
+                  <li class="flex items-start gap-2">
+                    <span class="text-emerald-400 font-bold">•</span>
+                    <span>{syn}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {interactions.trait_tensions?.length > 0 && (
+            <div class="bg-indigo-900/40 p-5 rounded-2xl border border-indigo-700/50 space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                <span>⚖️</span> Internal Tensions & Dilemmas
+              </h3>
+              <ul class="space-y-1.5 text-xs text-indigo-100">
+                {interactions.trait_tensions.map((ten) => (
+                  <li class="flex items-start gap-2">
+                    <span class="text-amber-400 font-bold">•</span>
+                    <span>{ten}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {interactions.situational_differences && (
+          <div class="pt-3 border-t border-indigo-800/60 space-y-1">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+              Situational Behavioral Shifts:
+            </span>
+            <p class="text-xs sm:text-sm text-indigo-100/90 leading-relaxed">
+              {interactions.situational_differences}
+            </p>
+          </div>
+        )}
+      </section>
+    )}
+
+    <!-- 5. Key Strengths & Cognitive Superpowers -->
+    {strengths.length > 0 && (
+      <section class="space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-lg border border-emerald-200">
+            🌟
+          </div>
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Key Strengths & Natural Advantages
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500">
+              High-leverage cognitive assets, relational strengths, and problem-solving advantages
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {strengths.map((s) => {
+            const title = typeof s === 'string' ? s : s.title;
+            const desc = typeof s === 'string' ? '' : s.description;
+            const context = typeof s === 'string' ? '' : s.context;
+
+            return (
+              <div class="bg-gradient-to-br from-emerald-50/50 to-white rounded-3xl p-6 border border-emerald-200/80 shadow-2xs space-y-2 hover:shadow-xs transition-all">
+                <h3 class="text-sm sm:text-base font-bold text-emerald-950 flex items-center gap-2">
+                  <span>★</span> {title}
+                </h3>
+                {desc && (
+                  <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    {desc}
+                  </p>
+                )}
+                {context && (
+                  <p class="text-[11px] text-slate-500 italic pt-1">
+                    Optimal context: {context}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    <!-- 6. Growth Areas, Blind Spots & Stress Triggers -->
+    {(growthBlindspots.length > 0 || content.challenges.length > 0) && (
+      <section class="space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center text-lg border border-amber-200">
+            🌱
+          </div>
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Growth Areas, Blind Spots & Stress Triggers
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500">
+              Constructive self-awareness frontiers and actionable navigation strategies
+            </p>
+          </div>
+        </div>
+
+        {growthBlindspots.length > 0 ? (
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {growthBlindspots.map((g) => (
+              <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-3 hover:border-amber-300 transition-all">
+                <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>🌱</span> {g.title}
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                  <strong class="text-slate-900">Pattern:</strong> {g.manifestation}
+                </p>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  <strong class="text-slate-900">Constructive Response:</strong> {g.constructive_response}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {content.challenges.map((c) => (
+              <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs text-xs sm:text-sm text-slate-700">
+                • {c}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    )}
+
+    <!-- 7. Relationships, Intimacy & Communication Style -->
+    {(relComm || content.relationships || content.communication) && (
+      <section class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xs space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center text-lg border border-rose-200">
+            💬
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Relationships & Interpersonal Dynamics
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500">
+              Relational bonding, communication style, listening tendencies, and conflict navigation
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs sm:text-sm text-slate-700">
+          <div class="space-y-4">
+            {relComm?.relational_style && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">Relational Bonding Style</h3>
+                <p class="leading-relaxed">{relComm.relational_style}</p>
+              </div>
+            )}
+            {relComm?.communication_style && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">Communication & Boundaries</h3>
+                <p class="leading-relaxed">{relComm.communication_style}</p>
+              </div>
+            )}
+          </div>
+
+          <div class="space-y-4">
+            {relComm?.listening_conflict && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">Listening & Conflict Resolution</h3>
+                <p class="leading-relaxed">{relComm.listening_conflict}</p>
+              </div>
+            )}
+            {relComm?.partner_dynamics && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">What You Value in Others</h3>
+                <p class="leading-relaxed">{relComm.partner_dynamics}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {relComm?.relationship_tips?.length > 0 && (
+          <div class="pt-4 border-t border-slate-100 space-y-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-rose-800">
+              Actionable Interpersonal Suggestions:
+            </span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {relComm.relationship_tips.map((tip) => (
+                <div class="p-3 bg-rose-50/50 rounded-xl border border-rose-100 text-xs text-slate-700">
+                  🤝 {tip}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+    )}
+
+    <!-- 8. Professional & Workplace Execution Dynamics -->
+    {(workLead || content.work_style) && (
+      <section class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xs space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-lg border border-indigo-200">
+            💼
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Professional, Career & Leadership Style
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500">
+              Optimal work environments, team collaboration, decision-making, and leadership tendencies
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs sm:text-sm text-slate-700">
+          <div class="space-y-4">
+            {workLead?.work_environment && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">Optimal Work Environment</h3>
+                <p class="leading-relaxed">{workLead.work_environment}</p>
+              </div>
+            )}
+            {workLead?.collaboration_teamwork && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">Collaboration & Team Dynamics</h3>
+                <p class="leading-relaxed">{workLead.collaboration_teamwork}</p>
+              </div>
+            )}
+          </div>
+
+          <div class="space-y-4">
+            {workLead?.decision_problem_solving && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">Decision-Making & Problem-Solving</h3>
+                <p class="leading-relaxed">{workLead.decision_problem_solving}</p>
+              </div>
+            )}
+            {workLead?.leadership_mentorship && (
+              <div>
+                <h3 class="font-bold text-slate-900 mb-1">Leadership & Influence Approach</h3>
+                <p class="leading-relaxed">{workLead.leadership_mentorship}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {workLead?.workplace_strengths?.length > 0 && (
+          <div class="pt-4 border-t border-slate-100 space-y-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-800">
+              Workplace Superpowers:
+            </span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {workLead.workplace_strengths.map((str) => (
+                <div class="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs text-slate-700">
+                  ⚡ {str}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+    )}
+
+    <!-- 9. Stress, Adaptability & Pressure Patterns -->
+    {stressAdapt && (
+      <section class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xs space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center text-lg border border-teal-200">
+            🧭
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Stress, Adaptability & Resilience Patterns
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500">
+              Cognitive shifts under pressure, reaction to sudden ambiguity, and restorative equilibrium practices
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {stressAdapt.pressure_patterns && (
+            <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Pressure Patterns</h3>
+              <p class="text-xs text-slate-700 leading-relaxed">{stressAdapt.pressure_patterns}</p>
+            </div>
+          )}
+          {stressAdapt.adaptability_change && (
+            <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Adaptability & Change</h3>
+              <p class="text-xs text-slate-700 leading-relaxed">{stressAdapt.adaptability_change}</p>
+            </div>
+          )}
+          {stressAdapt.recovery_equilibrium && (
+            <div class="p-5 bg-teal-50/60 rounded-2xl border border-teal-200 space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-teal-900">Restorative Equilibrium</h3>
+              <p class="text-xs text-slate-700 leading-relaxed">{stressAdapt.recovery_equilibrium}</p>
+            </div>
+          )}
+        </div>
+      </section>
+    )}
+
+    <!-- 10. 30-Day Personalized Growth Roadmap -->
+    {(actionPlan.length > 0 || content.practical_suggestions.length > 0) && (
+      <section class="bg-white rounded-3xl p-6 sm:p-10 border border-teal-200 shadow-2xs space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center text-lg border border-teal-200">
+            🎯
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Your 30-Day Personalized Growth Roadmap
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500">
+              Evidence-calibrated self-mastery practices tailored to your specific psychometric results
+            </p>
+          </div>
+        </div>
+
+        {actionPlan.length > 0 ? (
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {actionPlan.map((act, i) => (
+              <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-extrabold text-indigo-700">Practice #{i + 1}</span>
+                  <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-100 text-teal-800">
+                    {act.frequency}
+                  </span>
+                </div>
+                <h3 class="text-sm font-bold text-slate-900">{act.goal}</h3>
+                <p class="text-xs text-slate-700 leading-relaxed"><strong class="text-slate-900">Action:</strong> {act.action}</p>
+                {act.why_it_matters && (
+                  <p class="text-[11px] text-slate-500 italic"><strong class="text-slate-700">Rationale:</strong> {act.why_it_matters}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {content.practical_suggestions.map((sug, i) => (
+              <div class="p-4 bg-white rounded-2xl border border-teal-100 shadow-xs text-xs sm:text-sm text-slate-700">
+                <span class="font-bold text-teal-700 block mb-1">Practice #{i + 1}</span>
+                {sug}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    )}
+
+    <!-- 11. Final Profile Synthesis & Metacognitive Reflection -->
+    {finalSynth && (
+      <section class="bg-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-lg space-y-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-700 text-indigo-200 flex items-center justify-center text-lg font-bold">
+            🧠
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+              Final Profile Synthesis & Reflection
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300">
+              Core takeaways and deep reflective inquiries for long-term personal mastery
+            </p>
+          </div>
+        </div>
+
+        <!-- Top 5 Key Takeaways -->
+        {finalSynth.top_takeaways && finalSynth.top_takeaways.length > 0 && (
+          <div class="space-y-3 pt-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-300 block">
+              Your Top 5 Key Takeaways
+            </span>
+            <div class="space-y-2.5">
+              {finalSynth.top_takeaways.map((takeaway, idx) => (
+                <div class="flex items-start gap-3 p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700 text-xs text-slate-200">
+                  <span class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span class="leading-relaxed">{takeaway}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <!-- Strongest Pattern & Growth Opportunity Callouts -->
+        {(finalSynth.strongest_pattern || finalSynth.biggest_growth_opportunity) && (
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+            {finalSynth.strongest_pattern && (
+              <div class="p-4 bg-indigo-950/60 rounded-2xl border border-indigo-700/60 text-xs space-y-1.5">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block flex items-center gap-1.5">
+                  <span>⚡</span> Strongest Pattern
+                </span>
+                <p class="text-slate-200 leading-relaxed">{finalSynth.strongest_pattern}</p>
+              </div>
+            )}
+            {finalSynth.biggest_growth_opportunity && (
+              <div class="p-4 bg-amber-950/40 rounded-2xl border border-amber-700/50 text-xs space-y-1.5">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-300 block flex items-center gap-1.5">
+                  <span>🌱</span> Biggest Growth Opportunity
+                </span>
+                <p class="text-slate-200 leading-relaxed">{finalSynth.biggest_growth_opportunity}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
+          {finalSynth.notable_trait && (
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-xs space-y-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block">Defining Trait</span>
+              <span class="text-slate-200 font-semibold">{finalSynth.notable_trait}</span>
+            </div>
+          )}
+          {finalSynth.primary_advantage && (
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-xs space-y-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block">Primary Asset</span>
+              <span class="text-slate-200 font-semibold">{finalSynth.primary_advantage}</span>
+            </div>
+          )}
+          {finalSynth.growth_frontier && (
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-xs space-y-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-amber-300 block">Growth Frontier</span>
+              <span class="text-slate-200 font-semibold">{finalSynth.growth_frontier}</span>
+            </div>
+          )}
+          {finalSynth.relationship_insight && (
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-xs space-y-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-300 block">Relationship Takeaway</span>
+              <span class="text-slate-200 font-semibold">{finalSynth.relationship_insight}</span>
+            </div>
+          )}
+          {finalSynth.work_insight && (
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-xs space-y-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-sky-300 block">Workplace Takeaway</span>
+              <span class="text-slate-200 font-semibold">{finalSynth.work_insight}</span>
+            </div>
+          )}
+          {finalSynth.next_step && (
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-xs space-y-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-300 block">Immediate Next Step</span>
+              <span class="text-slate-200 font-semibold">{finalSynth.next_step}</span>
+            </div>
+          )}
+        </div>
+
+        {finalSynth.reflection_questions?.length > 0 && (
+          <div class="pt-4 border-t border-slate-800 space-y-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+              Metacognitive Reflection Prompts:
+            </span>
+            <div class="space-y-2">
+              {finalSynth.reflection_questions.map((q, idx) => (
+                <div class="p-3 bg-slate-800/60 rounded-xl border border-slate-700 text-xs text-slate-200">
+                  {idx + 1}. {q}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {finalSynth.closing_summary && (
+          <p class="text-xs text-slate-300 leading-relaxed pt-2 italic border-t border-slate-800">
+            "{finalSynth.closing_summary}"
+          </p>
+        )}
+      </section>
+    )}
+
+    <!-- 12. Educational & Clinical Disclaimer -->
+    <div class="p-6 bg-slate-100 border border-slate-200 rounded-3xl text-[11px] text-slate-500 text-center leading-relaxed space-y-1">
+      <strong class="text-slate-700 block text-xs">Psychological & Educational Disclaimer</strong>
+      <p>
+        {disclaimer ||
+          'This assessment report is designed solely for self-reflection and educational purposes. It does not constitute a clinical psychological diagnosis or medical advice.'}
+      </p>
     </div>
 
-    <!-- Actions -->
-    <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
-      <div class="flex flex-wrap items-center gap-3">
-        <a
-          href="/dashboard"
-          class="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs transition-all"
-        >
-          <span>📊</span>
-          <span>Back to Dashboard</span>
-        </a>
-        <a
-          href={`/results/${reportData.attemptId}`}
-          class="text-xs font-semibold text-slate-600 hover:text-slate-900"
-        >
-          ← Score Summary
-        </a>
-      </div>
-
-      <button
-        type="button"
-        onclick="window.print()"
-        class="px-5 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition-all flex items-center gap-1.5"
+    <!-- Bottom Action Row -->
+    <div class="pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4 no-print">
+      <a
+        href={`/results/${reportData.attemptId}`}
+        class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
       >
-        <span>🖨️</span>
-        <span>Print / Save Report</span>
-      </button>
+        <span>←</span>
+        <span>View Score Summary</span>
+      </a>
+
+      <a
+        href={`/api/v1/reports/${id}/pdf`}
+        download
+        class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+      >
+        <span>📑</span>
+        <span>Download Complete PDF Dossier</span>
+      </a>
     </div>
   </div>
 </BaseLayout>
-
-<style is:global>
-  @media print {
-    @page {
-      margin: 1.2cm;
-      size: auto;
-    }
-
-    body {
-      background: #ffffff !important;
-      color: #0f172a !important;
-    }
-
-    /* Prevent cards, domain insight boxes, and sections from splitting across page breaks */
-    .card,
-    [class*="rounded-2xl"],
-    [class*="rounded-3xl"],
-    [class*="rounded-xl"],
-    .break-inside-avoid,
-    section,
-    article,
-    .grid > div {
-      break-inside: avoid !important;
-      page-break-inside: avoid !important;
-    }
-
-    /* Prevent headings from being separated from their content */
-    h1, h2, h3, h4, h5, h6 {
-      break-after: avoid !important;
-      page-break-after: avoid !important;
-    }
-
-    .no-print,
-    header,
-    nav,
-    footer,
-    button {
-      display: none !important;
-    }
-  }
-</style>
-

@@ -2,6 +2,8 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getD1Database } from '@/lib/db/client';
 import { AssessmentRuntimeService } from '@/services/assessment-runtime.service';
+import { executeQuery } from '@/lib/db/query';
+import type { SiteSettingRow } from '@/types/database';
 
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/');
@@ -15,146 +17,533 @@ if (!assessmentData) {
   return new Response('Assessment Not Found or not published', { status: 404 });
 }
 
-const { assessment, questions } = assessmentData;
+const { assessment, questions, dimensions, category } = assessmentData;
+const estimatedMinutes = assessment.estimated_minutes || Math.max(3, Math.ceil(questions.length * 0.25));
+
+// Fetch configurable admin settings with safe defaults
+let showDimensionContext = true;
+let showDimensionDescription = true;
+let showDimensionProgress = true;
+let showDimensionTransition = true;
+
+if (db) {
+  try {
+    const settings = await executeQuery<SiteSettingRow>(
+      db,
+      "SELECT key, value FROM site_settings WHERE key IN ('show_dimension_context', 'show_dimension_description', 'show_dimension_progress', 'show_dimension_transition')"
+    );
+    for (const s of settings) {
+      if (s.key === 'show_dimension_context') showDimensionContext = s.value !== 'false';
+      if (s.key === 'show_dimension_description') showDimensionDescription = s.value !== 'false';
+      if (s.key === 'show_dimension_progress') showDimensionProgress = s.value !== 'false';
+      if (s.key === 'show_dimension_transition') showDimensionTransition = s.value !== 'false';
+    }
+  } catch {}
+}
+
+// Build Dimension Metadata Map dynamically (100% dynamic, no hardcoding)
+const dimensionMap = new Map<string, { id: string; name: string; description: string }>();
+dimensions.forEach((d) => {
+  dimensionMap.set(d.id, {
+    id: d.id,
+    name: d.name,
+    description: d.description || ''
+  });
+});
+
+// Count total questions and tracking per dimension
+const dimQuestionCounts = new Map<string, number>();
+const dimQuestionRunningIndex = new Map<string, number>();
+
+questions.forEach((q) => {
+  const dId = q.dimension_id || 'general';
+  dimQuestionCounts.set(dId, (dimQuestionCounts.get(dId) || 0) + 1);
+});
+
+// Enrich questions with dimension context
+const enrichedQuestions = questions.map((q) => {
+  const dId = q.dimension_id || 'general';
+  const itemIndexInDim = (dimQuestionRunningIndex.get(dId) || 0) + 1;
+  dimQuestionRunningIndex.set(dId, itemIndexInDim);
+  const dim = dimensionMap.get(dId);
+
+  return {
+    ...q,
+    dimensionId: dId,
+    dimensionName: dim?.name || category?.name || 'Psychological Construct',
+    dimensionDescription: dim?.description || '',
+    itemIndexInDimension: itemIndexInDim,
+    totalInDimension: dimQuestionCounts.get(dId) || 1
+  };
+});
+
+// Handle guest/user session on server
+const currentUser = Astro.locals.user;
+let guestSessionId = Astro.cookies.get('mm_guest_id')?.value || null;
+if (!currentUser && !guestSessionId) {
+  guestSessionId = crypto.randomUUID();
+  Astro.cookies.set('mm_guest_id', guestSessionId, {
+    path: '/',
+    httpOnly: true,
+    secure: import.meta.env.PROD,
+    sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60
+  });
+}
+
+// Start or resume attempt server-side for zero-latency start
+const urlAttemptId = Astro.url.searchParams.get('attemptId');
+let initialAttemptId = urlAttemptId || '';
+
+if (!initialAttemptId) {
+  try {
+    const { attempt } = await runtimeService.startOrResumeAttempt(
+      assessment.id,
+      currentUser?.id || null,
+      guestSessionId
+    );
+    initialAttemptId = attempt.id;
+  } catch (err) {
+    console.error('SSR attempt start error:', err);
+  }
+}
 ---
 
-<BaseLayout title={`Taking: ${assessment.name}`} description="Assessment in progress">
-  <!-- Minimalist Runner Shell -->
-  <div class="min-h-screen bg-slate-50 flex flex-col justify-between">
-    <!-- Top Progress Bar -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
-      <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          {Astro.locals.user ? (
-            <a href="/dashboard" class="text-xs text-teal-800 hover:text-teal-900 font-bold flex items-center gap-1 bg-teal-50 hover:bg-teal-100 px-2.5 py-1 rounded-lg border border-teal-200 transition-colors">
-              <span>📊</span>
-              <span>Dashboard</span>
-            </a>
-          ) : (
-            <a href={`/assessments/${assessment.slug}`} class="text-xs text-slate-500 hover:text-slate-800 font-semibold">
-              ✕ Exit
-            </a>
-          )}
-          <span class="text-slate-300">|</span>
-          <span class="text-xs font-bold text-slate-900 truncate max-w-[160px] sm:max-w-xs">{assessment.name}</span>
+<BaseLayout title={`${assessment.name} | Psychology Calculator`} description={assessment.short_description || 'Psychology Assessment in progress'}>
+  <div class="min-h-screen bg-slate-50/70 text-slate-900 flex flex-col justify-between selection:bg-teal-100 selection:text-teal-900">
+    <!-- Top Progress Bar & Focus Header -->
+    <header class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 shadow-2xs transition-all">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+        <!-- Brand & Exit Link -->
+        <div class="flex items-center gap-3">
+          <a
+            href={currentUser ? "/dashboard" : `/assessments/${assessment.slug}`}
+            class="group inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition-all"
+            title="Exit assessment"
+          >
+            <span>✕</span>
+            <span class="hidden sm:inline">Exit</span>
+          </a>
+
+          <div class="hidden sm:flex items-center gap-2">
+            <span class="text-slate-300">/</span>
+            <span class="text-xs font-bold text-slate-900 truncate max-w-xs">{assessment.name}</span>
+          </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <span id="progress-text" class="text-xs font-mono font-bold text-teal-700">0%</span>
-          <div class="w-28 sm:w-40 bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
-            <div id="progress-bar" class="bg-teal-600 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+        <!-- Progress Counter & Bar (Hidden on Intro Screen) -->
+        <div id="header-progress-container" class="flex items-center gap-3 sm:gap-4">
+          <!-- Estimated Time Remaining -->
+          <span id="estimated-time-text" class="text-[11px] font-medium text-slate-400 hidden sm:inline-block">
+            ~{estimatedMinutes} min remaining
+          </span>
+
+          <div class="flex items-center gap-2.5">
+            <span id="progress-step-text" class="text-xs font-bold font-mono text-teal-800">
+              1 of {questions.length}
+            </span>
+            <div class="w-24 sm:w-36 bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/80">
+              <div
+                id="progress-bar"
+                class="bg-gradient-to-r from-teal-500 to-teal-600 h-full rounded-full transition-all duration-300 ease-out"
+                style="width: 4%;"
+              ></div>
+            </div>
           </div>
+        </div>
+
+        <!-- Auto-Advance Toggle -->
+        <div class="flex items-center gap-2">
+          <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-500 hover:text-slate-800 select-none">
+            <input
+              type="checkbox"
+              id="auto-advance-toggle"
+              checked
+              class="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+            />
+            <span class="hidden md:inline">Auto-advance</span>
+          </label>
         </div>
       </div>
     </header>
 
-    <!-- Main Question Stepper Area -->
-    <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-8 sm:py-12 flex flex-col justify-center">
-      <div id="questions-deck" class="space-y-6">
-        {questions.map((q, idx) => (
+    <!-- Main Assessment Container -->
+    <main class="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-14 flex flex-col justify-center">
+      <!-- 1. START / INTRO SCREEN (First-time greeting) -->
+      <section id="assessment-intro-screen" class="hidden bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/80 shadow-sm space-y-8 text-center animate-fade-in">
+        <div class="space-y-3">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
+            {category?.name || 'Psychological Assessment'}
+          </span>
+          <h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            {assessment.name}
+          </h1>
+          <p class="text-sm sm:text-base text-slate-600 max-w-lg mx-auto leading-relaxed">
+            {assessment.short_description || 'Explore your cognitive, emotional, and behavioral tendencies through this structured self-reflection assessment.'}
+          </p>
+        </div>
+
+        <!-- Key Info Grid -->
+        <div class="grid grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+          <div>
+            <div class="text-lg sm:text-xl font-extrabold text-slate-900">{questions.length}</div>
+            <div class="text-[11px] text-slate-500 font-medium">Questions</div>
+          </div>
+          <div>
+            <div class="text-lg sm:text-xl font-extrabold text-slate-900">~{estimatedMinutes} min</div>
+            <div class="text-[11px] text-slate-500 font-medium">Estimated Time</div>
+          </div>
+          <div>
+            <div class="text-lg sm:text-xl font-extrabold text-slate-900">5-Point</div>
+            <div class="text-[11px] text-slate-500 font-medium">Rating Scale</div>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500 italic max-w-md mx-auto">
+          Answer honestly based on how you truly feel and behave, not how you think you "should" respond. There are no right or wrong answers.
+        </p>
+
+        <button
+          type="button"
+          id="start-assessment-btn"
+          class="w-full sm:w-auto px-8 py-4 bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-sm hover:shadow transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+        >
+          <span>Begin Assessment</span>
+          <span>→</span>
+        </button>
+      </section>
+
+      <!-- 2. ONE QUESTION AT A TIME CONTAINER -->
+      <div id="question-runner-container" class="space-y-8 relative">
+        <!-- Dimension Transition Interstitial Card (✦ NEW AREA) -->
+        {showDimensionTransition && (
           <div
-            class={`question-slide space-y-6 ${idx === 0 ? '' : 'hidden'}`}
-            data-q-index={idx}
-            data-q-id={q.id}
-            data-required={q.required}
+            id="dimension-transition-card"
+            class="hidden absolute inset-0 z-20 bg-white/95 backdrop-blur-md rounded-3xl p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-4 border border-teal-200 shadow-lg animate-fade-in"
+            aria-live="polite"
           >
-            <!-- Step Counter -->
-            <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
-              <span>Question {idx + 1} of {questions.length}</span>
-              {q.required === 1 && (
-                <span class="text-rose-500 text-[11px] font-semibold">* Required</span>
-              )}
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
+              <span>✦</span>
+              <span>NEW AREA</span>
             </div>
+            <h2 id="dim-trans-title" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Dimension Name
+            </h2>
+            <p id="dim-trans-desc" class="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+              Dimension Description
+            </p>
+            <div class="w-16 h-1 bg-teal-500 rounded-full animate-pulse"></div>
+          </div>
+        )}
 
-            <!-- Question Prompt -->
-            <div class="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6">
-              <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug tracking-tight">
-                {q.question_text}
-              </h2>
+        <!-- Questions Deck -->
+        <div id="questions-deck" class="relative overflow-hidden min-h-[380px] sm:min-h-[420px]">
+          {enrichedQuestions.map((q, idx) => (
+            <div
+              class={`question-slide w-full transition-all duration-300 ease-out space-y-5 ${idx === 0 ? '' : 'hidden'}`}
+              data-q-index={idx}
+              data-q-id={q.id}
+              data-dim-id={q.dimensionId}
+              data-dim-name={q.dimensionName}
+              data-dim-desc={q.dimensionDescription}
+              data-required={q.required}
+            >
+              <!-- Context Header & Optional Dimension Progress -->
+              <div class="flex items-center justify-between text-xs font-semibold text-slate-400">
+                <span class="uppercase tracking-wider font-mono">
+                  QUESTION {idx + 1} OF {questions.length}
+                </span>
+                {showDimensionProgress && q.totalInDimension > 1 && (
+                  <span class="text-[11px] font-mono text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-lg border border-teal-200/60 font-bold">
+                    {q.itemIndexInDimension} of {q.totalInDimension} in area
+                  </span>
+                )}
+              </div>
 
-              <!-- Options Grid / List -->
-              <div class="space-y-3 options-container">
-                {q.options.map((opt) => (
+              <!-- Dimension Context: What We're Exploring -->
+              {showDimensionContext && q.dimensionName && (
+                <div class="bg-white/95 border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-1.5 transition-all">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                    <span class="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-teal-700">
+                      What We're Exploring
+                    </span>
+                  </div>
+                  <h2 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                    {q.dimensionName}
+                  </h2>
+                  {showDimensionDescription && q.dimensionDescription && (
+                    <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                      {q.dimensionDescription}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <!-- Question Statement (Visual Focus) -->
+              <div class="py-2">
+                <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
+                  "{q.question_text}"
+                </h3>
+              </div>
+
+              <!-- Answer Options: Premium Clickable Cards -->
+              <div
+                class="options-container space-y-3 pt-1"
+                role="radiogroup"
+                aria-label={`Question ${idx + 1}: ${q.question_text}`}
+              >
+                {q.options.map((opt, optIdx) => (
                   <label
-                    class="option-label flex items-center justify-between p-4 rounded-2xl border-2 border-slate-200 hover:border-teal-500 hover:bg-teal-50/30 cursor-pointer transition-all text-xs sm:text-sm font-semibold text-slate-800"
+                    class="option-card group relative p-4 sm:p-5 bg-white border border-slate-200/90 rounded-2xl cursor-pointer transition-all duration-200 flex items-center justify-between gap-4 shadow-2xs hover:border-teal-500 hover:bg-teal-50/30 hover:shadow-xs active:scale-[0.99] focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-600 select-none"
                   >
-                    <div class="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name={`q_${q.id}`}
-                        value={opt.id}
-                        data-option-val={opt.option_value}
-                        class="w-4 h-4 text-teal-600 border-slate-300 focus:ring-teal-500"
-                      />
-                      <span>{opt.option_text}</span>
+                    <input
+                      type="radio"
+                      name={`q_${q.id}`}
+                      value={opt.id}
+                      data-option-val={opt.option_value}
+                      class="sr-only"
+                    />
+
+                    <div class="flex items-center gap-3.5 sm:gap-4">
+                      <!-- Custom Selection Indicator (Radio / Check) -->
+                      <div class="selection-indicator w-5 h-5 rounded-full border-2 border-slate-300 group-hover:border-teal-500 flex items-center justify-center transition-all shrink-0">
+                        <div class="indicator-inner w-2.5 h-2.5 rounded-full bg-white opacity-0 transition-opacity"></div>
+                      </div>
+
+                      <!-- Answer Label Text -->
+                      <span class="text-sm sm:text-base font-bold text-slate-800 group-hover:text-slate-950 transition-colors">
+                        {opt.option_text}
+                      </span>
                     </div>
+
+                    <!-- Keyboard Shortcut Hint (Desktop) -->
+                    <span class="hidden sm:inline-flex items-center justify-center w-5 h-5 text-[10px] font-mono font-bold text-slate-400 border border-slate-200 rounded-md bg-slate-50 group-hover:border-teal-300 group-hover:text-teal-700 transition-colors">
+                      {optIdx + 1}
+                    </span>
                   </label>
                 ))}
               </div>
             </div>
+          ))}
+        </div>
+
+        <!-- Bottom Action Bar & Navigation -->
+        <div id="actions-bar" class="pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <!-- Back Button -->
+          <button
+            type="button"
+            id="prev-btn"
+            class="w-full sm:w-auto px-5 py-3 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 active:scale-[0.99] transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+            disabled
+          >
+            <span>←</span>
+            <span>Back</span>
+          </button>
+
+          <!-- Dynamic Encouragement / Progress Note -->
+          <div id="encouragement-text" class="text-xs font-medium text-slate-400 text-center order-last sm:order-none">
+            Take your time and answer naturally
           </div>
-        ))}
-      </div>
 
-      <!-- Navigation Actions Bar -->
-      <div class="mt-8 flex items-center justify-between gap-4">
-        <button
-          type="button"
-          id="prev-btn"
-          class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          disabled
-        >
-          ← Previous
-        </button>
+          <!-- Forward Action (Continue / See My Results) -->
+          <div class="w-full sm:w-auto flex items-center gap-2">
+            <button
+              type="button"
+              id="next-btn"
+              class="w-full sm:w-auto px-7 py-3 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-[0.99] rounded-xl shadow-xs hover:shadow transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>Continue</span>
+              <span>→</span>
+            </button>
 
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            id="next-btn"
-            class="px-6 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
-          >
-            Next →
-          </button>
-
-          <button
-            type="button"
-            id="submit-btn"
-            class="hidden px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
-          >
-            Complete & View Results ✓
-          </button>
+            <button
+              type="button"
+              id="submit-btn"
+              class="hidden w-full sm:w-auto px-7 py-3 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] rounded-xl shadow-xs hover:shadow transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>See My Results</span>
+              <span>✓</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      <!-- 3. DEDICATED CALCULATION EXPERIENCE SCREEN -->
+      <section id="calculating-screen" class="hidden bg-white rounded-3xl p-8 sm:p-14 border border-slate-200/80 shadow-md space-y-8 text-center animate-fade-in">
+        <!-- Psychology Calculator Analysis Orb -->
+        <div class="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto flex items-center justify-center">
+          <div class="absolute inset-0 rounded-full border-2 border-teal-500/20 animate-ping"></div>
+          <div class="absolute inset-2 rounded-full border-2 border-teal-600/40 border-t-teal-600 animate-spin"></div>
+          <div class="absolute inset-5 rounded-full bg-teal-50 flex items-center justify-center border border-teal-200">
+            <span class="text-2xl sm:text-3xl animate-pulse">🧠</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-teal-700 font-mono">
+            CALCULATING YOUR RESULTS
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            That's all. Let's calculate your results.
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+            Synthesizing your responses across dimensional constructs and generating your baseline profile...
+          </p>
+        </div>
+
+        <div class="w-48 mx-auto bg-slate-100 rounded-full h-1.5 overflow-hidden">
+          <div class="bg-teal-600 h-full rounded-full animate-pulse w-full"></div>
+        </div>
+      </section>
     </main>
 
-    <!-- Footer Security Notice -->
-    <footer class="py-4 text-center text-[11px] text-slate-400">
-      Psychology Calculator • Deterministic Scoring Engine • Secure & Encrypted
+    <!-- Clean Footer -->
+    <footer class="py-5 text-center text-xs text-slate-400 border-t border-slate-200/60 bg-white/50">
+      <div class="max-w-4xl mx-auto px-4 flex flex-wrap items-center justify-between gap-3 text-[11px]">
+        <span>Psychology Calculator • Deterministic Scoring Engine</span>
+        <span>Secure & Private • Educational Self-Reflection</span>
+      </div>
     </footer>
   </div>
 </BaseLayout>
 
-<script is:inline define:vars={{ totalCount: questions.length, assessmentId: assessment.id, slug: assessment.slug }}>
-  // Extract or verify attemptId from URL query or session storage
+<style>
+  /* Question transition animations */
+  .slide-enter-right {
+    animation: slideInRight 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .slide-exit-left {
+    animation: slideOutLeft 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .slide-enter-left {
+    animation: slideInLeft 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .slide-exit-right {
+    animation: slideOutRight 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutLeft {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .slide-enter-right,
+    .slide-exit-left,
+    .slide-enter-left,
+    .slide-exit-right,
+    .animate-fade-in {
+      animation: none !important;
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<script is:inline define:vars={{ totalCount: questions.length, assessmentId: assessment.id, slug: assessment.slug, initialAttemptId, guestSessionId, estimatedMinutes, showDimensionTransition }}>
+  // Extract or verify attemptId from SSR, URL query or session storage
   const urlParams = new URLSearchParams(window.location.search);
-  let attemptId = urlParams.get('attemptId') || sessionStorage.getItem('active_attempt_id');
+  let attemptId = initialAttemptId || urlParams.get('attemptId') || sessionStorage.getItem('active_attempt_id');
+
+  if (attemptId) {
+    sessionStorage.setItem('active_attempt_id', attemptId);
+  }
+  if (guestSessionId) {
+    sessionStorage.setItem('guest_session_id', guestSessionId);
+  }
 
   let currentIndex = 0;
-  const slides = document.querySelectorAll('.question-slide');
+  let isTransitioning = false;
+  let isAutoAdvanceEnabled = localStorage.getItem('psy_auto_advance') !== 'false';
+
+  const slides = Array.from(document.querySelectorAll('.question-slide'));
   const prevBtn = document.getElementById('prev-btn');
   const nextBtn = document.getElementById('next-btn');
   const submitBtn = document.getElementById('submit-btn');
   const progressBar = document.getElementById('progress-bar');
-  const progressText = document.getElementById('progress-text');
+  const progressStepText = document.getElementById('progress-step-text');
+  const estimatedTimeText = document.getElementById('estimated-time-text');
+  const encouragementText = document.getElementById('encouragement-text');
+  const autoAdvanceToggle = document.getElementById('auto-advance-toggle');
+  const introScreen = document.getElementById('assessment-intro-screen');
+  const runnerContainer = document.getElementById('question-runner-container');
+  const calculatingScreen = document.getElementById('calculating-screen');
+  const startAssessmentBtn = document.getElementById('start-assessment-btn');
+  const dimTransitionCard = document.getElementById('dimension-transition-card');
+  const dimTransTitle = document.getElementById('dim-trans-title');
+  const dimTransDesc = document.getElementById('dim-trans-desc');
 
   // Answers Map: questionId -> optionId
   const answersMap = new Map();
 
+  if (autoAdvanceToggle) {
+    autoAdvanceToggle.checked = isAutoAdvanceEnabled;
+    autoAdvanceToggle.addEventListener('change', (e) => {
+      isAutoAdvanceEnabled = e.target.checked;
+      localStorage.setItem('psy_auto_advance', String(isAutoAdvanceEnabled));
+    });
+  }
+
   async function initAttempt() {
     if (!attemptId) {
-      // Auto-start attempt if not present
       try {
-        const res = await fetch(`/api/v1/assessments/${assessmentId}/start`, { method: 'POST' });
+        const res = await fetch(`/api/v1/assessments/${assessmentId}/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-guest-session': guestSessionId || sessionStorage.getItem('guest_session_id') || ''
+          }
+        });
         const data = await res.json();
         if (data.success && data.data?.attemptId) {
           attemptId = data.data.attemptId;
@@ -168,148 +557,336 @@ const { assessment, questions } = assessmentData;
     // Load any existing answers if resuming
     if (attemptId) {
       try {
-        const res = await fetch(`/api/v1/attempts/${attemptId}`);
+        const res = await fetch(`/api/v1/attempts/${attemptId}`, {
+          headers: {
+            'x-guest-session': guestSessionId || sessionStorage.getItem('guest_session_id') || ''
+          }
+        });
         const data = await res.json();
-        if (data.success && data.data?.answers) {
+        if (data.success && data.data?.answers && data.data.answers.length > 0) {
           data.data.answers.forEach((ans) => {
             answersMap.set(ans.question_id, ans.option_id);
-            // Check radio button in DOM
+            // Apply checked UI
             const radio = document.querySelector(`input[name="q_${ans.question_id}"][value="${ans.option_id}"]`);
             if (radio) {
               radio.checked = true;
-              radio.closest('.option-label')?.classList.add('border-teal-600', 'bg-teal-50/50');
+              markCardSelected(radio.closest('.option-card'), true);
             }
           });
+
+          // Resume at first unanswered question
+          const firstUnanswered = slides.findIndex((s) => !answersMap.has(s.getAttribute('data-q-id')));
+          if (firstUnanswered !== -1) {
+            showSlide(firstUnanswered, 'none');
+          } else {
+            showSlide(totalCount - 1, 'none');
+          }
           updateProgress();
         }
       } catch {}
     }
   }
 
-  function updateProgress() {
-    const answered = answersMap.size;
-    const pct = Math.round((answered / totalCount) * 100);
-    if (progressBar) progressBar.style.width = `${pct}%`;
-    if (progressText) progressText.innerText = `${pct}%`;
+  function markCardSelected(card, isSelected) {
+    if (!card) return;
+    const indicator = card.querySelector('.selection-indicator');
+    const innerDot = card.querySelector('.indicator-inner');
+
+    if (isSelected) {
+      card.classList.add('border-teal-600', 'bg-teal-50/70', 'ring-2', 'ring-teal-500/20', 'shadow-xs');
+      card.classList.remove('border-slate-200/90', 'bg-white');
+      if (indicator) {
+        indicator.classList.add('border-teal-600', 'bg-teal-600');
+        indicator.classList.remove('border-slate-300');
+      }
+      if (innerDot) {
+        innerDot.classList.remove('opacity-0');
+        innerDot.classList.add('opacity-100');
+      }
+    } else {
+      card.classList.remove('border-teal-600', 'bg-teal-50/70', 'ring-2', 'ring-teal-500/20', 'shadow-xs');
+      card.classList.add('border-slate-200/90', 'bg-white');
+      if (indicator) {
+        indicator.classList.remove('border-teal-600', 'bg-teal-600');
+        indicator.classList.add('border-slate-300');
+      }
+      if (innerDot) {
+        innerDot.classList.add('opacity-0');
+        innerDot.classList.remove('opacity-100');
+      }
+    }
   }
 
-  function showSlide(index) {
-    slides.forEach((slide, idx) => {
-      slide.classList.toggle('hidden', idx !== index);
-    });
+  function updateProgress() {
+    const answeredCount = answersMap.size;
+    const currentNum = currentIndex + 1;
+    const pct = Math.max(4, Math.round((answeredCount / totalCount) * 100));
 
-    currentIndex = index;
-    prevBtn.disabled = index === 0;
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (progressStepText) progressStepText.innerText = `${currentNum} of ${totalCount}`;
 
-    const isLast = index === totalCount - 1;
+    // Dynamic estimated remaining time calculation
+    if (estimatedTimeText) {
+      const remainingQuestions = Math.max(0, totalCount - answeredCount);
+      const remainingMin = Math.ceil((remainingQuestions / totalCount) * estimatedMinutes);
+      estimatedTimeText.innerText = remainingMin <= 1 ? '~1 min remaining' : `~${remainingMin} min remaining`;
+    }
+
+    // Dynamic encouragement message based on progress
+    if (encouragementText) {
+      const progressFraction = answeredCount / totalCount;
+      if (progressFraction >= 0.85) {
+        encouragementText.innerText = "Almost finished! Just a few more to go.";
+      } else if (progressFraction >= 0.5) {
+        encouragementText.innerText = "You're more than halfway there.";
+      } else if (progressFraction >= 0.25) {
+        encouragementText.innerText = "You're making great progress.";
+      } else {
+        encouragementText.innerText = "Answer naturally based on your true feelings.";
+      }
+    }
+  }
+
+  function showSlide(newIndex, direction = 'forward') {
+    if (newIndex < 0 || newIndex >= totalCount || isTransitioning) return;
+    isTransitioning = true;
+
+    const oldSlide = slides[currentIndex];
+    const newSlide = slides[newIndex];
+
+    if (direction === 'none' || oldSlide === newSlide) {
+      slides.forEach((s, i) => s.classList.toggle('hidden', i !== newIndex));
+      currentIndex = newIndex;
+      updateControls();
+      isTransitioning = false;
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Check if dimension changed between old and new question
+    const oldDimId = oldSlide.getAttribute('data-dim-id');
+    const newDimId = newSlide.getAttribute('data-dim-id');
+    const isDimensionChange = oldDimId !== newDimId;
+
+    if (prefersReducedMotion) {
+      oldSlide.classList.add('hidden');
+      newSlide.classList.remove('hidden');
+      currentIndex = newIndex;
+      updateControls();
+      isTransitioning = false;
+      return;
+    }
+
+    const executeSlideTransition = () => {
+      if (direction === 'forward') {
+        oldSlide.classList.add('slide-exit-left');
+        setTimeout(() => {
+          oldSlide.classList.add('hidden');
+          oldSlide.classList.remove('slide-exit-left');
+
+          newSlide.classList.remove('hidden');
+          newSlide.classList.add('slide-enter-right');
+          setTimeout(() => {
+            newSlide.classList.remove('slide-enter-right');
+            currentIndex = newIndex;
+            updateControls();
+            isTransitioning = false;
+          }, 260);
+        }, 180);
+      } else {
+        oldSlide.classList.add('slide-exit-right');
+        setTimeout(() => {
+          oldSlide.classList.add('hidden');
+          oldSlide.classList.remove('slide-exit-right');
+
+          newSlide.classList.remove('hidden');
+          newSlide.classList.add('slide-enter-left');
+          setTimeout(() => {
+            newSlide.classList.remove('slide-enter-left');
+            currentIndex = newIndex;
+            updateControls();
+            isTransitioning = false;
+          }, 260);
+        }, 180);
+      }
+    };
+
+    // Show ✦ NEW AREA dimension transition if dimension changed and enabled
+    if (isDimensionChange && showDimensionTransition && dimTransitionCard && direction === 'forward') {
+      const newDimName = newSlide.getAttribute('data-dim-name') || 'New Area';
+      const newDimDesc = newSlide.getAttribute('data-dim-desc') || '';
+
+      if (dimTransTitle) dimTransTitle.innerText = newDimName;
+      if (dimTransDesc) dimTransDesc.innerText = newDimDesc;
+
+      dimTransitionCard.classList.remove('hidden');
+      setTimeout(() => {
+        dimTransitionCard.classList.add('hidden');
+        executeSlideTransition();
+      }, 360);
+    } else {
+      executeSlideTransition();
+    }
+  }
+
+  function updateControls() {
+    if (prevBtn) prevBtn.disabled = currentIndex === 0;
+
+    const isLast = currentIndex === totalCount - 1;
     if (nextBtn) nextBtn.classList.toggle('hidden', isLast);
     if (submitBtn) submitBtn.classList.toggle('hidden', !isLast);
 
+    updateProgress();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Handle Option Selection
-  document.querySelectorAll('.option-label input[type="radio"]').forEach((radio) => {
-    radio.addEventListener('change', async (e) => {
-      const target = e.target;
-      const optionId = target.value;
-      const slide = target.closest('.question-slide');
-      const questionId = slide.getAttribute('data-q-id');
+  // Handle Option Selection on Cards
+  document.querySelectorAll('.option-card').forEach((card) => {
+    card.addEventListener('click', async (e) => {
+      const radio = card.querySelector('input[type="radio"]');
+      if (!radio) return;
 
-      // Style active radio label
-      slide.querySelectorAll('.option-label').forEach((lbl) => {
-        lbl.classList.remove('border-teal-600', 'bg-teal-50/50');
+      const slide = card.closest('.question-slide');
+      const questionId = slide.getAttribute('data-q-id');
+      const optionId = radio.value;
+
+      // Update selection styling across all options in this slide
+      slide.querySelectorAll('.option-card').forEach((otherCard) => {
+        markCardSelected(otherCard, false);
       });
-      target.closest('.option-label')?.classList.add('border-teal-600', 'bg-teal-50/50');
+      radio.checked = true;
+      markCardSelected(card, true);
 
       answersMap.set(questionId, optionId);
       updateProgress();
 
-      // Persist answer to backend in real time
+      // Persist to backend in real time
       if (attemptId) {
         try {
-          await fetch(`/api/v1/attempts/${attemptId}/answers`, {
+          fetch(`/api/v1/attempts/${attemptId}/answers`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-guest-session': guestSessionId || sessionStorage.getItem('guest_session_id') || ''
+            },
             body: JSON.stringify({ questionId, optionId })
-          });
-        } catch (err) {
-          console.error('Failed to sync answer', err);
-        }
+          }).catch((err) => console.error('Background answer save error', err));
+        } catch {}
       }
 
-      // Auto-advance to next question smoothly after short delay
-      if (currentIndex < totalCount - 1) {
+      // Auto-advance if enabled and not last question
+      if (isAutoAdvanceEnabled && currentIndex < totalCount - 1) {
         setTimeout(() => {
-          showSlide(currentIndex + 1);
-        }, 220);
+          showSlide(currentIndex + 1, 'forward');
+        }, 280);
       }
     });
   });
 
+  // Previous Question
   prevBtn?.addEventListener('click', () => {
-    if (currentIndex > 0) showSlide(currentIndex - 1);
+    if (currentIndex > 0) {
+      showSlide(currentIndex - 1, 'backward');
+    }
   });
 
+  // Next Question
   nextBtn?.addEventListener('click', () => {
     const currentSlide = slides[currentIndex];
     const qId = currentSlide.getAttribute('data-q-id');
     const isRequired = currentSlide.getAttribute('data-required') === '1';
 
     if (isRequired && !answersMap.has(qId)) {
-      alert('Please select an answer to continue.');
+      currentSlide.querySelector('.options-container')?.classList.add('ring-2', 'ring-rose-400', 'rounded-2xl');
+      setTimeout(() => {
+        currentSlide.querySelector('.options-container')?.classList.remove('ring-2', 'ring-rose-400', 'rounded-2xl');
+      }, 1000);
       return;
     }
 
     if (currentIndex < totalCount - 1) {
-      showSlide(currentIndex + 1);
+      showSlide(currentIndex + 1, 'forward');
     }
   });
 
-  // Submit Final Answers and Calculate Scores
+  // Submit / Finalize Assessment
   submitBtn?.addEventListener('click', async () => {
     const currentSlide = slides[currentIndex];
     const qId = currentSlide.getAttribute('data-q-id');
     const isRequired = currentSlide.getAttribute('data-required') === '1';
 
     if (isRequired && !answersMap.has(qId)) {
-      alert('Please answer the current question before completing.');
+      currentSlide.querySelector('.options-container')?.classList.add('ring-2', 'ring-rose-400', 'rounded-2xl');
+      setTimeout(() => {
+        currentSlide.querySelector('.options-container')?.classList.remove('ring-2', 'ring-rose-400', 'rounded-2xl');
+      }, 1000);
       return;
     }
 
-    submitBtn.setAttribute('disabled', 'true');
-    submitBtn.innerText = 'Calculating scores...';
+    // Switch to Calculating Results Experience
+    if (runnerContainer) runnerContainer.classList.add('hidden');
+    if (calculatingScreen) calculatingScreen.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
       const res = await fetch(`/api/v1/attempts/${attemptId}/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'x-guest-session': guestSessionId || sessionStorage.getItem('guest_session_id') || ''
+        }
       });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         alert(data.error?.message || 'Failed to finalize assessment.');
-        submitBtn.removeAttribute('disabled');
-        submitBtn.innerText = 'Complete & View Results ✓';
+        if (runnerContainer) runnerContainer.classList.remove('hidden');
+        if (calculatingScreen) calculatingScreen.classList.add('hidden');
         return;
       }
 
-      // Redirect to Result View
+      // Smooth instant redirect to calculated result profile
       window.location.href = `/results/${attemptId}`;
     } catch {
-      alert('A network error occurred while finalizing. Please try again.');
-      submitBtn.removeAttribute('disabled');
-      submitBtn.innerText = 'Complete & View Results ✓';
+      alert('A network error occurred while finalizing. Please check your connection.');
+      if (runnerContainer) runnerContainer.classList.remove('hidden');
+      if (calculatingScreen) calculatingScreen.classList.add('hidden');
     }
   });
 
   // Keyboard navigation
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' && currentIndex < totalCount - 1) {
-      nextBtn.click();
-    } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
-      prevBtn.click();
+    // Number keys 1-5 for options
+    if (['1', '2', '3', '4', '5'].includes(e.key)) {
+      const optIndex = parseInt(e.key, 10) - 1;
+      const currentSlide = slides[currentIndex];
+      const optionCards = currentSlide.querySelectorAll('.option-card');
+      if (optionCards[optIndex]) {
+        optionCards[optIndex].click();
+      }
+    } else if (e.key === 'Enter') {
+      if (currentIndex === totalCount - 1) {
+        submitBtn?.click();
+      } else {
+        nextBtn?.click();
+      }
+    } else if (e.key === 'ArrowRight') {
+      if (currentIndex < totalCount - 1) {
+        nextBtn?.click();
+      }
+    } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && currentIndex > 0) {
+        prevBtn?.click();
+      }
     }
+  });
+
+  // Start Assessment button
+  startAssessmentBtn?.addEventListener('click', () => {
+    if (introScreen) introScreen.classList.add('hidden');
+    if (runnerContainer) runnerContainer.classList.remove('hidden');
+    showSlide(0, 'none');
   });
 
   initAttempt();

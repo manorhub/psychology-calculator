@@ -1,0 +1,101 @@
+---
+import type { SnapshotDimensionScore } from '@/types/database';
+
+interface Props {
+  dimensions: SnapshotDimensionScore[];
+}
+
+const { dimensions } = Astro.props;
+
+function getLevelBadge(score: number, customName?: string) {
+  if (customName) return customName;
+  if (score >= 70) return 'High Range';
+  if (score >= 35) return 'Moderate Range';
+  return 'Low Range';
+}
+
+function getBarColor(score: number) {
+  if (score >= 70) return 'bg-emerald-500';
+  if (score >= 35) return 'bg-teal-500';
+  return 'bg-amber-500';
+}
+---
+
+<section id="dimensions" class="space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
+    <div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        Dimensional Breakdown
+      </h2>
+      <p class="text-xs sm:text-sm text-slate-600 mt-1">
+        Normalized psychometric evaluations across all {dimensions.length} evaluated {dimensions.length === 1 ? 'dimension' : 'dimensions'}
+      </p>
+    </div>
+    <span class="text-xs text-slate-400 font-mono hidden sm:inline-block">
+      Standardized 0–100% Scale
+    </span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+    {dimensions.map((dim) => {
+      const score = Math.min(100, Math.max(0, Math.round(dim.normalizedScore)));
+      const level = getLevelBadge(score, dim.resultTypeName);
+      const barColor = getBarColor(score);
+
+      return (
+        <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-4 hover:border-teal-300 transition-all flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="space-y-1">
+                <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                  {dim.dimensionName}
+                </h3>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                  <span>●</span>
+                  <span>{level}</span>
+                </span>
+              </div>
+
+              <div class="text-right flex-shrink-0">
+                <span class="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
+                  {score}%
+                </span>
+                <span class="text-[10px] text-slate-400 font-mono block">
+                  Raw: {dim.rawScore} / {dim.maxScore}
+                </span>
+              </div>
+            </div>
+
+            <!-- Accessible Progress Meter -->
+            <div
+              class="space-y-1.5"
+              role="progressbar"
+              aria-valuenow={score}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`${dim.dimensionName}: ${score}% (${level})`}
+            >
+              <div class="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden border border-slate-200 p-0.5">
+                <div
+                  class={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
+                  style={`width: ${score}%;`}
+                ></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span>0% Low</span>
+                <span>50% Mid</span>
+                <span>100% High</span>
+              </div>
+            </div>
+
+            {dim.description && (
+              <p class="text-xs text-slate-600 leading-relaxed pt-1">
+                {dim.description}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</section>

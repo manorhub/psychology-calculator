@@ -1,8 +1,16 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Card from '@/components/ui/Card.astro';
-import DimensionScoreCard from '@/components/results/DimensionScoreCard.astro';
-import SectionNarrative from '@/components/results/SectionNarrative.astro';
+import ResultHero from '@/components/results/ResultHero.astro';
+import ResultQuickNav from '@/components/results/ResultQuickNav.astro';
+import DimensionProfile from '@/components/results/DimensionProfile.astro';
+import StrengthsSection from '@/components/results/StrengthsSection.astro';
+import GrowthSection from '@/components/results/GrowthSection.astro';
+import LifeContextSection from '@/components/results/LifeContextSection.astro';
+import ReflectionSection from '@/components/results/ReflectionSection.astro';
+import PremiumAiCta from '@/components/results/PremiumAiCta.astro';
+import GuestSaveBanner from '@/components/results/GuestSaveBanner.astro';
+import AiGenerationExperience from '@/components/results/AiGenerationExperience.astro';
 import { getD1Database } from '@/lib/db/client';
 import { ResultService } from '@/services/result.service';
 
@@ -30,38 +38,57 @@ try {
   );
 } catch (error: any) {
   if (error.statusCode === 403 || error.statusCode === 404) {
-    return new Response('Result Not Found or Access Denied', { status: error.statusCode });
+    return new Response(
+      `<!DOCTYPE html><html><head><title>Result Not Available</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://cdn.tailwindcss.com"></head><body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans"><div class="max-w-md w-full bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-4 text-center"><div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl mx-auto flex items-center justify-center text-xl font-bold">🔒</div><h2 class="text-xl font-black text-slate-900">Result Not Found or Access Denied</h2><p class="text-xs text-slate-600 leading-relaxed">This assessment attempt is either private or has expired.</p><div class="pt-2"><a href="/assessments" class="inline-block px-5 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-colors">Browse Assessments</a></div></div></body></html>`,
+      { status: error.statusCode, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
   }
   return Astro.redirect('/');
 }
 
 const { snapshot, isSharedView, shareToken: activeShareToken } = resultData;
-const [relatedAssessments, faqs, existingReport] = await Promise.all([
+const { CreditService } = await import('@/services/credit.service');
+const creditService = new CreditService(db);
+
+const [relatedAssessments, faqs, existingReport, userWallet, reportCost] = await Promise.all([
   resultService.getRelatedAssessments(snapshot.assessmentId, snapshot.assessmentId, 3),
   resultService.getAssessmentFaqs(snapshot.assessmentId),
-  db.prepare("SELECT id FROM reports WHERE attempt_id = ? AND report_type = 'ai' AND status = 'completed'").bind(id).first<{ id: string }>()
+  db.prepare("SELECT id FROM reports WHERE attempt_id = ? AND report_type = 'ai' AND status = 'completed'").bind(id).first<{ id: string }>(),
+  currentUser ? creditService.getUserWallet(currentUser.id) : null,
+  creditService.getReportCreditCost()
 ]);
 
-const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
+// Organize primary result type contents into distinct contextual buckets
+const contents = snapshot.primaryResultType?.contents || [];
+
+const overviewContent = contents.find((c) => c.section_type === 'overview');
+const strengthsContent = contents.find((c) => c.section_type === 'strengths');
+const growthContent = contents.find((c) => c.section_type === 'growth_suggestions' || c.section_type === 'challenges');
+const contextContents = contents.filter((c) => ['work_style', 'communication', 'relationships', 'recommendations', 'custom'].includes(c.section_type));
+
+const hasDimensions = snapshot.dimensionScores && snapshot.dimensionScores.length > 0;
+const hasStrengths = !!strengthsContent || (snapshot.primaryResultType?.description?.length ?? 0) > 0;
+const hasGrowth = !!growthContent;
+const hasContexts = contextContents.length > 0;
 ---
 
 <BaseLayout
-  title={`Results: ${snapshot.assessmentName}`}
-  description={`Comprehensive psychometric evaluation and dimensional breakdown for ${snapshot.assessmentName}`}
+  title={`Results: ${snapshot.assessmentName} | Psychology Calculator`}
+  description={`Standardized psychometric evaluation and dimensional profile breakdown for ${snapshot.assessmentName}`}
 >
-  <!-- SEO Privacy: Strictly Noindex for personal psychometric results -->
+  <!-- Privacy & Anti-Scraping: Strictly Noindex for personal test outcomes -->
   <Fragment slot="head">
     <meta name="robots" content="noindex, nofollow" />
   </Fragment>
 
-  <div class="max-w-4xl mx-auto py-8 sm:py-12 px-4 sm:px-6 space-y-10">
-    <!-- Top Action & Navigation Bar -->
+  <div class="max-w-4xl mx-auto py-6 sm:py-10 px-4 sm:px-6 space-y-8 sm:space-y-12">
+    <!-- Top Action & Navigation Breadcrumb Bar -->
     <div class="flex flex-wrap items-center justify-between gap-3 no-print">
       <div class="flex flex-wrap items-center gap-2">
         {currentUser ? (
           <a
             href="/dashboard"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
           >
             <span>📊</span>
             <span>Back to Dashboard</span>
@@ -69,7 +96,7 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
         ) : (
           <a
             href="/assessments"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
           >
             <span>📝</span>
             <span>Browse Tests</span>
@@ -77,12 +104,13 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
         )}
         <a
           href={`/assessments/${snapshot.assessmentSlug}/take`}
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
         >
           <span>🔄</span>
           <span>Retake Test</span>
         </a>
       </div>
+
       <a
         href="/assessments"
         class="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1"
@@ -92,221 +120,148 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
       </a>
     </div>
 
-    <!-- Shared View Notice Banner -->
+    <!-- Shared View Notice Banner (Only if viewed via share link) -->
     {isSharedView && (
-      <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span>🔗</span>
+      <div class="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="text-base">🔗</span>
           <span>You are viewing a shared assessment result link.</span>
         </div>
-        <a href={`/assessments/${snapshot.assessmentSlug}`} class="font-bold text-amber-950 underline">
+        <a href={`/assessments/${snapshot.assessmentSlug}`} class="font-bold text-amber-950 underline flex-shrink-0">
           Take This Assessment Yourself →
         </a>
       </div>
     )}
 
-    <!-- Header & Summary Card -->
-    <div class="text-center space-y-3">
-      <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-bold">
-        <span>✓ Completed Assessment</span>
-      </div>
-      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-        {snapshot.assessmentName} Results
-      </h1>
-      <p class="text-xs sm:text-sm text-slate-500 font-mono">
-        Completed in {durationMins} mins • {new Date(snapshot.completedAt).toLocaleDateString()} • v{snapshot.assessmentVersion}
-      </p>
-    </div>
+    <!-- 1. Result Hero Component -->
+    <ResultHero
+      snapshot={snapshot}
+      isSharedView={isSharedView}
+      activeShareToken={activeShareToken}
+    />
 
-    <!-- Guest Account Conversion Banner -->
-    {!currentUser && (
-      <div class="bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-teal-800/40 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div class="space-y-1.5 text-center sm:text-left">
-          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-teal-800/70 text-teal-200 rounded-full text-[11px] font-bold">
-            <span>💾 Save Your Result</span>
-          </div>
-          <h3 class="text-lg sm:text-xl font-extrabold text-white">
-            Keep this assessment permanently in your Dashboard
-          </h3>
-          <p class="text-xs text-slate-300 max-w-lg leading-relaxed">
-            Create a free account or sign in to link this result, track your psychometric progress over time, and unlock detailed AI insights.
+    <!-- 2. Sticky Quick Jump Sub-Navigation -->
+    <ResultQuickNav
+      hasDimensions={hasDimensions}
+      hasStrengths={hasStrengths}
+      hasGrowth={hasGrowth}
+      hasContexts={hasContexts}
+      hasReflection={true}
+      hasAiReport={true}
+    />
+
+    <!-- 3. Guest Account Conversion Banner (if unauthenticated) -->
+    {!currentUser && !isSharedView && (
+      <GuestSaveBanner attemptId={snapshot.attemptId} />
+    )}
+
+    <!-- 4. Result Summary: What Your Result Means -->
+    <section class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xs space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center text-lg border border-teal-200">
+          🔍
+        </div>
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            What Your Result Means
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500">
+            Psychometric interpretation grounded in standardized self-report evaluation
           </p>
         </div>
-
-        <div class="flex-shrink-0 flex flex-wrap gap-2.5 justify-center">
-          <a
-            href={`/register?redirect=${encodeURIComponent(`/results/${snapshot.attemptId}`)}`}
-            class="px-5 py-2.5 text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl transition-all shadow-sm"
-          >
-            Create Free Account
-          </a>
-          <a
-            href={`/login?redirect=${encodeURIComponent(`/results/${snapshot.attemptId}`)}`}
-            class="px-5 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl transition-all"
-          >
-            Sign In
-          </a>
-        </div>
       </div>
-    )}
 
-    <!-- Primary Psychological Outcome Card -->
-    {snapshot.primaryResultType && (
-      <div class="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <span class="text-xs font-bold tracking-wider uppercase text-teal-300">
-            Primary Psychometric Archetype
-          </span>
-          <span class="text-xs font-mono px-3 py-1 bg-teal-900/60 rounded-full text-teal-200 border border-teal-700/50">
-            Overall Score: {snapshot.totalRawScore} / {snapshot.totalMaxScore} ({snapshot.totalNormalizedScore}%)
-          </span>
-        </div>
-
-        <div class="space-y-3">
-          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            {snapshot.primaryResultType.name}
-          </h2>
-          {snapshot.primaryResultType.description && (
-            <p class="text-sm sm:text-base text-teal-100/90 leading-relaxed max-w-2xl">
-              {snapshot.primaryResultType.description}
-            </p>
-          )}
-        </div>
-
-        <!-- Share Actions & PDF Download -->
-        {!isSharedView && (
-          <div class="pt-4 border-t border-teal-800/60 flex flex-wrap items-center justify-between gap-4">
-            <div class="text-xs text-teal-200/80">
-              Save or share your official psychometric outcome:
-            </div>
-            <div class="flex items-center gap-2">
-              <a
-                href={`/api/v1/results/${snapshot.attemptId}/pdf`}
-                download
-                class="px-4 py-2 text-xs font-bold bg-teal-800/80 hover:bg-teal-700 text-teal-100 border border-teal-600/60 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
-              >
-                <span>📄</span>
-                <span>Download Result PDF</span>
-              </a>
-              <button
-                type="button"
-                id="share-result-btn"
-                data-attempt-id={snapshot.attemptId}
-                class="px-4 py-2 text-xs font-bold bg-white text-slate-950 hover:bg-teal-50 rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <span>🔗</span>
-                <span id="share-btn-text">{activeShareToken ? 'Copy Share Link' : 'Generate Share Link'}</span>
-              </button>
-            </div>
+      <div class="text-xs sm:text-sm text-slate-700 leading-relaxed space-y-3 pt-2">
+        {overviewContent ? (
+          <div class="whitespace-pre-line leading-relaxed">
+            {overviewContent.content}
           </div>
+        ) : (
+          <p>
+            Your responses on the <strong class="text-slate-900 font-semibold">{snapshot.assessmentName}</strong> indicate an overall normalized score of <strong class="text-slate-900 font-mono font-semibold">{snapshot.totalNormalizedScore}%</strong>, corresponding to the primary archetype <strong class="text-teal-800 font-semibold">{snapshot.primaryResultType?.name || 'Assessed Profile'}</strong>. This pattern suggests stable behavioral tendencies in how you process information, navigate social environments, and approach everyday decision-making.
+          </p>
         )}
       </div>
+    </section>
+
+    <!-- 5. Dimension Profile & Overview (Dynamic for 1, 2, 3, 5, 8+ dimensions) -->
+    {hasDimensions && (
+      <DimensionProfile dimensions={snapshot.dimensionScores} />
     )}
 
-    <!-- Evaluated Dimension Score Grid -->
-    {snapshot.dimensionScores.length > 0 && (
-      <div class="space-y-6">
+    <!-- 6. Key Strengths -->
+    {hasStrengths && (
+      <StrengthsSection strengthsContent={strengthsContent} />
+    )}
+
+    <!-- 7. Areas to Consider & Growth Pathways -->
+    {hasGrowth && (
+      <GrowthSection growthContent={growthContent} />
+    )}
+
+    <!-- 8. How This May Show Up in Daily Life -->
+    {hasContexts && (
+      <LifeContextSection contextContents={contextContents} />
+    )}
+
+    <!-- 9. Practical Self-Reflection Prompts -->
+    <ReflectionSection
+      assessmentName={snapshot.assessmentName}
+      archetypeName={snapshot.primaryResultType?.name}
+    />
+
+    <!-- 10. Premium AI Report CTA -->
+    <PremiumAiCta
+      attemptId={snapshot.attemptId}
+      assessmentName={snapshot.assessmentName}
+      existingReportId={existingReport?.id}
+      isGuest={!currentUser}
+      userCredits={userWallet?.balance ?? 0}
+      creditCost={reportCost}
+    />
+
+    <!-- 11. Explore Related Assessments -->
+    {relatedAssessments.length > 0 && (
+      <section class="space-y-6 pt-6 border-t border-slate-200 no-print">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-              Dimensional Breakdown
-            </h2>
-            <p class="text-xs text-slate-500 mt-0.5">
-              Standardized psychological construct evaluations
+            <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Explore Related Assessments
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Discover complementary tests to build a complete psychometric profile
             </p>
           </div>
-          <span class="text-xs text-slate-400 font-mono hidden sm:inline">
-            Deterministic Engine
-          </span>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {snapshot.dimensionScores.map((dim) => (
-            <DimensionScoreCard dimension={dim} />
-          ))}
-        </div>
-      </div>
-    )}
-
-    <!-- Dynamic Modular Psychological Interpretation Sections -->
-    {snapshot.primaryResultType?.contents && snapshot.primaryResultType.contents.length > 0 && (
-      <div class="space-y-6">
-        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-          Psychological Narrative & Insights
-        </h2>
-
-        <div class="space-y-4">
-          {snapshot.primaryResultType.contents.map((section) => (
-            <SectionNarrative section={section} />
-          ))}
-        </div>
-      </div>
-    )}
-
-    <!-- AI In-Depth Report Banner -->
-    <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white rounded-3xl p-8 sm:p-10 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-6">
-      <div class="space-y-2 max-w-xl">
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-800/60 rounded-full text-xs font-bold text-indigo-300">
-          <span>✨ In-Depth AI Analysis</span>
-        </div>
-        <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight">
-          Unlock Your Comprehensive Personality Synthesis
-        </h3>
-        <p class="text-xs sm:text-sm text-indigo-200 leading-relaxed">
-          Receive a personalized narrative exploring your cognitive blind spots, communication style, relationship dynamics, and actionable daily exercises.
-        </p>
-      </div>
-
-      <div class="flex-shrink-0">
-        {existingReport ? (
-          <a
-            href={`/reports/${existingReport.id}`}
-            class="inline-flex items-center justify-center px-6 py-3.5 text-xs font-bold text-slate-950 bg-white hover:bg-indigo-50 rounded-xl shadow-md transition-all"
-          >
-            View Existing AI Report →
+          <a href="/assessments" class="text-xs font-bold text-teal-700 hover:text-teal-800 hidden sm:inline-block">
+            View Catalog →
           </a>
-        ) : (
-          <button
-            type="button"
-            id="generate-ai-btn"
-            data-attempt-id={snapshot.attemptId}
-            class="inline-flex items-center justify-center px-6 py-3.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md transition-all cursor-pointer"
-          >
-            <span id="ai-btn-text">Generate AI Report ✨</span>
-          </button>
-        )}
-      </div>
-    </div>
+        </div>
 
-    <!-- Related Assessments Section -->
-    {relatedAssessments.length > 0 && (
-      <div class="space-y-4 pt-6 border-t border-slate-200">
-        <h3 class="text-lg font-bold text-slate-900">Explore Related Assessments</h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {relatedAssessments.map((ra) => (
-            <Card class="p-5 space-y-2 hover:border-teal-500 transition-colors flex flex-col justify-between">
-              <div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 block mb-1">
+            <Card class="p-6 space-y-3 hover:border-teal-500 transition-all flex flex-col justify-between">
+              <div class="space-y-1.5">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md inline-block">
                   {ra.category_name}
                 </span>
-                <h4 class="text-xs font-bold text-slate-900">{ra.name}</h4>
-                <p class="text-[11px] text-slate-500 line-clamp-2 mt-1">{ra.short_description}</p>
+                <h4 class="text-sm font-bold text-slate-900 leading-snug">{ra.name}</h4>
+                <p class="text-xs text-slate-500 line-clamp-2">{ra.short_description}</p>
               </div>
               <a
                 href={`/assessments/${ra.slug}`}
-                class="text-xs font-semibold text-teal-700 hover:text-teal-800 pt-2 block"
+                class="text-xs font-bold text-teal-700 hover:text-teal-800 pt-2 block border-t border-slate-100"
               >
                 Take Assessment →
               </a>
             </Card>
           ))}
         </div>
-      </div>
+      </section>
     )}
 
-    <!-- Assessment FAQs -->
+    <!-- 12. Frequently Asked Questions -->
     {faqs.length > 0 && (
-      <div class="space-y-4 pt-6 border-t border-slate-200">
+      <section class="space-y-4 pt-6 border-t border-slate-200 no-print">
         <h3 class="text-lg font-bold text-slate-900">Frequently Asked Questions</h3>
         <div class="space-y-3">
           {faqs.map((faq) => (
@@ -321,22 +276,25 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
             </details>
           ))}
         </div>
-      </div>
+      </section>
     )}
 
-    <!-- Clinical Disclaimer -->
-    <div class="p-5 bg-slate-100 border border-slate-200 rounded-2xl text-[11px] text-slate-500 text-center leading-relaxed space-y-1">
-      <strong class="text-slate-700 block">Psychological & Educational Disclaimer</strong>
-      <p>{snapshot.disclaimer || 'This psychometric self-assessment is designed exclusively for educational, personal reflection, and self-discovery purposes and does not constitute clinical psychological diagnosis or medical advice.'}</p>
+    <!-- 13. Educational & Clinical Disclaimer -->
+    <div class="p-6 bg-slate-100/80 border border-slate-200 rounded-3xl text-[11px] text-slate-500 text-center leading-relaxed space-y-1">
+      <strong class="text-slate-700 block text-xs">Psychological & Educational Disclaimer</strong>
+      <p>
+        {snapshot.disclaimer ||
+          'This assessment is intended for educational, personal reflection, and self-discovery purposes only. It does not constitute a clinical psychological diagnosis or a substitute for professional medical or mental health advice.'}
+      </p>
     </div>
 
-    <!-- Bottom Actions -->
+    <!-- 14. Bottom Actions -->
     <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
       <div class="flex flex-wrap items-center gap-3">
         {currentUser ? (
           <a
             href="/dashboard"
-            class="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs transition-all"
+            class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs transition-all"
           >
             <span>📊</span>
             <span>Back to Dashboard</span>
@@ -344,7 +302,7 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
         ) : (
           <a
             href="/assessments"
-            class="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs transition-all"
+            class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-xl border border-teal-200 shadow-2xs transition-all"
           >
             <span>📝</span>
             <span>Browse More Assessments</span>
@@ -360,15 +318,109 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
 
       <a
         href="/assessments"
-        class="inline-flex items-center justify-center px-5 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-sm transition-all"
+        class="inline-flex items-center justify-center px-5 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs transition-all"
       >
         Explore All Assessments →
       </a>
     </div>
+
+    <!-- Guest Auth Required Modal -->
+    <div
+      id="guest-auth-modal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs hidden no-print"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-200">
+        <!-- Close Button -->
+        <button
+          type="button"
+          id="close-auth-modal"
+          class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+        >
+          ✕
+        </button>
+
+        <div class="text-center space-y-4">
+          <div class="w-14 h-14 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-xs">
+            ✨
+          </div>
+
+          <div class="space-y-1.5">
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">
+              Sign In to Unlock AI Report
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              In-depth psychological narrative syntheses and actionable daily growth plans require an account and credits. Sign in or create a free account to continue.
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="pt-3 space-y-2.5">
+            <a
+              href={`/auth/google?redirect=${encodeURIComponent(`/results/${snapshot.attemptId}`)}`}
+              class="w-full py-3 px-4 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 shadow-2xs transition-all flex items-center justify-center gap-2.5"
+            >
+              <svg class="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Continue with Google</span>
+            </a>
+
+            <div class="relative my-2">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-slate-200"></div>
+              </div>
+              <div class="relative flex justify-center text-[10px] uppercase">
+                <span class="bg-white px-2 text-slate-400 font-semibold">Or Email</span>
+              </div>
+            </div>
+
+            <a
+              href={`/register?redirect=${encodeURIComponent(`/results/${snapshot.attemptId}`)}`}
+              class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center justify-center gap-2"
+            >
+              <span>Create Free Account</span>
+              <span>→</span>
+            </a>
+
+            <a
+              href={`/login?redirect=${encodeURIComponent(`/results/${snapshot.attemptId}`)}`}
+              class="w-full py-2.5 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-2"
+            >
+              <span>Sign In to Existing Account</span>
+            </a>
+          </div>
+
+          <p class="text-[11px] text-slate-400 pt-1">
+            New accounts receive free starter credits automatically.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Premium AI Generation Experience Overlay Modal -->
+    <AiGenerationExperience attemptId={snapshot.attemptId} assessmentName={snapshot.assessmentName} />
   </div>
 </BaseLayout>
 
-<script is:inline define:vars={{ attemptId: snapshot.attemptId, activeShareToken }}>
+<script is:inline define:vars={{ attemptId: snapshot.attemptId, activeShareToken, isGuest: !currentUser }}>
+  const authModal = document.getElementById('guest-auth-modal');
+  const closeAuthBtn = document.getElementById('close-auth-modal');
+
+  closeAuthBtn?.addEventListener('click', () => {
+    authModal?.classList.add('hidden');
+  });
+
+  authModal?.addEventListener('click', (e) => {
+    if (e.target === authModal) {
+      authModal.classList.add('hidden');
+    }
+  });
+
   const shareBtn = document.getElementById('share-result-btn');
   const shareText = document.getElementById('share-btn-text');
 
@@ -394,32 +446,17 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
   });
 
   const aiBtn = document.getElementById('generate-ai-btn');
-  const aiBtnText = document.getElementById('ai-btn-text');
 
   aiBtn?.addEventListener('click', async () => {
-    if (!aiBtnText) return;
-    aiBtnText.innerText = 'Generating personalized report...';
-    aiBtn.disabled = true;
+    // If guest, immediately open the authentication popup
+    if (isGuest) {
+      authModal?.classList.remove('hidden');
+      return;
+    }
 
-    try {
-      const res = await fetch('/api/v1/reports/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptId })
-      });
-      const data = await res.json();
-
-      if (data.success && data.data?.reportId) {
-        window.location.href = `/reports/${data.data.reportId}`;
-      } else {
-        alert(data.error?.message || 'AI generation failed. Please try again.');
-        aiBtnText.innerText = 'Generate AI Report ✨';
-        aiBtn.disabled = false;
-      }
-    } catch (err) {
-      alert('An error occurred during AI report synthesis.');
-      aiBtnText.innerText = 'Generate AI Report ✨';
-      aiBtn.disabled = false;
+    // Launch the polished premium AI report generation experience
+    if (typeof window.triggerAiReportGeneration === 'function') {
+      window.triggerAiReportGeneration();
     }
   });
 </script>
@@ -436,7 +473,6 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
       color: #0f172a !important;
     }
 
-    /* Prevent cards, dimensions, and sections from breaking across page breaks */
     .card,
     [class*="rounded-2xl"],
     [class*="rounded-3xl"],
@@ -449,14 +485,13 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
       page-break-inside: avoid !important;
     }
 
-    /* Prevent headings from being separated from content */
     h1, h2, h3, h4, h5, h6 {
       break-after: avoid !important;
       page-break-after: avoid !important;
     }
 
     .no-print,
-    header,
+    header nav,
     nav,
     footer,
     button {
@@ -464,4 +499,3 @@ const durationMins = Math.max(1, Math.round(snapshot.durationSeconds / 60));
     }
   }
 </style>
-

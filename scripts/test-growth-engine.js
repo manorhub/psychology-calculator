@@ -55,29 +55,10 @@ async function runTests() {
   rawDb.exec('PRAGMA foreign_keys = ON;');
 
   const migrationsDir = path.resolve(process.cwd(), 'migrations');
-  const migrationFiles = [
-    '0001_core_users.sql',
-    '0002_assessments_schema.sql',
-    '0003_scoring_and_results.sql',
-    '0004_attempts_and_answers.sql',
-    '0005_ai_and_prompts.sql',
-    '0006_billing_and_credits.sql',
-    '0007_content_and_settings.sql',
-    '0008_auth_system.sql',
-    '0009_assessment_builder_enhancements.sql',
-    '0010_result_snapshots_and_sharing.sql',
-    '0011_initial_psychology_assessments_seed.sql',
-    '0012_ai_engine_and_generations.sql',
-    '0013_pdf_and_generated_files.sql',
-    '0014_lemon_squeezy_billing.sql',
-    '0015_seo_engine_and_redirects.sql',
-    '0016_content_cms_and_blog.sql',
-    '0017_email_notifications_and_templates.sql',
-    '0018_analytics_and_business_intelligence.sql',
-    '0019_admin_control_center_and_global_settings.sql',
-    '0020_production_hardening_and_indexes.sql',
-    '0021_growth_experiments_and_feedback.sql'
-  ];
+  const migrationFiles = fs
+    .readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
 
   for (const file of migrationFiles) {
     const filePath = path.join(migrationsDir, file);

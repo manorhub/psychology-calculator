@@ -1,0 +1,419 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Button from '@/components/ui/Button.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { EmailService } from '@/services/email.service';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/admin/email/templates');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const emailService = new EmailService(db);
+
+const template = await emailService.getTemplateById(id);
+if (!template) return Astro.redirect('/admin/email/templates');
+
+const allowedVars: string[] = JSON.parse(template.allowed_variables || '[]');
+---
+
+<AdminLayout title={`Edit Template: ${template.name}`}>
+  <div class="space-y-6 max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/email/templates" class="text-xs font-semibold text-indigo-600 hover:underline">Templates</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">{template.name}</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <h1 class="text-2xl font-black text-slate-900 tracking-tight">{template.name}</h1>
+          <Badge variant={template.status === 'active' ? 'success' : 'default'} size="sm">
+            {template.status === 'active' ? '● Active' : '○ Disabled'}
+          </Badge>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Event Key: <code class="font-mono text-indigo-600 font-semibold">{template.event_key}</code> &bull;
+          Category: <span class="capitalize text-slate-700 font-medium">{template.category.replace('_', ' ')}</span>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="preview-btn"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+        >
+          👁️ Live Preview
+        </button>
+        <button
+          type="button"
+          id="test-send-btn"
+          class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+        >
+          ✉️ Send Test
+        </button>
+      </div>
+    </div>
+
+    <!-- Supported Variables Palette -->
+    <Card class="p-4 border-indigo-100 bg-indigo-50/40 space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+          Available Variables for this Event:
+        </span>
+        <span class="text-[11px] text-indigo-600 font-medium">
+          Click any variable pill to copy placeholder
+        </span>
+      </div>
+      <div class="flex flex-wrap gap-2 pt-1">
+        {allowedVars.map((v) => (
+          <button
+            type="button"
+            onclick={`copyVar('{{${v}}}')`}
+            class="px-2.5 py-1 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-indigo-700 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer shadow-2xs"
+            title="Click to copy placeholder"
+          >
+            {`{{${v}}}`}
+          </button>
+        ))}
+        <span class="px-2 py-1 bg-white/70 text-slate-400 rounded-lg text-xs font-mono">
+          {'Global: {{site_name}}, {{site_url}}, {{dashboard_url}}, {{support_email}}'}
+        </span>
+      </div>
+    </Card>
+
+    <!-- Visual Editor Form -->
+    <form id="template-editor-form" class="space-y-6">
+      <input type="hidden" name="id" value={template.id} />
+      <input type="hidden" name="event_key" value={template.event_key} />
+      <input type="hidden" name="category" value={template.category} />
+      <input type="hidden" name="allowed_variables" value={template.allowed_variables} />
+
+      <Card class="p-6 border-slate-200 bg-white space-y-5 shadow-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Template Display Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              required
+              value={template.name}
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-indigo-600"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Delivery Status
+            </label>
+            <select
+              name="status"
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-indigo-600"
+            >
+              <option value="active" selected={template.status === 'active'}>● Active (Sends live emails)</option>
+              <option value="inactive" selected={template.status === 'inactive'}>○ Inactive (Disabled)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            Email Subject Line
+          </label>
+          <input
+            type="text"
+            id="template-subject"
+            name="subject"
+            required
+            value={template.subject}
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-indigo-600 font-medium"
+            placeholder="e.g. Welcome to PsychologyCalculator.com, {{user_name}}!"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            Preview Text / Preheader <span class="text-slate-400 font-normal text-[11px]">(shown in inbox snippet)</span>
+          </label>
+          <input
+            type="text"
+            id="template-preview-text"
+            name="preview_text"
+            value={template.preview_text || ''}
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-indigo-600"
+            placeholder="e.g. Explore self-assessments across personality, emotional wellbeing, and career."
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            Card Headline Title
+          </label>
+          <input
+            type="text"
+            id="template-headline"
+            name="headline"
+            value={template.headline || template.name}
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-indigo-600"
+            placeholder="e.g. Welcome to PsychologyCalculator.com"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            Body Content (Human-Written Paragraphs)
+          </label>
+          <p class="text-[11px] text-slate-500 mb-2">
+            Use clean paragraphs. Double line breaks create new paragraphs automatically. No HTML required.
+          </p>
+          <textarea
+            id="template-body-content"
+            name="body_content"
+            rows="7"
+            class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs leading-relaxed text-slate-800 focus:bg-white focus:outline-indigo-600 font-sans"
+            placeholder="Write your email body copy here..."
+          >{template.body_content || ''}</textarea>
+        </div>
+
+        <!-- CTA Button Group -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Primary Button Text <span class="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="text"
+              id="template-button-text"
+              name="button_text"
+              value={template.button_text || ''}
+              class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium"
+              placeholder="e.g. Explore Assessments"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Primary Button URL <span class="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="text"
+              id="template-button-url"
+              name="button_url"
+              value={template.button_url || ''}
+              class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono"
+              placeholder="e.g. {{dashboard_url}}"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            Contextual / Security Footer Note <span class="text-slate-400 font-normal">(Optional callout box)</span>
+          </label>
+          <input
+            type="text"
+            id="template-footer-note"
+            name="footer_note"
+            value={template.footer_note || ''}
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-indigo-600"
+            placeholder="e.g. If you did not request this change, please contact support immediately."
+          />
+        </div>
+
+        <!-- Advanced Sender Overrides (Collapsible) -->
+        <details class="pt-2 text-xs border-t border-slate-100">
+          <summary class="font-bold text-slate-700 cursor-pointer py-1 select-none hover:text-indigo-600">
+            ⚙️ Advanced Sender & Reply-To Overrides
+          </summary>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 pb-1">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Sender Name Override</label>
+              <input
+                type="text"
+                name="sender_name"
+                value={template.sender_name || ''}
+                placeholder="Leave blank for global default"
+                class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Sender Email Override</label>
+              <input
+                type="email"
+                name="sender_email"
+                value={template.sender_email || ''}
+                placeholder="Leave blank for global default"
+                class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Reply-To Override</label>
+              <input
+                type="email"
+                name="reply_to"
+                value={template.reply_to || ''}
+                placeholder="Leave blank for global default"
+                class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+            </div>
+          </div>
+        </details>
+      </Card>
+
+      <div class="flex items-center justify-between pt-2">
+        <a
+          href="/admin/email/templates"
+          class="text-xs font-semibold text-slate-500 hover:underline"
+        >
+          &larr; Return to Templates
+        </a>
+        <Button type="submit" id="save-template-btn" variant="primary" size="md">
+          Save Template Changes
+        </Button>
+      </div>
+    </form>
+
+    <!-- Preview Modal -->
+    <div id="preview-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+          <div>
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Live Preview (Rendered with Sample Data)</div>
+            <div id="preview-subject-header" class="text-sm text-indigo-700 font-bold mt-0.5"></div>
+          </div>
+          <button type="button" id="close-preview-btn" class="text-slate-400 hover:text-slate-700 text-lg font-bold p-1">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 bg-slate-100/60">
+          <div id="preview-html-container" class="bg-white rounded-xl shadow-xs border border-slate-200"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    function copyVar(variable) {
+      navigator.clipboard.writeText(variable);
+      alert(`Copied "${variable}" to clipboard! You can paste it into Subject, Headline, or Body.`);
+    }
+
+    const form = document.getElementById('template-editor-form');
+    const saveBtn = document.getElementById('save-template-btn');
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving Changes...';
+
+        const formData = new FormData(form);
+        const payload = {
+          id: formData.get('id'),
+          event_key: formData.get('event_key'),
+          name: formData.get('name'),
+          category: formData.get('category'),
+          subject: formData.get('subject'),
+          preview_text: formData.get('preview_text'),
+          headline: formData.get('headline'),
+          body_content: formData.get('body_content'),
+          button_text: formData.get('button_text'),
+          button_url: formData.get('button_url'),
+          footer_note: formData.get('footer_note'),
+          sender_name: formData.get('sender_name') || undefined,
+          sender_email: formData.get('sender_email') || undefined,
+          reply_to: formData.get('reply_to') || undefined,
+          status: formData.get('status'),
+          allowed_variables: formData.get('allowed_variables')
+        };
+
+        try {
+          const res = await fetch('/api/v1/admin/email-templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'upsert', template: payload })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert('Email template saved successfully!');
+            window.location.reload();
+          } else {
+            alert(data.message || 'Failed to save template');
+          }
+        } catch {
+          alert('Network error saving template');
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Template Changes';
+        }
+      });
+    }
+
+    // Preview Logic
+    const previewBtn = document.getElementById('preview-btn');
+    const previewModal = document.getElementById('preview-modal');
+    const closePreviewBtn = document.getElementById('close-preview-btn');
+    const previewSubjectHeader = document.getElementById('preview-subject-header');
+    const previewHtmlContainer = document.getElementById('preview-html-container');
+
+    previewBtn?.addEventListener('click', async () => {
+      const eventKey = document.querySelector('input[name="event_key"]').value;
+      previewSubjectHeader.textContent = 'Rendering preview...';
+      previewHtmlContainer.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">Generating preview...</div>';
+      previewModal.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/v1/admin/email-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'preview', eventKey })
+        });
+        const data = await res.json();
+        if (data.success) {
+          previewSubjectHeader.textContent = `Subject: ${data.subject}`;
+          previewHtmlContainer.innerHTML = data.html;
+        } else {
+          previewHtmlContainer.innerHTML = `<div class="p-8 text-center text-rose-500 text-xs">${data.message}</div>`;
+        }
+      } catch {
+        previewHtmlContainer.innerHTML = '<div class="p-8 text-center text-rose-500 text-xs">Error rendering preview</div>';
+      }
+    });
+
+    closePreviewBtn?.addEventListener('click', () => {
+      previewModal.classList.add('hidden');
+    });
+
+    // Test Send Logic
+    const testSendBtn = document.getElementById('test-send-btn');
+    testSendBtn?.addEventListener('click', async () => {
+      const email = prompt('Enter your recipient email address to receive this template test:');
+      if (!email) return;
+
+      testSendBtn.disabled = true;
+      testSendBtn.textContent = 'Sending Test...';
+
+      try {
+        const eventKey = document.querySelector('input[name="event_key"]').value;
+        const res = await fetch('/api/v1/admin/email-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'send_test', eventKey, testEmail: email })
+        });
+        const data = await res.json();
+        alert(data.message);
+      } catch {
+        alert('Network error sending test email');
+      } finally {
+        testSendBtn.disabled = false;
+        testSendBtn.textContent = '✉️ Send Test';
+      }
+    });
+  </script>
+</AdminLayout>

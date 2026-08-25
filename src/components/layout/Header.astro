@@ -1,13 +1,37 @@
 ---
 import type { DynamicSiteConfig } from '@/types/config';
 import Button from '@/components/ui/Button.astro';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher.astro';
+import { getD1Database } from '@/lib/db/client';
+import { fetchFirst } from '@/lib/db/query';
+import { useTranslations, getLocalizedPath, normalizeLocale } from '@/i18n';
 
 interface Props {
   config: DynamicSiteConfig;
+  locale?: string;
 }
 
-const { config } = Astro.props;
+const { config, locale: propLocale } = Astro.props;
+const currentLocale = normalizeLocale(propLocale || Astro.currentLocale || Astro.url.pathname.split('/')[1]);
+const { t } = useTranslations(currentLocale);
 const user = Astro.locals.user;
+
+let userCredits: number | null = null;
+if (user) {
+  const env = Astro.locals.runtime?.env;
+  const db = getD1Database(env);
+  if (db) {
+    const row = await fetchFirst<{ balance: number }>(
+      db,
+      'SELECT balance FROM credit_wallets WHERE user_id = ?',
+      [user.id]
+    );
+    userCredits = row?.balance ?? 0;
+  }
+}
+const publicNav = config.headerNavigation.filter(
+  (item) => item.label.toLowerCase() !== 'admin' && item.href !== '/admin'
+);
 ---
 
 <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
@@ -15,28 +39,25 @@ const user = Astro.locals.user;
     <div class="flex items-center justify-between h-16 sm:h-20">
       <!-- Brand Logo -->
       <div class="flex items-center gap-8">
-        <a href="/" class="flex items-center gap-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded-lg">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 flex items-center justify-center text-white shadow-sm shadow-teal-500/20 group-hover:scale-105 transition-transform">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2a8 8 0 0 0-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 0 0-8-8z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
+        <a href={getLocalizedPath('/', currentLocale)} class="flex items-center gap-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded-lg">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 flex items-center justify-center text-white font-bold text-lg shadow-sm shadow-teal-500/20 group-hover:scale-105 transition-transform">
+            Ψ
           </div>
           <div class="flex flex-col">
             <span class="font-bold text-lg sm:text-xl text-slate-900 tracking-tight leading-none">
               {config.siteName}
             </span>
             <span class="text-[10px] text-teal-700 font-semibold tracking-wider uppercase mt-0.5">
-              Psychology
+              {t.common.brandName.split(' ')[0]}
             </span>
           </div>
         </a>
 
-        <!-- Desktop Navigation Links (Dynamic) -->
+        <!-- Desktop Navigation Links (Dynamic & Localized) -->
         <nav class="hidden md:flex items-center gap-1" aria-label="Main Navigation">
-          {config.headerNavigation.map((item) => (
+          {publicNav.map((item) => (
             <a
-              href={item.href}
+              href={getLocalizedPath(item.href, currentLocale)}
               class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
             >
               {item.label}
@@ -50,16 +71,27 @@ const user = Astro.locals.user;
         </nav>
       </div>
 
-      <!-- Action Buttons -->
+      <!-- Action Buttons & Language Switcher -->
       <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Language Switcher -->
+        <LanguageSwitcher currentLocale={currentLocale} />
+
         {user ? (
           <div class="flex items-center gap-2">
             <a
+              href="/dashboard/credits"
+              class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-mono font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all shadow-2xs"
+              title="View your credit balance & transaction ledger"
+            >
+              <span>💎</span>
+              <span>{userCredits !== null ? `${userCredits} ${t.nav.credits}` : t.nav.credits}</span>
+            </a>
+            <a
               href="/dashboard"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all shadow-2xs"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all shadow-2xs"
             >
               <span>📊</span>
-              <span>Dashboard</span>
+              <span class="hidden sm:inline">{t.nav.dashboard}</span>
             </a>
             {user.role === 'admin' && (
               <a
@@ -67,7 +99,7 @@ const user = Astro.locals.user;
                 class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-colors"
               >
                 <span>⚙️</span>
-                <span>Admin</span>
+                <span>{t.nav.admin}</span>
               </a>
             )}
             <a
@@ -86,13 +118,13 @@ const user = Astro.locals.user;
               href="/login"
               class="hidden sm:inline-flex px-3.5 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
             >
-              Sign In
+              {t.nav.signIn}
             </a>
           )
         )}
 
-        <Button href={config.primaryCtaLink} variant="primary" size="sm">
-          {config.primaryCtaText}
+        <Button href={getLocalizedPath(config.primaryCtaLink, currentLocale)} variant="primary" size="sm">
+          {config.primaryCtaText || t.nav.register}
         </Button>
 
         <!-- Mobile Menu Toggle Button -->
@@ -114,7 +146,7 @@ const user = Astro.locals.user;
 
   <!-- Mobile Dropdown Navigation -->
   <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 shadow-lg">
-    {config.headerNavigation.map((item) => (
+    {publicNav.map((item) => (
       <a
         href={item.href}
         class="block px-3.5 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl"

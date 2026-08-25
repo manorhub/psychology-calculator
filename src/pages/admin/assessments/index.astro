@@ -34,7 +34,21 @@ const [result, categories] = await Promise.all([
         <p class="text-xs sm:text-sm text-slate-500 mt-1">Configure instruments, item banks, dimensions, scoring rules, and interpretations</p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <a
+          href="/admin/assessments/import"
+          class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all"
+        >
+          <span>📥</span>
+          <span>Import JSON</span>
+        </a>
+        <a
+          href="/admin/assessments/export"
+          class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl transition-all"
+        >
+          <span>📤</span>
+          <span>Export JSON</span>
+        </a>
         <Button href="/admin/assessments/new" variant="primary" size="sm">
           + Create Assessment
         </Button>

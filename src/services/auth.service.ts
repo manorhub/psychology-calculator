@@ -43,7 +43,7 @@ export class AuthService extends BaseService {
   ) {
     super('AuthService');
     this.db = db;
-    this.emailService = emailService || new EmailService();
+    this.emailService = emailService || new EmailService(db);
     this.auditService = auditService || new AuditService(db);
     this.rateLimiter = rateLimiter || new RateLimiter(db);
   }
@@ -89,6 +89,7 @@ export class AuthService extends BaseService {
     // 4. Hash password and insert user + profile
     const userId = crypto.randomUUID();
     const passwordHash = await hashPassword(params.password);
+    const bonusCredits = await this.getSignupBonusCredits();
 
     await this.db
       .prepare(
@@ -105,9 +106,28 @@ export class AuthService extends BaseService {
       .run();
 
     await this.db
-      .prepare('INSERT INTO credit_balances (user_id, balance, updated_at) VALUES (?, 0, CURRENT_TIMESTAMP)')
-      .bind(userId)
+      .prepare('INSERT INTO credit_balances (user_id, balance, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)')
+      .bind(userId, bonusCredits)
       .run();
+
+    await this.db
+      .prepare('INSERT OR IGNORE INTO credit_wallets (id, user_id, balance, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)')
+      .bind(`wlt_${userId}`, userId, bonusCredits)
+      .run();
+
+    if (bonusCredits > 0) {
+      await this.db
+        .prepare(
+          "INSERT INTO credit_transactions (id, user_id, amount, transaction_type, source, reference_id, metadata, created_at) VALUES (?, ?, ?, 'signup_bonus', 'system', 'welcome_bonus', ?, CURRENT_TIMESTAMP)"
+        )
+        .bind(
+          `tx_${crypto.randomUUID()}`,
+          userId,
+          bonusCredits,
+          JSON.stringify({ reason: 'New user welcome bonus credits' })
+        )
+        .run();
+    }
 
     // 5. Generate Email Verification Token
     const rawVerificationToken = generateSecureToken(32);
@@ -569,12 +589,17 @@ export class AuthService extends BaseService {
     if (!this.db) throw new Error('Database not available');
 
     const email = normalizeEmail(googleUser.email);
+    const googleUserId = googleUser.id || (googleUser as any).sub;
+
+    if (!googleUserId) {
+      throw new ValidationError('Invalid Google user profile: Missing Google user identifier.');
+    }
 
     // 1. Check if OAuth account link already exists
     const existingOAuth = await fetchFirst<OAuthAccountRow>(
       this.db,
       "SELECT * FROM oauth_accounts WHERE provider = 'google' AND provider_user_id = ?",
-      [googleUser.id]
+      [googleUserId]
     );
 
     let targetUserId: string;
@@ -594,28 +619,49 @@ export class AuthService extends BaseService {
           .prepare(
             "INSERT INTO users (id, email, auth_provider, auth_provider_id, role, status, email_verified_at, created_at, updated_at) VALUES (?, ?, 'google', ?, 'user', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
           )
-          .bind(targetUserId, email, googleUser.id)
+          .bind(targetUserId, email, googleUserId)
           .run();
 
         await this.db
           .prepare(
             "INSERT INTO profiles (user_id, display_name, avatar_url, timezone, locale, created_at, updated_at) VALUES (?, ?, ?, 'UTC', 'en', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
           )
-          .bind(targetUserId, googleUser.name, googleUser.picture || null)
+          .bind(targetUserId, googleUser.name || email.split('@')[0], googleUser.picture || null)
+          .run();
+
+        const bonusCredits = await this.getSignupBonusCredits();
+
+        await this.db
+          .prepare('INSERT OR IGNORE INTO credit_balances (user_id, balance, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)')
+          .bind(targetUserId, bonusCredits)
           .run();
 
         await this.db
-          .prepare('INSERT INTO credit_balances (user_id, balance, updated_at) VALUES (?, 0, CURRENT_TIMESTAMP)')
-          .bind(targetUserId)
+          .prepare('INSERT OR IGNORE INTO credit_wallets (id, user_id, balance, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)')
+          .bind(`wlt_${targetUserId}`, targetUserId, bonusCredits)
           .run();
+
+        if (bonusCredits > 0) {
+          await this.db
+            .prepare(
+              "INSERT INTO credit_transactions (id, user_id, amount, transaction_type, source, reference_id, metadata, created_at) VALUES (?, ?, ?, 'signup_bonus', 'system', 'welcome_bonus', ?, CURRENT_TIMESTAMP)"
+            )
+            .bind(
+              `tx_${crypto.randomUUID()}`,
+              targetUserId,
+              bonusCredits,
+              JSON.stringify({ reason: 'New user welcome bonus credits' })
+            )
+            .run();
+        }
       }
 
       // Link OAuth account
       await this.db
         .prepare(
-          "INSERT INTO oauth_accounts (id, user_id, provider, provider_user_id, email, created_at, updated_at) VALUES (?, ?, 'google', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+          "INSERT OR IGNORE INTO oauth_accounts (id, user_id, provider, provider_user_id, email, created_at, updated_at) VALUES (?, ?, 'google', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         )
-        .bind(crypto.randomUUID(), targetUserId, googleUser.id, email)
+        .bind(crypto.randomUUID(), targetUserId, googleUserId, email)
         .run();
     }
 
@@ -719,5 +765,23 @@ export class AuthService extends BaseService {
       isAdmin,
       hasPermission
     };
+  }
+
+  /**
+   * Retrieves the configured signup bonus credits for new users from site_settings (defaults to 10)
+   */
+  public async getSignupBonusCredits(): Promise<number> {
+    if (!this.db) return 10;
+    try {
+      const row = await fetchFirst<{ value: string }>(
+        this.db,
+        "SELECT value FROM site_settings WHERE key = 'signup_bonus_credits' OR key = 'new_user_initial_credits' LIMIT 1"
+      );
+      if (!row || row.value === undefined || row.value === null) return 10;
+      const parsed = parseInt(row.value, 10);
+      return isNaN(parsed) ? 10 : Math.max(0, parsed);
+    } catch {
+      return 10;
+    }
   }
 }

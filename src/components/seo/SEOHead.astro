@@ -1,5 +1,13 @@
 ---
 import { SeoService } from '@/services/seo/seo.service';
+import {
+  type SupportedLocale,
+  SUPPORTED_LOCALES,
+  DEFAULT_LOCALE,
+  getLocalizedPath,
+  normalizeLocale,
+  stripLocaleFromPath
+} from '@/i18n';
 
 interface Props {
   title?: string;
@@ -8,6 +16,7 @@ interface Props {
   ogImage?: string;
   ogType?: 'website' | 'article';
   noindex?: boolean;
+  locale?: string;
 }
 
 const env = Astro.locals.runtime?.env;
@@ -19,19 +28,67 @@ const seoSettings = await seoService.getSeoSettings();
 const {
   title,
   description = seoSettings.defaultDescription,
-  canonicalUrl = `${seoSettings.canonicalDomain}${Astro.url.pathname === '/' ? '' : Astro.url.pathname}`,
+  canonicalUrl: propCanonical,
   ogImage = seoSettings.defaultOgImage,
   ogType = 'website',
-  noindex = false
+  noindex = false,
+  locale: propLocale
 } = Astro.props;
 
+// 1. Title Formatting: Enforce exactly one clean brand suffix
 const formattedTitle = title
-  ? (title === seoSettings.siteTitle ? title : seoService.formatTitle(title, seoSettings.titleTemplate))
-  : seoSettings.siteTitle;
+  ? seoService.formatTitle(title, seoSettings.titleTemplate)
+  : 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+
+// 2. Canonical URL Normalization: Preferred HTTPS www hostname, clean pathname without query params
+const rawPath = Astro.url.pathname || '/';
+const normalizedPath = rawPath === '/' ? '/' : rawPath.replace(/\/+$/, '');
+const baseDomain = seoSettings.canonicalDomain.replace(/\/+$/, '');
+
+let canonicalUrl = propCanonical
+  ? propCanonical.replace(/^https?:\/\/(www\.)?psychologycalculator\.com/i, baseDomain)
+  : `${baseDomain}${normalizedPath}`;
+
+// 3. Robots Indexation Rules: Ensure private & auth pages are noindexed
+const isPrivateRoute =
+  noindex ||
+  rawPath.startsWith('/login') ||
+  rawPath.startsWith('/register') ||
+  rawPath.startsWith('/forgot-password') ||
+  rawPath.startsWith('/reset-password') ||
+  rawPath.startsWith('/verify-email') ||
+  rawPath.startsWith('/auth') ||
+  rawPath.startsWith('/admin') ||
+  rawPath.startsWith('/dashboard') ||
+  rawPath.startsWith('/account');
 
 const fullOgImage = ogImage.startsWith('http')
   ? ogImage
-  : `${seoSettings.canonicalDomain}${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
+  : `${baseDomain}${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
+
+// 4. Multilingual Hreflang Alternates & Locales
+const currentLocale = normalizeLocale(propLocale || Astro.currentLocale || rawPath.split('/')[1]);
+const cleanPath = stripLocaleFromPath(rawPath);
+
+const hreflangs = SUPPORTED_LOCALES.map((loc) => {
+  const locPath = getLocalizedPath(cleanPath, loc);
+  const fullUrl = `${baseDomain}${locPath === '/' ? '/' : locPath.replace(/\/+$/, '')}`;
+  return {
+    lang: loc,
+    href: fullUrl
+  };
+});
+
+const xDefaultHref = `${baseDomain}${cleanPath === '/' ? '/' : cleanPath.replace(/\/+$/, '')}`;
+
+const ogLocaleMap: Record<SupportedLocale, string> = {
+  en: 'en_US',
+  es: 'es_ES',
+  fr: 'fr_FR',
+  de: 'de_DE',
+  pt: 'pt_BR',
+  hi: 'hi_IN'
+};
 ---
 
 <!-- Primary Meta Tags -->
@@ -42,11 +99,21 @@ const fullOgImage = ogImage.startsWith('http')
 <meta charset="utf-8" />
 <link rel="canonical" href={canonicalUrl} />
 
+<!-- Multilingual Hreflang Alternates -->
+{!isPrivateRoute && (
+  <>
+    {hreflangs.map((hf) => (
+      <link rel="alternate" hreflang={hf.lang} href={hf.href} />
+    ))}
+    <link rel="alternate" hreflang="x-default" href={xDefaultHref} />
+  </>
+)}
+
 <!-- Robots Indexation Directives -->
-{noindex ? (
-  <meta name="robots" content="noindex, nofollow" />
+{isPrivateRoute ? (
+  <meta name="robots" content="noindex, follow" />
 ) : (
-  <meta name="robots" content={seoSettings.defaultRobots} />
+  <meta name="robots" content={seoSettings.defaultRobots || 'index, follow'} />
 )}
 
 <!-- Search Engine Verifications -->
@@ -56,6 +123,9 @@ const fullOgImage = ogImage.startsWith('http')
 {seoSettings.bingVerification && (
   <meta name="msvalidate.01" content={seoSettings.bingVerification} />
 )}
+{seoSettings.yandexVerification && (
+  <meta name="yandex-verification" content={seoSettings.yandexVerification} />
+)}
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content={ogType} />
@@ -64,6 +134,7 @@ const fullOgImage = ogImage.startsWith('http')
 <meta property="og:description" content={description} />
 <meta property="og:image" content={fullOgImage} />
 <meta property="og:site_name" content={seoSettings.orgName} />
+<meta property="og:locale" content={ogLocaleMap[currentLocale] || 'en_US'} />
 
 <!-- Twitter / X Card -->
 <meta property="twitter:card" content="summary_large_image" />
@@ -79,13 +150,13 @@ const fullOgImage = ogImage.startsWith('http')
 <meta name="theme-color" content="#4f46e5" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-<!-- Google Analytics 4 (Conditional) -->
+<!-- Google tag (gtag.js) -->
 {seoSettings.ga4MeasurementId && (
   <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${seoSettings.ga4MeasurementId}`}></script>
   <script is:inline define:vars={{ gaId: seoSettings.ga4MeasurementId }}>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', gaId, { anonymize_ip: true });
+    gtag('config', gaId);
   </script>
 )}

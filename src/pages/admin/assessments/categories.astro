@@ -1,0 +1,762 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AssessmentCategoryService } from '@/services/assessment-category.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const categoryService = new AssessmentCategoryService(db);
+
+const url = new URL(Astro.request.url);
+const currentStatus = url.searchParams.get('status') || 'all';
+const currentSearch = url.searchParams.get('search') || '';
+const isFeatured = url.searchParams.get('featured') === 'true';
+
+const categories = await categoryService.getCategories({
+  status: currentStatus,
+  search: currentSearch,
+  featuredOnly: isFeatured
+});
+
+// Category stats summary
+const allCategories = await categoryService.getCategories();
+const totalCount = allCategories.length;
+const activeCount = allCategories.filter((c) => c.status === 'active').length;
+const draftCount = allCategories.filter((c) => c.status === 'draft').length;
+const archivedCount = allCategories.filter((c) => c.status === 'archived').length;
+const featuredCount = allCategories.filter((c) => c.featured === 1).length;
+---
+
+<AdminLayout title="Assessment Categories | Admin">
+  <div class="space-y-6 max-w-7xl mx-auto">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <a href="/admin/assessments" class="text-teal-700 hover:underline">Assessments</a>
+          <span>/</span>
+          <span class="text-slate-700">Categories</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+          Assessment Categories
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+          Manage dynamic psychometric categories, taxonomies, sort order, and SEO metadata.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          onclick="openCategoryModal('create')"
+          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+        >
+          <span>➕</span>
+          <span>New Category</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <a
+        href="/admin/assessments/categories"
+        class={`p-4 rounded-2xl border transition-all ${
+          currentStatus === 'all' && !isFeatured
+            ? 'bg-teal-50/80 border-teal-300 ring-2 ring-teal-500/20'
+            : 'bg-white border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Categories</div>
+        <div class="text-2xl font-black text-slate-900 mt-1">{totalCount}</div>
+      </a>
+
+      <a
+        href="/admin/assessments/categories?status=active"
+        class={`p-4 rounded-2xl border transition-all ${
+          currentStatus === 'active'
+            ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20'
+            : 'bg-white border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Active (Public)</div>
+        <div class="text-2xl font-black text-emerald-900 mt-1">{activeCount}</div>
+      </a>
+
+      <a
+        href="/admin/assessments/categories?status=draft"
+        class={`p-4 rounded-2xl border transition-all ${
+          currentStatus === 'draft'
+            ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-500/20'
+            : 'bg-white border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        <div class="text-[11px] font-bold uppercase tracking-wider text-amber-700">Draft</div>
+        <div class="text-2xl font-black text-amber-900 mt-1">{draftCount}</div>
+      </a>
+
+      <a
+        href="/admin/assessments/categories?status=archived"
+        class={`p-4 rounded-2xl border transition-all ${
+          currentStatus === 'archived'
+            ? 'bg-slate-100 border-slate-300 ring-2 ring-slate-400/20'
+            : 'bg-white border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-600">Archived</div>
+        <div class="text-2xl font-black text-slate-700 mt-1">{archivedCount}</div>
+      </a>
+
+      <a
+        href="/admin/assessments/categories?featured=true"
+        class={`p-4 rounded-2xl border transition-all ${
+          isFeatured
+            ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-500/20'
+            : 'bg-white border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Featured</div>
+        <div class="text-2xl font-black text-indigo-900 mt-1">{featuredCount}</div>
+      </a>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <Card class="p-4 bg-white border-slate-200 shadow-xs">
+      <form method="GET" action="/admin/assessments/categories" class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div class="relative w-full sm:w-80">
+          <input
+            type="text"
+            name="search"
+            value={currentSearch}
+            placeholder="Search category name or slug..."
+            class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          />
+          <span class="absolute left-3 top-2.5 text-xs text-slate-400">🔍</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {currentStatus !== 'all' && (
+            <input type="hidden" name="status" value={currentStatus} />
+          )}
+          {isFeatured && (
+            <input type="hidden" name="featured" value="true" />
+          )}
+
+          <div class="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600">
+            <a
+              href={`/admin/assessments/categories${currentSearch ? `?search=${encodeURIComponent(currentSearch)}` : ''}`}
+              class={`px-3 py-1 rounded-lg transition-all ${currentStatus === 'all' && !isFeatured ? 'bg-white text-slate-900 shadow-2xs' : 'hover:text-slate-900'}`}
+            >
+              All
+            </a>
+            <a
+              href={`/admin/assessments/categories?status=active${currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : ''}`}
+              class={`px-3 py-1 rounded-lg transition-all ${currentStatus === 'active' ? 'bg-white text-emerald-800 shadow-2xs' : 'hover:text-slate-900'}`}
+            >
+              Active
+            </a>
+            <a
+              href={`/admin/assessments/categories?status=draft${currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : ''}`}
+              class={`px-3 py-1 rounded-lg transition-all ${currentStatus === 'draft' ? 'bg-white text-amber-800 shadow-2xs' : 'hover:text-slate-900'}`}
+            >
+              Draft
+            </a>
+            <a
+              href={`/admin/assessments/categories?status=archived${currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : ''}`}
+              class={`px-3 py-1 rounded-lg transition-all ${currentStatus === 'archived' ? 'bg-white text-slate-800 shadow-2xs' : 'hover:text-slate-900'}`}
+            >
+              Archived
+            </a>
+            <a
+              href={`/admin/assessments/categories?featured=true${currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : ''}`}
+              class={`px-3 py-1 rounded-lg transition-all ${isFeatured ? 'bg-white text-indigo-800 shadow-2xs' : 'hover:text-slate-900'}`}
+            >
+              Featured
+            </a>
+          </div>
+
+          {(currentSearch || currentStatus !== 'all' || isFeatured) && (
+            <a
+              href="/admin/assessments/categories"
+              class="px-2.5 py-1 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg font-medium transition-colors"
+            >
+              Clear
+            </a>
+          )}
+        </div>
+      </form>
+    </Card>
+
+    <!-- Categories Data Table -->
+    <Card class="border-slate-200 bg-white overflow-hidden shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold text-[10px] tracking-wider">
+            <tr>
+              <th class="px-4 py-3">Order</th>
+              <th class="px-4 py-3">Category</th>
+              <th class="px-4 py-3">Slug</th>
+              <th class="px-4 py-3 text-center">Assessments</th>
+              <th class="px-4 py-3 text-center">Status</th>
+              <th class="px-4 py-3 text-center">Featured</th>
+              <th class="px-4 py-3 text-right">Updated</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+            {categories.length === 0 ? (
+              <tr>
+                <td colspan="8" class="p-12 text-center text-slate-400">
+                  <div class="text-3xl mb-2">🏷️</div>
+                  <div class="font-bold text-slate-700 text-sm">No Categories Found</div>
+                  <div class="text-xs text-slate-400 mt-1">Try adjusting search query or click "New Category" to create one.</div>
+                </td>
+              </tr>
+            ) : (
+              categories.map((cat) => (
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                  <td class="px-4 py-3.5 font-bold text-slate-400 text-center w-12">
+                    #{cat.display_order}
+                  </td>
+                  <td class="px-4 py-3.5">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-base shrink-0">
+                        {cat.icon || '🏷️'}
+                      </span>
+                      <div>
+                        <div class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                          {cat.name}
+                        </div>
+                        <div class="text-[11px] text-slate-500 line-clamp-1 max-w-xs">
+                          {cat.short_description || cat.description || 'No description provided'}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3.5 font-mono text-[11px] text-slate-600">
+                    /category/<span class="font-bold text-teal-800">{cat.slug}</span>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      (cat.assessment_count || 0) > 0
+                        ? 'bg-teal-50 text-teal-800 border border-teal-200'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {cat.assessment_count || 0} tests
+                    </span>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      cat.status === 'active'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : cat.status === 'draft'
+                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}>
+                      {cat.status}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    {cat.featured ? (
+                      <span class="text-amber-500 font-bold" title="Featured on Homepage">⭐ Yes</span>
+                    ) : (
+                      <span class="text-slate-300 font-medium">—</span>
+                    )}
+                  </td>
+                  <td class="px-4 py-3.5 text-right text-[11px] text-slate-400 whitespace-nowrap">
+                    {new Date(cat.updated_at).toLocaleDateString()}
+                  </td>
+                  <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <a
+                        href={`/assessments/category/${cat.slug}`}
+                        target="_blank"
+                        rel="noopener"
+                        class="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                        title="View Public Category Page"
+                      >
+                        👁️
+                      </a>
+                      <button
+                        onclick={`editCategoryModal(${JSON.stringify(cat).replace(/"/g, '&quot;')})`}
+                        class="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                        title="Edit Category"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onclick={`toggleArchiveCategory('${cat.id}', '${cat.status === 'archived' ? 'active' : 'archived'}')`}
+                        class={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          cat.status === 'archived'
+                            ? 'text-emerald-600 hover:bg-emerald-50'
+                            : 'text-amber-600 hover:bg-amber-50'
+                        }`}
+                        title={cat.status === 'archived' ? 'Restore Category to Active' : 'Archive Category'}
+                      >
+                        {cat.status === 'archived' ? '♻️' : '📦'}
+                      </button>
+                      <button
+                        onclick={`confirmDeleteCategory('${cat.id}', '${cat.name.replace(/'/g, "\\'")}', ${cat.assessment_count || 0})`}
+                        class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Category"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  </div>
+
+  <!-- Category Create/Edit Modal -->
+  <div id="categoryModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+        <div>
+          <h3 id="modalTitle" class="text-lg font-black text-slate-900 tracking-tight">Create Category</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Configure details, visual icon, sorting order, and SEO tags.</p>
+        </div>
+        <button onclick="closeCategoryModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+          ✕
+        </button>
+      </div>
+
+      <form id="categoryForm" onsubmit="saveCategory(event)" class="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <input type="hidden" id="categoryId" name="id" value="" />
+
+        <!-- Basic Details -->
+        <div class="space-y-4">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-teal-800 border-b border-slate-100 pb-1.5">
+            1. Core Information
+          </h4>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="sm:col-span-2 space-y-1">
+              <label class="block text-xs font-bold text-slate-700">Category Name <span class="text-rose-500">*</span></label>
+              <input
+                type="text"
+                id="catName"
+                name="name"
+                required
+                placeholder="e.g. Personality & Temperament"
+                oninput="handleNameInput(this.value)"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">Icon (Emoji/Symbol)</label>
+              <input
+                type="text"
+                id="catIcon"
+                name="icon"
+                placeholder="e.g. 🧬, ❤️, 🧠"
+                maxlength="10"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-center text-lg"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">URL Slug <span class="text-rose-500">*</span></label>
+              <input
+                type="text"
+                id="catSlug"
+                name="slug"
+                required
+                placeholder="e.g. personality-temperament"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono text-slate-800"
+              />
+              <span class="text-[10px] text-slate-400">URL: /assessments/category/&lt;slug&gt;</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Status</label>
+                <select
+                  id="catStatus"
+                  name="status"
+                  class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="active">Active (Public)</option>
+                  <option value="draft">Draft (Hidden)</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+
+              <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Sort Order</label>
+                <input
+                  type="number"
+                  id="catOrder"
+                  name="sort_order"
+                  value="1"
+                  min="0"
+                  max="999"
+                  class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="catFeatured"
+              name="featured"
+              class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300"
+            />
+            <label for="catFeatured" class="text-xs font-bold text-slate-700 cursor-pointer">
+              ⭐ Feature on Homepage and Main Category Highlights
+            </label>
+          </div>
+        </div>
+
+        <!-- Descriptions -->
+        <div class="space-y-4">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-teal-800 border-b border-slate-100 pb-1.5">
+            2. Descriptions & Content
+          </h4>
+
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-slate-700">Short Summary Description</label>
+            <textarea
+              id="catShortDesc"
+              name="short_description"
+              rows="2"
+              placeholder="1-2 sentences summarizing this domain for test cards and search previews..."
+              class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            ></textarea>
+          </div>
+
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-slate-700">Full Description / Domain Overview</label>
+            <textarea
+              id="catDesc"
+              name="description"
+              rows="3"
+              placeholder="In-depth explanation displayed in the category hero section on public pages..."
+              class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            ></textarea>
+          </div>
+
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-slate-700">Banner / Visual Image URL (R2 path or URL)</label>
+            <input
+              type="text"
+              id="catImage"
+              name="image"
+              placeholder="e.g. /media/categories/personality-banner.jpg"
+              class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+        </div>
+
+        <!-- SEO & Open Graph Metadata -->
+        <div class="space-y-4">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-teal-800 border-b border-slate-100 pb-1.5">
+            3. Programmatic SEO & Open Graph
+          </h4>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">SEO Page Title</label>
+              <input
+                type="text"
+                id="catSeoTitle"
+                name="seo_title"
+                placeholder="e.g. Personality Tests & Psychometrics | Psychology Calculator"
+                maxlength="120"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">Canonical URL (Optional)</label>
+              <input
+                type="url"
+                id="catCanonical"
+                name="canonical"
+                placeholder="https://psychologycalculator.com/assessments/category/personality"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="block text-xs font-bold text-slate-700">SEO Meta Description</label>
+            <textarea
+              id="catSeoDesc"
+              name="seo_description"
+              rows="2"
+              placeholder="Search engine snippet description (recommended 140-160 characters)..."
+              maxlength="300"
+              class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">OG Share Title</label>
+              <input
+                type="text"
+                id="catOgTitle"
+                name="og_title"
+                placeholder="Custom social title..."
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">OG Share Image URL</label>
+              <input
+                type="text"
+                id="catOgImage"
+                name="og_image"
+                placeholder="https://.../og-image.jpg"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onclick="closeCategoryModal()"
+            class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            id="saveBtn"
+            class="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>Save Category</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in zoom-in-95 duration-150">
+      <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 text-2xl flex items-center justify-center mx-auto">
+        ⚠️
+      </div>
+      <div>
+        <h3 class="text-base font-black text-slate-900">Delete Category</h3>
+        <p id="deleteMessage" class="text-xs text-slate-500 mt-1">
+          Are you sure you want to delete this category?
+        </p>
+      </div>
+
+      <div id="deleteBlockedWarning" class="hidden p-3 bg-amber-50 text-amber-800 rounded-xl text-xs font-semibold border border-amber-200 text-left">
+        ⚠️ <strong>Cannot Delete:</strong> This category contains active assessments. Please reassign those assessments before deleting, or choose to <strong>Archive</strong> the category instead.
+      </div>
+
+      <div class="flex items-center justify-center gap-2 pt-2">
+        <button
+          onclick="closeDeleteModal()"
+          class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          id="confirmDeleteBtn"
+          onclick="executeDeleteCategory()"
+          class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all shadow-sm"
+        >
+          Delete Permanently
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    let isEditing = false;
+    let pendingDeleteId = null;
+
+    function slugify(text) {
+      return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/[\s\W-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    function handleNameInput(name) {
+      if (!isEditing) {
+        document.getElementById('catSlug').value = slugify(name);
+      }
+    }
+
+    function openCategoryModal(mode) {
+      isEditing = mode === 'edit';
+      document.getElementById('categoryModal').classList.remove('hidden');
+      if (mode === 'create') {
+        document.getElementById('modalTitle').textContent = 'Create Assessment Category';
+        document.getElementById('categoryId').value = '';
+        document.getElementById('categoryForm').reset();
+        document.getElementById('catOrder').value = '1';
+        document.getElementById('catStatus').value = 'active';
+      }
+    }
+
+    function editCategoryModal(cat) {
+      isEditing = true;
+      document.getElementById('modalTitle').textContent = `Edit Category: ${cat.name}`;
+      document.getElementById('categoryId').value = cat.id;
+      document.getElementById('catName').value = cat.name || '';
+      document.getElementById('catSlug').value = cat.slug || '';
+      document.getElementById('catIcon').value = cat.icon || '';
+      document.getElementById('catStatus').value = cat.status || 'active';
+      document.getElementById('catOrder').value = cat.display_order ?? cat.sort_order ?? 1;
+      document.getElementById('catFeatured').checked = Boolean(cat.featured);
+      document.getElementById('catShortDesc').value = cat.short_description || '';
+      document.getElementById('catDesc').value = cat.description || '';
+      document.getElementById('catImage').value = cat.image || '';
+      document.getElementById('catSeoTitle').value = cat.seo_title || '';
+      document.getElementById('catSeoDesc').value = cat.seo_description || '';
+      document.getElementById('catCanonical').value = cat.canonical || '';
+      document.getElementById('catOgTitle').value = cat.og_title || '';
+      document.getElementById('catOgImage').value = cat.og_image || '';
+      document.getElementById('categoryModal').classList.remove('hidden');
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').classList.add('hidden');
+    }
+
+    async function saveCategory(e) {
+      e.preventDefault();
+      const form = document.getElementById('categoryForm');
+      const formData = new FormData(form);
+      const categoryId = document.getElementById('categoryId').value;
+
+      const payload = {
+        name: formData.get('name'),
+        slug: formData.get('slug'),
+        icon: formData.get('icon'),
+        status: formData.get('status'),
+        sort_order: parseInt(formData.get('sort_order') || '0', 10),
+        featured: document.getElementById('catFeatured').checked,
+        short_description: formData.get('short_description'),
+        description: formData.get('description'),
+        image: formData.get('image'),
+        seo_title: formData.get('seo_title'),
+        seo_description: formData.get('seo_description'),
+        canonical: formData.get('canonical'),
+        og_title: formData.get('og_title'),
+        og_image: formData.get('og_image')
+      };
+
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        const url = categoryId ? `/api/admin/categories/${categoryId}` : '/api/admin/categories';
+        const method = categoryId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error?.message || data.message || 'Failed to save category');
+        }
+
+        window.location.reload();
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Category';
+      }
+    }
+
+    async function toggleArchiveCategory(id, nextStatus) {
+      if (!confirm(`Are you sure you want to ${nextStatus === 'archived' ? 'archive' : 'restore'} this category?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/categories/${id}/archive`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error?.message || data.message || 'Failed to toggle archive');
+        }
+        window.location.reload();
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    function confirmDeleteCategory(id, name, assessmentCount) {
+      pendingDeleteId = id;
+      const msg = document.getElementById('deleteMessage');
+      const warning = document.getElementById('deleteBlockedWarning');
+      const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+      msg.textContent = `Are you sure you want to permanently delete "${name}"?`;
+
+      if (assessmentCount > 0) {
+        warning.classList.remove('hidden');
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        warning.classList.add('hidden');
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.add('hidden');
+      pendingDeleteId = null;
+    }
+
+    async function executeDeleteCategory() {
+      if (!pendingDeleteId) return;
+
+      const confirmBtn = document.getElementById('confirmDeleteBtn');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Deleting...';
+
+      try {
+        const res = await fetch(`/api/admin/categories/${pendingDeleteId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error?.message || data.message || 'Failed to delete category');
+        }
+        window.location.reload();
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        closeDeleteModal();
+      }
+    }
+  </script>
+</AdminLayout>

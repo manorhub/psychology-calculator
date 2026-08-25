@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS assessment_categories (
     description TEXT,
     icon TEXT,
     display_order INTEGER NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft', 'archived')),
     seo_title TEXT,
     seo_description TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

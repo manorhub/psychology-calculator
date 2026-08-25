@@ -1,0 +1,55 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import {
+  type SupportedLocale,
+  isValidLocale,
+  useTranslations
+} from '@/i18n';
+
+export const prerender = false;
+
+const { lang } = Astro.params;
+if (!isValidLocale(lang)) {
+  return Astro.redirect('/404');
+}
+
+const currentLocale = lang as SupportedLocale;
+const { t } = useTranslations(currentLocale);
+---
+
+<PublicLayout
+  title={`${t.footer.termsOfService} | PsychologyCalculator.com`}
+  description="PsychologyCalculator.com Terms of Service. User agreement and platform usage guidelines."
+  locale={currentLocale}
+>
+  <div class="max-w-4xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-10">
+    <div class="space-y-3">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 text-teal-800 text-xs font-bold rounded-full border border-teal-200">
+        <span>📜</span> {t.footer.termsOfService}
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {t.footer.termsOfService}
+      </h1>
+      <p class="text-xs text-slate-500 font-mono">
+        Last Updated: August 2026
+      </p>
+    </div>
+
+    <div class="prose prose-slate max-w-none space-y-6 text-sm sm:text-base text-slate-700 leading-relaxed bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 shadow-2xs">
+      <h2 class="text-xl font-bold text-slate-900">1. Acceptance of Terms</h2>
+      <p>
+        By accessing or using PsychologyCalculator.com, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+      </p>
+
+      <h2 class="text-xl font-bold text-slate-900">2. Educational & Self-Reflection Purpose</h2>
+      <p>
+        All assessments, psychometric scores, archetype profiles, and AI-generated dossiers provided on this website are intended solely for personal self-exploration and educational purposes. They do not constitute medical, psychiatric, or psychological diagnoses.
+      </p>
+
+      <h2 class="text-xl font-bold text-slate-900">3. One-Time Credits & Digital Goods</h2>
+      <p>
+        Credits purchased on PsychologyCalculator.com are digital goods that allow the generation of AI dossiers and PDF reports. Credits never expire and are non-transferable.
+      </p>
+    </div>
+  </div>
+</PublicLayout>

@@ -1,0 +1,117 @@
+---
+import {
+  type SupportedLocale,
+  SUPPORTED_LANGUAGES,
+  DEFAULT_LOCALE,
+  getLocalizedPath,
+  normalizeLocale
+} from '@/i18n';
+
+interface Props {
+  currentLocale?: string;
+  class?: string;
+}
+
+const { currentLocale: propLocale, class: className = '' } = Astro.props;
+const currentLocale = normalizeLocale(propLocale || Astro.currentLocale || Astro.url.pathname.split('/')[1]);
+const currentLang = SUPPORTED_LANGUAGES[currentLocale] || SUPPORTED_LANGUAGES[DEFAULT_LOCALE];
+const currentPath = Astro.url.pathname;
+
+const languages = Object.values(SUPPORTED_LANGUAGES);
+---
+
+<div class={`relative inline-block text-left ${className}`} id="language-switcher-wrapper">
+  <button
+    type="button"
+    id="lang-menu-button"
+    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs transition-all focus:outline-none focus:ring-2 focus:ring-teal-600 cursor-pointer"
+    aria-expanded="false"
+    aria-haspopup="true"
+    title="Change Language / Cambiar Idioma"
+  >
+    <span class="text-sm">{currentLang.flagEmoji}</span>
+    <span class="hidden sm:inline font-medium">{currentLang.nativeName}</span>
+    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+    </svg>
+  </button>
+
+  <!-- Dropdown Menu -->
+  <div
+    id="lang-dropdown-menu"
+    class="hidden absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-slate-200/90 shadow-lg py-1.5 z-50 focus:outline-none animate-in fade-in slide-in-from-top-2 duration-150"
+    role="menu"
+    aria-orientation="vertical"
+    aria-labelledby="lang-menu-button"
+  >
+    <div class="px-3 py-1.5 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+      Select Language
+    </div>
+
+    {languages.map((lang) => {
+      const targetHref = getLocalizedPath(currentPath, lang.code as SupportedLocale);
+      const isCurrent = lang.code === currentLocale;
+
+      return (
+        <a
+          href={targetHref}
+          class={`flex items-center justify-between px-3.5 py-2 text-xs transition-colors ${
+            isCurrent
+              ? 'bg-teal-50 text-teal-900 font-bold'
+              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium'
+          }`}
+          role="menuitem"
+          data-lang-code={lang.code}
+        >
+          <div class="flex items-center gap-2.5">
+            <span class="text-sm">{lang.flagEmoji}</span>
+            <span>{lang.nativeName}</span>
+          </div>
+          {isCurrent && (
+            <span class="text-teal-600 font-bold text-xs">✓</span>
+          )}
+        </a>
+      );
+    })}
+  </div>
+</div>
+
+<script>
+  function initLanguageSwitcher() {
+    const btn = document.getElementById('lang-menu-button');
+    const menu = document.getElementById('lang-dropdown-menu');
+    const wrapper = document.getElementById('language-switcher-wrapper');
+
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', (!isExpanded).toString());
+      menu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (wrapper && !wrapper.contains(e.target as Node)) {
+        menu.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Save language preference to cookie on selection
+    menu.querySelectorAll('a[data-lang-code]').forEach((link) => {
+      link.addEventListener('click', () => {
+        const langCode = link.getAttribute('data-lang-code');
+        if (langCode) {
+          document.cookie = `pref_lang=${langCode}; path=/; max-age=31536000; SameSite=Lax`;
+          try {
+            localStorage.setItem('pref_lang', langCode);
+          } catch {}
+        }
+      });
+    });
+  }
+
+  initLanguageSwitcher();
+  document.addEventListener('astro:after-swap', initLanguageSwitcher);
+</script>

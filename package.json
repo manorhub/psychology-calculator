@@ -28,7 +28,16 @@
     "test:launch": "tsx scripts/test-production-launch.js",
     "test:growth": "tsx scripts/test-growth-engine.js",
     "test:guest": "tsx scripts/test-guest-access.js",
-    "test:all": "npm run test:db && npm run test:auth && npm run test:admin && npm run test:assessment && npm run test:engine && npm run test:result && npm run test:initial && npm run test:ai && npm run test:dashboard && npm run test:pdf && npm run test:billing && npm run test:seo && npm run test:cms && npm run test:notifications && npm run test:analytics && npm run test:control-center && npm run test:launch && npm run test:growth && npm run test:guest"
+    "test:import-export": "tsx scripts/test-import-export.js",
+    "test:category": "tsx scripts/test-category-management.js",
+    "test:ai-experience": "tsx scripts/test-ai-generation-experience.js",
+    "test:pdf-quality": "tsx scripts/test-pdf-report-quality.js",
+    "test:question-experience": "tsx scripts/test-question-experience.js",
+    "test:one-time-credits": "tsx scripts/test-one-time-credit-system.js",
+    "test:email": "tsx scripts/test-transactional-email-system.js",
+    "test:seo-audit": "tsx scripts/test-technical-seo-audit.js",
+    "test:i18n": "tsx scripts/test-multilingual-i18n-system.js",
+    "test:all": "npm run test:db && npm run test:auth && npm run test:admin && npm run test:assessment && npm run test:engine && npm run test:result && npm run test:initial && npm run test:ai && npm run test:dashboard && npm run test:pdf && npm run test:billing && npm run test:seo && npm run test:seo-audit && npm run test:cms && npm run test:notifications && npm run test:email && npm run test:analytics && npm run test:control-center && npm run test:launch && npm run test:growth && npm run test:guest && npm run test:import-export && npm run test:category && npm run test:ai-experience && npm run test:pdf-quality && npm run test:question-experience && npm run test:one-time-credits && npm run test:i18n"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -36,6 +45,7 @@
     "@lucide/astro": "^1.33.0",
     "@tailwindcss/vite": "^4.0.9",
     "astro": "^5.3.0",
+    "nodemailer": "^9.0.5",
     "pdf-lib": "^1.17.1",
     "tailwindcss": "^4.0.9",
     "zod": "^3.24.2"
@@ -43,8 +53,10 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "@types/node": "^22.13.4",
+    "@types/nodemailer": "^8.0.1",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "wrangler": "^3.109.2"
+    "vite": "^8.2.2",
+    "wrangler": "^4.125.0"
   }
 }

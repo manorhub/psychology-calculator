@@ -18,7 +18,18 @@ const navSections: { title?: string; items: NavItem[] }[] = [
     items: [
       { label: 'Dashboard', href: '/admin', icon: '📊' },
       { label: 'Users', href: '/admin/users', icon: '👥' },
-      { label: 'Assessments', href: '/admin/assessments', icon: '📝' },
+      {
+        label: 'Assessments',
+        href: '/admin/assessments',
+        icon: '📝',
+        children: [
+          { label: 'Catalog', href: '/admin/assessments' },
+          { label: 'Categories', href: '/admin/assessments/categories' },
+          { label: 'Import Assessments', href: '/admin/assessments/import' },
+          { label: 'Export Assessments', href: '/admin/assessments/export' },
+          { label: 'Import History', href: '/admin/assessments/import-history' }
+        ]
+      },
       { label: 'Results & Scoring', href: '/admin/results', icon: '🎯' },
       { label: 'Reports', href: '/admin/reports', icon: '📈' }
     ]
@@ -53,7 +64,7 @@ const navSections: { title?: string; items: NavItem[] }[] = [
         icon: '✉️',
         children: [
           { label: 'SMTP Config', href: '/admin/settings/email' },
-          { label: 'Email Templates', href: '/admin/settings/email/templates' },
+          { label: 'Email Templates', href: '/admin/email/templates' },
           { label: 'Delivery Logs', href: '/admin/email/logs' }
         ]
       },

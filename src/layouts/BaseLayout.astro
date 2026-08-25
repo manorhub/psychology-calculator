@@ -1,6 +1,7 @@
 ---
 import '@/styles/global.css';
 import SEOHead from '@/components/seo/SEOHead.astro';
+import { normalizeLocale, SUPPORTED_LANGUAGES, DEFAULT_LOCALE } from '@/i18n';
 
 interface Props {
   title?: string;
@@ -8,13 +9,16 @@ interface Props {
   canonicalUrl?: string;
   ogImage?: string;
   noindex?: boolean;
+  locale?: string;
 }
 
-const { title, description, canonicalUrl, ogImage, noindex } = Astro.props;
+const { title, description, canonicalUrl, ogImage, noindex, locale: propLocale } = Astro.props;
+const currentLocale = normalizeLocale(propLocale || Astro.currentLocale || Astro.url.pathname.split('/')[1]);
+const langInfo = SUPPORTED_LANGUAGES[currentLocale] || SUPPORTED_LANGUAGES[DEFAULT_LOCALE];
 ---
 
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang={currentLocale} dir={langInfo.dir} class="h-full">
   <head>
     <SEOHead
       title={title}
@@ -22,6 +26,7 @@ const { title, description, canonicalUrl, ogImage, noindex } = Astro.props;
       canonicalUrl={canonicalUrl}
       ogImage={ogImage}
       noindex={noindex}
+      locale={currentLocale}
     />
     <slot name="head" />
   </head>

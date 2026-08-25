@@ -103,7 +103,7 @@ export class LemonSqueezyService extends BaseService {
             }
           },
           product_options: {
-            redirect_url: successUrl || 'https://psychologycalculator.com/dashboard/subscription?status=success'
+            redirect_url: successUrl || 'https://psychologycalculator.com/dashboard/credits?status=success'
           }
         },
         relationships: {

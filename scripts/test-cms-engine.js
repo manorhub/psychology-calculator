@@ -250,9 +250,9 @@ async function runCmsTests() {
 
   console.log('\n--- 9. Testing Sitemap Integration for Blog & Static Pages ---');
   const sitemapXml = await seoService.generateSitemapXml();
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/blog</loc>'));
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/blog/what-is-the-big-five-personality-model</loc>'));
-  assert.ok(sitemapXml.includes('<loc>https://psychologycalculator.com/p/about</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/blog</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/blog/what-is-the-big-five-personality-model</loc>'));
+  assert.ok(sitemapXml.includes('<loc>https://www.psychologycalculator.com/p/about</loc>'));
   assert.ok(!sitemapXml.includes('future-psychology-research-trends'), 'Scheduled post must not be in sitemap');
   console.log('✔ Dynamic XML Sitemap verified: /blog, published articles, and static pages included');
 

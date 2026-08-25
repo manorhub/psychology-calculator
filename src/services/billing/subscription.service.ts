@@ -231,25 +231,114 @@ export class SubscriptionService extends BaseService {
   }
 
   /**
-   * Processes a verified Lemon Squeezy Order / Payment webhook event
+   * Processes a verified Lemon Squeezy Order / Payment webhook event for one-time credits
    */
-  public async handleOrderWebhookEvent(_eventName: string, payloadData: any): Promise<boolean> {
+  public async handleOrderWebhookEvent(eventName: string, payloadData: any): Promise<boolean> {
     if (!this.db) return false;
 
     const attributes = payloadData.attributes || {};
-    const orderId = String(payloadData.id || attributes.identifier || '');
+    const orderId = String(payloadData.id || attributes.identifier || attributes.first_order_item?.order_id || '');
     const userEmail = attributes.user_email || attributes.customer_email;
     const totalAmount = (attributes.total || attributes.total_usd || 0) / 100;
     const currency = attributes.currency || 'USD';
     const status = attributes.status === 'paid' ? 'paid' : attributes.status === 'refunded' ? 'refunded' : 'pending';
     const receiptUrl = attributes.urls?.receipt || null;
+    const variantId = String(attributes.first_order_item?.variant_id || attributes.variant_id || '');
+    const productId = String(attributes.first_order_item?.product_id || attributes.product_id || '');
 
-    let userId: string | null = attributes.custom_data?.user_id || null;
+    let userId: string | null = attributes.custom_data?.user_id || payloadData.meta?.custom_data?.user_id || null;
+    let packageId: string | null = attributes.custom_data?.package_id || payloadData.meta?.custom_data?.package_id || null;
+
     if (!userId && userEmail) {
       const user = await fetchFirst<{ id: string }>(this.db, 'SELECT id FROM users WHERE email = ?', [userEmail]);
       if (user) userId = user.id;
     }
 
+    if (!userId) {
+      this.logger.warn('Could not map Lemon Squeezy order event to user ID', { orderId, userEmail });
+      return false;
+    }
+
+    // 1. Resolve Package (default to 20 AI Report Credits)
+    let creditPackage = packageId ? await this.creditService.getPackageById(packageId) : null;
+    if (!creditPackage && variantId) {
+      creditPackage = await fetchFirst<any>(
+        this.db,
+        'SELECT * FROM credit_packages WHERE lemon_squeezy_variant_id = ? LIMIT 1',
+        [variantId]
+      );
+    }
+    if (!creditPackage) {
+      const packages = await this.creditService.getPackages(true);
+      creditPackage = packages[0] || null;
+    }
+
+    const creditsToGrant = creditPackage?.credits || 20;
+
+    // 2. Check Order Idempotency (prevent duplicate credit grants)
+    const existingOrder = await fetchFirst<any>(
+      this.db,
+      'SELECT * FROM orders WHERE provider_order_id = ?',
+      [orderId]
+    );
+
+    if (status === 'paid' && !existingOrder) {
+      const orderDbId = crypto.randomUUID();
+      await executeMutation(
+        this.db,
+        `INSERT INTO orders (
+           id, user_id, provider, provider_order_id, package_id, product_id, variant_id,
+           amount, currency, status, credits_granted, receipt_url, created_at, updated_at
+         ) VALUES (?, ?, 'lemonsqueezy', ?, ?, ?, ?, ?, ?, 'paid', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [
+          orderDbId,
+          userId,
+          orderId,
+          creditPackage?.id || 'pkg_credits_20',
+          productId || null,
+          variantId || null,
+          totalAmount || 4.00,
+          currency,
+          creditsToGrant,
+          receiptUrl
+        ]
+      );
+
+      // Grant credits to user wallet
+      await this.creditService.addCredits(
+        userId,
+        creditsToGrant,
+        'purchase',
+        `Purchased ${creditsToGrant} AI Report Credits (Order #${orderId})`,
+        orderId,
+        'order'
+      );
+
+      this.logger.info('Granted one-time credits from verified order', { userId, orderId, credits: creditsToGrant });
+    } else if (status === 'refunded' && existingOrder && existingOrder.status !== 'refunded') {
+      await executeMutation(
+        this.db,
+        `UPDATE orders SET status = 'refunded', updated_at = CURRENT_TIMESTAMP WHERE provider_order_id = ?`,
+        [orderId]
+      );
+
+      // Record refund transaction safely
+      const wallet = await this.creditService.getUserWallet(userId);
+      const creditsToDeduct = Math.min(wallet.balance, existingOrder.credits_granted || creditsToGrant);
+      if (creditsToDeduct > 0) {
+        await this.creditService.addCredits(
+          userId,
+          -creditsToDeduct,
+          'refund',
+          `Refund for order #${orderId} (-${creditsToDeduct} credits)`,
+          orderId,
+          'order'
+        );
+      }
+      this.logger.info('Processed order refund in ledger', { userId, orderId, refundedCredits: creditsToDeduct });
+    }
+
+    // Also update legacy payments table for backward compatibility
     const paymentId = crypto.randomUUID();
     await executeMutation(
       this.db,
@@ -260,10 +349,9 @@ export class SubscriptionService extends BaseService {
          status = excluded.status,
          receipt_url = excluded.receipt_url,
          updated_at = CURRENT_TIMESTAMP`,
-      [paymentId, userId, orderId, totalAmount, currency, status, receiptUrl]
+      [paymentId, userId, orderId, totalAmount || 4.00, currency, status, receiptUrl]
     );
 
-    this.logger.info('Recorded payment transaction from webhook', { orderId, amount: totalAmount, status });
     return true;
   }
 

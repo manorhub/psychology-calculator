@@ -1,0 +1,70 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import {
+  type SupportedLocale,
+  isValidLocale,
+  useTranslations,
+  getLocalizedPath
+} from '@/i18n';
+
+export const prerender = false;
+
+const { lang } = Astro.params;
+if (!isValidLocale(lang)) {
+  return Astro.redirect('/404');
+}
+
+const currentLocale = lang as SupportedLocale;
+const { t } = useTranslations(currentLocale);
+---
+
+<PublicLayout
+  title={`${t.nav.about} | PsychologyCalculator.com`}
+  description="Discover our mission, methodology, and commitment to evidence-based psychological self-reflection."
+  locale={currentLocale}
+>
+  <div class="max-w-4xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-12">
+    <div class="space-y-4">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 text-teal-800 text-xs font-bold rounded-full border border-teal-200">
+        <span>Ψ</span> {t.nav.about}
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {t.common.brandName}
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        {t.common.tagline}
+      </p>
+    </div>
+
+    <div class="prose prose-slate max-w-none space-y-6 text-sm sm:text-base text-slate-700 leading-relaxed">
+      <p>
+        PsychologyCalculator.com was founded with a clear mission: to make scientifically grounded psychological measurement tools transparent, accessible, and practical for personal growth and self-discovery.
+      </p>
+
+      <h2 class="text-xl sm:text-2xl font-bold text-slate-900 pt-4">Our Scientific Philosophy</h2>
+      <p>
+        Modern psychology has established rigorous psychometric frameworks—such as the Big Five (OCEAN) model, Adult Attachment Theory, and Emotional Intelligence constructs—that provide meaningful insight into human behavioral variance. We implement standardized scoring formulas, clear dimensional distributions, and structured psychological interpretations.
+      </p>
+
+      <h2 class="text-xl sm:text-2xl font-bold text-slate-900 pt-4">Ethical & Responsible Guidance</h2>
+      <p>
+        We believe that self-awareness should empower, not limit. Our instruments do not pathologize human differences or offer medical diagnoses. Instead, they present traits as natural cognitive configurations with unique strengths and situational trade-offs.
+      </p>
+    </div>
+
+    <div class="pt-8 border-t border-slate-200 flex flex-wrap gap-4">
+      <a
+        href={getLocalizedPath('/assessments', currentLocale)}
+        class="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+      >
+        {t.common.exploreAssessments} →
+      </a>
+      <a
+        href={getLocalizedPath('/contact', currentLocale)}
+        class="px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all"
+      >
+        {t.nav.contact}
+      </a>
+    </div>
+  </div>
+</PublicLayout>

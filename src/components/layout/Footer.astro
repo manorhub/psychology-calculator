@@ -1,11 +1,15 @@
 ---
 import type { DynamicSiteConfig } from '@/types/config';
+import { useTranslations, getLocalizedPath, normalizeLocale } from '@/i18n';
 
 interface Props {
   config: DynamicSiteConfig;
+  locale?: string;
 }
 
-const { config } = Astro.props;
+const { config, locale: propLocale } = Astro.props;
+const currentLocale = normalizeLocale(propLocale || Astro.currentLocale || Astro.url.pathname.split('/')[1]);
+const { t } = useTranslations(currentLocale);
 const currentYear = new Date().getFullYear();
 ---
 
@@ -15,7 +19,7 @@ const currentYear = new Date().getFullYear();
       <!-- Brand & Mission Column -->
       <div class="md:col-span-1 space-y-4">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 flex items-center justify-center text-white font-bold text-lg shadow-sm shadow-teal-500/20">
             Ψ
           </div>
           <span class="font-bold text-lg text-slate-900 tracking-tight">
@@ -23,7 +27,7 @@ const currentYear = new Date().getFullYear();
           </span>
         </div>
         <p class="text-sm text-slate-500 leading-relaxed">
-          {config.siteTagline}
+          {t.footer.description}
         </p>
         <p class="text-xs text-slate-400">
           Built with scientific rigor & privacy-first architecture.
@@ -41,7 +45,7 @@ const currentYear = new Date().getFullYear();
               {section.links.map((link) => (
                 <li>
                   <a
-                    href={link.href}
+                    href={link.isExternal ? link.href : getLocalizedPath(link.href, currentLocale)}
                     target={link.isExternal ? '_blank' : undefined}
                     rel={link.isExternal ? 'noopener noreferrer' : undefined}
                     class="text-sm text-slate-600 hover:text-slate-900 transition-colors"
@@ -59,12 +63,12 @@ const currentYear = new Date().getFullYear();
     <!-- Mandatory Psychology Disclaimer & Bottom Bar -->
     <div class="pt-8 space-y-6">
       <div class="p-4 rounded-xl bg-slate-100/80 border border-slate-200/80 text-xs text-slate-500 leading-relaxed">
-        <span class="font-semibold text-slate-700 block sm:inline mr-1">Medical & Psychological Disclaimer:</span>
-        {config.disclaimerText}
+        <span class="font-semibold text-slate-700 block sm:inline mr-1">{t.footer.legalDisclaimerTitle}:</span>
+        {t.footer.legalDisclaimerText}
       </div>
 
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-        <p>© {currentYear} {config.siteName}. All rights reserved.</p>
+        <p>© {currentYear} {config.siteName}. {t.common.allRightsReserved}</p>
         <p class="flex items-center gap-1">
           <span>Server-rendered on Cloudflare Edge</span>
         </p>

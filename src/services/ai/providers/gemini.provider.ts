@@ -20,27 +20,25 @@ export class GeminiProvider implements AIProvider {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     try {
+      const timeoutMs = options.timeoutMs || 90000;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || 30000);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: systemPrompt }]
-          },
           contents: [
             {
               role: 'user',
-              parts: [{ text: prompt }]
+              parts: [{ text: `${systemPrompt}\n\n${prompt}` }]
             }
           ],
           generationConfig: {
+            responseMimeType: 'application/json',
             temperature: options.temperature ?? 0.7,
-            maxOutputTokens: options.maxTokens ?? 4096,
-            responseMimeType: 'application/json'
+            maxOutputTokens: options.maxTokens ?? 4096
           }
         })
       });
@@ -70,7 +68,8 @@ export class GeminiProvider implements AIProvider {
       };
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        throw new ExternalServiceError('Gemini request timed out after 30 seconds');
+        const seconds = Math.round((options.timeoutMs || 90000) / 1000);
+        throw new ExternalServiceError(`Gemini request timed out after ${seconds} seconds`);
       }
       throw err instanceof ExternalServiceError ? err : new ExternalServiceError(err.message || 'Gemini generation failed');
     }

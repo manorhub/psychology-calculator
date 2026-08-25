@@ -1,35 +1,272 @@
 ---
 import PublicLayout from '@/layouts/PublicLayout.astro';
-import Card from '@/components/ui/Card.astro';
-import Alert from '@/components/ui/Alert.astro';
-import { ConfigService } from '@/services/config.service';
-import { ContentService } from '@/services/content.service';
-import { getD1Database } from '@/lib/db/client';
+import Badge from '@/components/ui/Badge.astro';
 
-const env = Astro.locals.runtime?.env;
-const db = getD1Database(env);
-const configService = new ConfigService(db);
-const config = await configService.getSiteConfig();
+export const prerender = false;
 
-const contentService = new ContentService(db);
-const page = await contentService.getPageBySlug('disclaimer');
+const lastUpdated = "August 24, 2026";
 ---
 
-<PublicLayout title={page?.seo_title || page?.title || "Psychological Disclaimer"}>
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-6">
-    <Alert variant="warning" title="Important Medical & Health Notice">
-      {config.disclaimerText}
-    </Alert>
-
-    <Card title={page?.title || "Detailed Disclaimer & Educational Purpose"}>
-      <div class="prose prose-slate max-w-none space-y-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-        {page?.content || (
-          `The assessments, psychometric models, reports, and AI-generated insights presented on MindMetrics are intended strictly for educational, informational, and self-reflection purposes.
-
-Not Clinical Diagnosis
-Nothing contained on this website should be construed as medical, psychiatric, or clinical psychological advice, diagnosis, or treatment. If you are experiencing psychological distress or a mental health emergency, please consult a licensed mental health professional or contact an emergency crisis hotline immediately.`
-        )}
+<PublicLayout
+  title="Psychological & Medical Disclaimer"
+  description="Learn how PsychologyCalculator.com assessments and AI-generated reports are intended for self-reflection and education, not professional psychological or medical diagnosis."
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 space-y-12">
+    <!-- Header Section -->
+    <div class="space-y-4 border-b border-slate-200 pb-8">
+      <div class="flex items-center gap-2">
+        <Badge variant="warning" size="sm">Non-Clinical Notice</Badge>
+        <span class="text-xs text-slate-500 font-medium">Last Updated: {lastUpdated}</span>
       </div>
-    </Card>
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+        Psychological & Medical Disclaimer
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
+        PsychologyCalculator.com assessments and AI-generated reports are designed for <strong>education, self-reflection, and personal insight</strong>. They are not substitutes for professional psychological, psychiatric, or medical evaluations.
+      </p>
+    </div>
+
+    <!-- Prominent Crisis Notice -->
+    <div class="p-6 bg-amber-50/90 rounded-2xl border border-amber-200/90 space-y-2 text-amber-950">
+      <div class="flex items-center gap-2 font-bold text-base text-amber-900">
+        <span>⚠️</span>
+        <span>Emergency & Crisis Situations</span>
+      </div>
+      <p class="text-xs sm:text-sm text-amber-900 leading-relaxed">
+        <strong>PsychologyCalculator.com is not an emergency service, medical provider, or crisis hotline.</strong> If you are experiencing severe emotional distress, thoughts of self-harm, or a mental health emergency, please immediately reach out to your local emergency services, a hospital, or an accredited national crisis hotline in your country.
+      </p>
+    </div>
+
+    <!-- Quick Navigation Table of Contents -->
+    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-3">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+        Table of Contents
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-teal-700 font-medium">
+        <a href="#purpose" class="hover:underline">1. Purpose of Our Assessments</a>
+        <a href="#not-diagnostic" class="hover:underline">2. Not a Clinical Diagnostic Tool</a>
+        <a href="#ai-reports" class="hover:underline">3. AI-Generated Synthesis Reports</a>
+        <a href="#understanding-results" class="hover:underline">4. Understanding Assessment Scores</a>
+        <a href="#emotional-wellbeing" class="hover:underline">5. Emotional Wellbeing & Resilience Tests</a>
+        <a href="#relationships" class="hover:underline">6. Relationship & Attachment Tests</a>
+        <a href="#personality-career" class="hover:underline">7. Personality & Career Work-Style Tools</a>
+        <a href="#cognitive" class="hover:underline">8. Cognitive-Style Self-Reflection</a>
+        <a href="#original-instruments" class="hover:underline">9. Original Educational Assessments</a>
+        <a href="#no-labeling" class="hover:underline">10. Constructive Framing (No Stigmatizing Labels)</a>
+        <a href="#professional-consultation" class="hover:underline">11. When to Seek Professional Consultation</a>
+        <a href="#no-guarantees" class="hover:underline">12. No Guarantees of Specific Outcomes</a>
+        <a href="#legal-references" class="hover:underline">13. Privacy & Terms References</a>
+        <a href="#contact" class="hover:underline">14. Contact Us</a>
+      </div>
+    </div>
+
+    <!-- Disclaimer Content Body -->
+    <div class="prose prose-slate max-w-none space-y-10 text-sm sm:text-base text-slate-700 leading-relaxed">
+      
+      <!-- 1. Purpose -->
+      <section id="purpose" class="space-y-3 pt-2">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          1. Purpose of Our Assessments
+        </h2>
+        <p>
+          The primary objective of <strong>PsychologyCalculator.com</strong> is to foster healthy self-awareness, provide structured educational frameworks, and encourage constructive personal introspection.
+        </p>
+        <p>
+          Our self-assessments are designed to help you explore behavioral tendencies, communication preferences, emotional habits, and workplace styles. They are built as exploratory instruments to stimulate self-discovery, not as definitive judgements of your psychological health.
+        </p>
+      </section>
+
+      <!-- 2. Not a Diagnostic Tool -->
+      <section id="not-diagnostic" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          2. Not a Clinical Diagnostic Tool
+        </h2>
+        <p>
+          Self-reported online questionnaires cannot replace comprehensive clinical evaluations conducted by qualified healthcare professionals.
+        </p>
+        <div class="p-4 bg-white rounded-xl border border-slate-200 space-y-2 text-xs sm:text-sm text-slate-600">
+          <p class="font-bold text-slate-900">Assessment results on this platform do NOT diagnose:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Clinical depression, anxiety disorders, or panic conditions.</li>
+            <li>Personality disorders or dissociative conditions.</li>
+            <li>Attention-Deficit/Hyperactivity Disorder (ADHD) or neurodevelopmental disorders.</li>
+            <li>Post-Traumatic Stress Disorder (PTSD) or acute trauma responses.</li>
+            <li>Clinical attachment disorders or psychiatric medical conditions.</li>
+          </ul>
+        </div>
+        <p class="text-xs text-slate-500">
+          A valid clinical diagnosis requires direct, in-depth evaluation by a licensed psychologist, psychiatrist, or qualified mental health clinician with appropriate diagnostic credentials.
+        </p>
+      </section>
+
+      <!-- 3. AI-Generated Synthesis Reports -->
+      <section id="ai-reports" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          3. AI-Generated Synthesis Reports
+        </h2>
+        <p>
+          When you unlock an optional, detailed assessment report, our platform uses automated artificial intelligence (large language model inference) to synthesize your calculated psychometric dimension scores into a comprehensive analysis.
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li><strong>Automated Nature:</strong> AI reports are generated algorithmically based on statistical language models and general psychological concepts.</li>
+          <li><strong>Not Individualized Therapy:</strong> AI reports do not constitute psychotherapy, clinical counseling, psychiatric advice, or medical treatment plans.</li>
+          <li><strong>Self-Reflection Material:</strong> While reports offer structured perspectives and actionable communication strategies, they may occasionally contain generalized observations. Always apply your own judgment and personal context.</li>
+        </ul>
+      </section>
+
+      <!-- 4. Understanding Assessment Scores -->
+      <section id="understanding-results" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          4. Understanding Assessment Scores
+        </h2>
+        <p>
+          Your calculated scores reflect your self-reported responses at a specific moment in time. They can be influenced by:
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li>Your current mood, stress level, fatigue, or recent life events.</li>
+          <li>Your personal interpretation of specific question prompts.</li>
+          <li>The environmental context in which you completed the questionnaire.</li>
+        </ul>
+        <p>
+          Human personality and emotional states are dynamic. A single test score does not represent a permanent trait or define your complete identity.
+        </p>
+      </section>
+
+      <!-- 5. Emotional Wellbeing Tests -->
+      <section id="emotional-wellbeing" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          5. Emotional Wellbeing & Resilience Tests
+        </h2>
+        <p>
+          Our emotional wellbeing and stress management self-assessments are designed to help you notice emotional patterns, coping mechanisms, and self-care opportunities.
+        </p>
+        <p>
+          They are not medical screenings. If an assessment highlights high stress, anger patterns, or emotional strain, this should be viewed as an invitation for mindful self-care or a conversation with a healthcare provider, rather than a clinical prognosis.
+        </p>
+      </section>
+
+      <!-- 6. Relationship & Attachment Tests -->
+      <section id="relationships" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          6. Relationship & Attachment Tests
+        </h2>
+        <p>
+          Assessments exploring love languages, communication styles, attachment tendencies, and conflict styles provide useful vocabulary for understanding interpersonal dynamics.
+        </p>
+        <div class="p-4 bg-teal-50/60 rounded-xl border border-teal-200/80 space-y-1 text-xs sm:text-sm text-teal-900">
+          <p class="font-bold">Important Relationship Perspective:</p>
+          <ul class="list-disc pl-5 space-y-1 text-teal-800">
+            <li>Scores do not predict whether a relationship will succeed or fail.</li>
+            <li>Results should never be used to diagnose, label, or dismiss a partner.</li>
+            <li>Do not make life-altering relationship decisions solely based on an online questionnaire.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 7. Personality & Career Work-Style Tools -->
+      <section id="personality-career" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          7. Personality & Career Work-Style Tools
+        </h2>
+        <p>
+          Our personality (e.g. Big Five facets, 16-type profiles) and workplace self-assessments provide insights into your preferred working environments, collaboration styles, and task orientation.
+        </p>
+        <p>
+          They do not measure intelligence, guarantee employment, predict job performance, or restrict what career paths you can pursue. Real career growth involves skills, qualifications, dedication, and practical experience.
+        </p>
+      </section>
+
+      <!-- 8. Cognitive-Style Self-Reflection -->
+      <section id="cognitive" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          8. Cognitive-Style Self-Reflection
+        </h2>
+        <p>
+          Questionnaires exploring thinking styles, decision-making preferences, or problem-solving approaches are conceptual tools. They are not IQ tests, neurological examinations, or assessments for learning disabilities.
+        </p>
+      </section>
+
+      <!-- 9. Original Educational Assessments -->
+      <section id="original-instruments" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          9. Original Educational Assessments
+        </h2>
+        <p>
+          Unless explicitly stated, assessments on PsychologyCalculator.com are original questionnaires developed for our platform, inspired by established psychological theories (such as the Five-Factor Model or Attachment Theory).
+        </p>
+        <p>
+          They are distinct from proprietary standardized tests administered in clinical or academic settings.
+        </p>
+      </section>
+
+      <!-- 10. Constructive Framing -->
+      <section id="no-labeling" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          10. Constructive Framing (No Stigmatizing Labels)
+        </h2>
+        <p>
+          We believe in constructive, non-stigmatizing language. Assessment scores represent dimensional spectra (such as "higher preference", "moderate tendency", or "area for self-reflection"). We reject simplistic binaries such as "good vs. bad" or "healthy vs. unhealthy" personalities.
+        </p>
+      </section>
+
+      <!-- 11. When to Seek Professional Help -->
+      <section id="professional-consultation" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          11. When to Seek Professional Consultation
+        </h2>
+        <p>
+          We strongly encourage seeking the counsel of a licensed psychologist, psychiatrist, licensed professional counselor (LPC), or general medical practitioner if you:
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li>Experience ongoing sadness, severe anxiety, or debilitating stress.</li>
+          <li>Find that emotional challenges interfere with daily responsibilities, work, or relationships.</li>
+          <li>Are seeking personalized therapy, psychiatric diagnosis, or medication management.</li>
+        </ul>
+      </section>
+
+      <!-- 12. No Guarantees -->
+      <section id="no-guarantees" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          12. No Guarantees of Specific Outcomes
+        </h2>
+        <p>
+          PsychologyCalculator.com makes no warranties or guarantees regarding specific personal, emotional, career, or relational outcomes resulting from the use of our assessments or AI reports. Self-improvement and behavioral change depend on individual commitment and real-world actions.
+        </p>
+      </section>
+
+      <!-- 13. Privacy & Terms References -->
+      <section id="legal-references" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          13. Privacy & Terms References
+        </h2>
+        <p>
+          For detailed information regarding how we handle your assessment answers, account credentials, and data privacy, please review our <a href="/privacy-policy" class="text-teal-700 font-bold hover:underline">Privacy Policy</a>.
+        </p>
+        <p>
+          Your continued access to this website, purchase of report credits, and use of assessments is also governed by our <a href="/terms-of-service" class="text-teal-700 font-bold hover:underline">Terms of Service</a>.
+        </p>
+      </section>
+
+      <!-- 14. Contact Us -->
+      <section id="contact" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          14. Contact Us
+        </h2>
+        <p>
+          If you have questions about the educational purpose of our assessments or our non-clinical guidelines, please contact us:
+        </p>
+        <div class="p-5 bg-white rounded-2xl border border-slate-200 space-y-2">
+          <div class="text-xs text-slate-500 font-bold uppercase tracking-wider">Educational & Content Standards</div>
+          <div class="text-sm font-bold text-slate-900">PsychologyCalculator.com</div>
+          <div class="text-xs text-slate-600">
+            Email: <a href="mailto:support@psychologycalculator.com" class="text-teal-700 font-bold hover:underline">support@psychologycalculator.com</a>
+          </div>
+          <div class="text-xs text-slate-600">
+            About Us: <a href="https://psychologycalculator.com/about" class="text-teal-700 font-bold hover:underline">https://psychologycalculator.com/about</a>
+          </div>
+        </div>
+      </section>
+
+    </div>
   </div>
 </PublicLayout>

@@ -90,12 +90,20 @@ export class ResultService extends BaseService {
       };
     }
 
-    // 6. Calculate Duration
+    // 6. Load Dimension Descriptions for rich contextual reporting
+    const dimensionRows = await executeQuery<{ id: string; description: string | null }>(
+      this.db,
+      'SELECT id, description FROM assessment_dimensions WHERE assessment_id = ?',
+      [assessment.id]
+    );
+    const dimDescMap = new Map(dimensionRows.map((r) => [r.id, r.description]));
+
+    // 7. Calculate Duration
     const startedAt = new Date(attempt.started_at).getTime();
     const completedAt = attempt.completed_at ? new Date(attempt.completed_at).getTime() : Date.now();
     const durationSeconds = Math.max(1, Math.round((completedAt - startedAt) / 1000));
 
-    // 7. Assemble Snapshot Data Structure
+    // 8. Assemble Snapshot Data Structure
     const snapshotData: ResultSnapshotData = {
       attemptId: attempt.id,
       assessmentId: assessment.id,
@@ -113,6 +121,7 @@ export class ResultService extends BaseService {
         dimensionId: d.dimensionId,
         dimensionName: d.dimensionName,
         dimensionSlug: d.dimensionSlug,
+        description: dimDescMap.get(d.dimensionId) || null,
         rawScore: d.rawScore,
         maxScore: d.maxScore,
         normalizedScore: d.normalizedScore,
@@ -350,6 +359,9 @@ export class ResultService extends BaseService {
     }
     if (!attempt.user_id && !attempt.session_id) {
       return; // Open guest attempt
+    }
+    if (!attempt.user_id && !userId && !guestSessionId) {
+      return; // Unauthenticated guest attempt
     }
     throw new ForbiddenError('Unauthorized: You do not have access to view this assessment result.');
   }

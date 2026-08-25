@@ -5,40 +5,43 @@ import type { DynamicSiteConfig } from '@/types/config';
  * These values serve as initial defaults and can be updated at runtime via the Admin Panel & D1 database.
  */
 export const DEFAULT_DYNAMIC_CONFIG: DynamicSiteConfig = {
-  siteName: 'MindMetrics',
-  siteTagline: 'Scientifically grounded self-assessments for clarity, growth, and self-discovery.',
+  siteName: 'Psychology Calculator',
+  siteTagline: 'Psychology tests that turn your answers into useful insights.',
   siteDescription: 'Explore comprehensive personality, emotional intelligence, and relationship assessments designed with psychological rigor.',
   primaryCtaText: 'Explore Assessments',
-  primaryCtaLink: '#assessments',
-  disclaimerText: 'MindMetrics self-assessments are provided for educational and self-exploration purposes only. They are not intended as diagnostic tools or clinical psychological evaluations.',
-  contactEmail: 'support@mindmetrics.io',
+  primaryCtaLink: '/assessments',
+  disclaimerText: 'PsychologyCalculator.com self-assessments are provided for educational and self-exploration purposes only. They are not intended as diagnostic tools or clinical psychological evaluations.',
+  contactEmail: 'support@psychologycalculator.com',
   headerNavigation: [
-    { label: 'Assessments', href: '/#assessments' },
+    { label: 'Assessments', href: '/assessments' },
     { label: 'How It Works', href: '/#how-it-works' },
-    { label: 'About', href: '/#about' },
-    { label: 'Admin', href: '/admin' }
+    { label: 'Credits & Pricing', href: '/pricing' },
+    { label: 'About', href: '/about' }
   ],
   footerSections: [
     {
-      title: 'Platform',
+      title: 'Assessments',
       links: [
-        { label: 'All Assessments', href: '/#assessments' },
-        { label: 'Methodology', href: '/#methodology' },
-        { label: 'Pricing', href: '/#pricing' }
+        { label: 'All Assessments', href: '/assessments' },
+        { label: 'Personality Tests', href: '/assessments/category/personality' },
+        { label: 'Relationship Tests', href: '/assessments/category/relationships' },
+        { label: 'Emotional Intelligence', href: '/assessments/category/emotional-intelligence' },
+        { label: 'Credits & Pricing', href: '/pricing' }
       ]
     },
     {
       title: 'Company',
       links: [
-        { label: 'About Us', href: '/#about' },
-        { label: 'Contact', href: 'mailto:support@mindmetrics.io' }
+        { label: 'About Us', href: '/about' },
+        { label: 'How It Works', href: '/#how-it-works' },
+        { label: 'Contact', href: 'mailto:support@psychologycalculator.com' }
       ]
     },
     {
       title: 'Legal & Ethics',
       links: [
-        { label: 'Privacy Policy', href: '/privacy' },
-        { label: 'Terms of Service', href: '/terms' },
+        { label: 'Privacy Policy', href: '/privacy-policy' },
+        { label: 'Terms of Service', href: '/terms-of-service' },
         { label: 'Psychological Disclaimer', href: '/disclaimer' }
       ]
     }

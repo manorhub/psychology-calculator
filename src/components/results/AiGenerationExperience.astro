@@ -1,0 +1,381 @@
+---
+interface Props {
+  attemptId: string;
+  assessmentName: string;
+}
+
+const { attemptId, assessmentName } = Astro.props;
+---
+
+<!-- AI Report Generation Experience Overlay Modal -->
+<div
+  id="ai-generation-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="ai-gen-title"
+  aria-describedby="ai-gen-desc"
+>
+  <div
+    id="ai-generation-card"
+    class="relative w-full max-w-xl bg-slate-900 text-white rounded-3xl border border-indigo-500/30 shadow-2xl overflow-hidden p-6 sm:p-10 transform scale-95 transition-all duration-300 space-y-6 sm:space-y-8"
+  >
+    <!-- Ambient Background Glows -->
+    <div class="absolute -top-24 -right-24 w-72 h-72 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-teal-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Active Generation State Container -->
+    <div id="ai-gen-active-state" class="relative z-10 space-y-6 sm:space-y-8">
+      <!-- Top Brand Tag & Expected Wait -->
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-950/80 border border-indigo-700/50 rounded-full text-[11px] font-bold text-indigo-300 tracking-wide uppercase">
+          <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+          <span>Psychometric Synthesis Engine</span>
+        </div>
+        <div id="ai-gen-counter" class="text-xs font-semibold text-indigo-200">
+          Stage <span id="ai-stage-num">1</span> of 6
+        </div>
+      </div>
+
+      <!-- Center Dynamic Visual & Copy -->
+      <div class="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+        <!-- Original Psychology Calculator Analysis Orb -->
+        <div class="relative flex-shrink-0 w-24 h-24 flex items-center justify-center" aria-hidden="true">
+          <div class="ai-orbit-outer absolute inset-0 rounded-full border border-indigo-400/30"></div>
+          <div class="ai-orbit-mid absolute inset-2 rounded-full border border-dashed border-teal-400/50"></div>
+          <div class="ai-core-glow absolute inset-4 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-teal-400 opacity-90 shadow-lg shadow-indigo-500/40 flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="space-y-1.5 flex-1">
+          <h2 id="ai-gen-title" class="text-lg sm:text-xl font-black text-white tracking-tight leading-snug">
+            Synthesizing Your Report
+          </h2>
+          <p id="ai-gen-desc" class="text-xs text-indigo-200/90 leading-relaxed">
+            Your results are more than a score. We are turning your assessment on <strong class="text-white font-semibold">{assessmentName}</strong> into a personalized psychological dossier.
+          </p>
+        </div>
+      </div>
+
+      <!-- Stage Checklist with Accessibility ARIA-live -->
+      <div class="bg-slate-950/60 rounded-2xl border border-slate-800 p-4 sm:p-5 space-y-3.5" aria-live="polite" id="ai-stages-container">
+        <!-- Stage 1 -->
+        <div class="ai-stage-item flex items-start gap-3 text-xs" data-stage="1">
+          <div class="ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-indigo-600 text-white shadow-md shadow-indigo-500/50 text-xs animate-pulse">
+            <span class="ai-icon-content">●</span>
+          </div>
+          <div class="flex-1 space-y-0.5">
+            <div class="ai-stage-title font-bold text-white transition-colors duration-300">Understanding your assessment</div>
+            <div class="ai-stage-sub text-[11px] text-indigo-300 font-medium transition-colors duration-300">Reviewing your responses and foundational psychometric baseline...</div>
+          </div>
+        </div>
+
+        <!-- Stage 2 -->
+        <div class="ai-stage-item flex items-start gap-3 text-xs" data-stage="2">
+          <div class="ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-slate-800 text-slate-500 border border-slate-700 text-xs">
+            <span class="ai-icon-content">2</span>
+          </div>
+          <div class="flex-1 space-y-0.5">
+            <div class="ai-stage-title font-normal text-slate-500 transition-colors duration-300">Analyzing your profile</div>
+            <div class="ai-stage-sub text-[11px] text-slate-600 transition-colors duration-300">Evaluating dimensional distributions and scoring weights...</div>
+          </div>
+        </div>
+
+        <!-- Stage 3 -->
+        <div class="ai-stage-item flex items-start gap-3 text-xs" data-stage="3">
+          <div class="ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-slate-800 text-slate-500 border border-slate-700 text-xs">
+            <span class="ai-icon-content">3</span>
+          </div>
+          <div class="flex-1 space-y-0.5">
+            <div class="ai-stage-title font-normal text-slate-500 transition-colors duration-300">Connecting your patterns</div>
+            <div class="ai-stage-sub text-[11px] text-slate-600 transition-colors duration-300">Discovering trait synergies, tensions, and situational dynamics...</div>
+          </div>
+        </div>
+
+        <!-- Stage 4 -->
+        <div class="ai-stage-item flex items-start gap-3 text-xs" data-stage="4">
+          <div class="ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-slate-800 text-slate-500 border border-slate-700 text-xs">
+            <span class="ai-icon-content">4</span>
+          </div>
+          <div class="flex-1 space-y-0.5">
+            <div class="ai-stage-title font-normal text-slate-500 transition-colors duration-300">Writing personalized insights</div>
+            <div class="ai-stage-sub text-[11px] text-slate-600 transition-colors duration-300">Synthesizing executive narrative, relational habits, and work style...</div>
+          </div>
+        </div>
+
+        <!-- Stage 5 -->
+        <div class="ai-stage-item flex items-start gap-3 text-xs" data-stage="5">
+          <div class="ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-slate-800 text-slate-500 border border-slate-700 text-xs">
+            <span class="ai-icon-content">5</span>
+          </div>
+          <div class="flex-1 space-y-0.5">
+            <div class="ai-stage-title font-normal text-slate-500 transition-colors duration-300">Creating recommendations</div>
+            <div class="ai-stage-sub text-[11px] text-slate-600 transition-colors duration-300">Structuring your actionable 30-day personal development plan...</div>
+          </div>
+        </div>
+
+        <!-- Stage 6 -->
+        <div class="ai-stage-item flex items-start gap-3 text-xs" data-stage="6">
+          <div class="ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-slate-800 text-slate-500 border border-slate-700 text-xs">
+            <span class="ai-icon-content">6</span>
+          </div>
+          <div class="flex-1 space-y-0.5">
+            <div class="ai-stage-title font-normal text-slate-500 transition-colors duration-300">Preparing your report</div>
+            <div class="ai-stage-sub text-[11px] text-slate-600 transition-colors duration-300">Finalizing dossier layout, typography, and profile visualization...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reassurance Footer -->
+      <div class="flex items-center justify-between text-[11px] text-indigo-300/80 pt-1">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+          <span>Your personalized report is being prepared. This usually takes less than a minute.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success State Container (Hidden initially) -->
+    <div id="ai-gen-success-state" class="relative z-10 hidden text-center space-y-6 py-4">
+      <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full mx-auto flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/20 animate-bounce">
+        ✓
+      </div>
+
+      <div class="space-y-2">
+        <h3 class="text-2xl font-black text-white tracking-tight">
+          Your Personalized Report is Ready!
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+          Your multi-page psychometric narrative dossier for <strong class="text-white font-semibold">{assessmentName}</strong> has been generated and securely saved to your account.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        <a
+          id="ai-view-report-btn"
+          href="#"
+          class="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-black rounded-2xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+        >
+          <span>View My Report</span>
+          <span>→</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Error State Container (Hidden initially) -->
+    <div id="ai-gen-error-state" class="relative z-10 hidden text-center space-y-6 py-4">
+      <div class="w-16 h-16 bg-rose-500/20 text-rose-400 border border-rose-500/40 rounded-full mx-auto flex items-center justify-center text-2xl shadow-lg shadow-rose-500/20">
+        ⚠️
+      </div>
+
+      <div class="space-y-2">
+        <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+          We could not finish your report right now.
+        </h3>
+        <p id="ai-gen-error-msg" class="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+          Do not worry — your assessment answers and scores are completely safe. No credits were lost.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        <button
+          type="button"
+          id="ai-retry-btn"
+          class="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+        >
+          <span>Try Again 🔄</span>
+        </button>
+        <button
+          type="button"
+          id="ai-close-modal-btn"
+          class="w-full sm:w-auto px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-2xl transition-all cursor-pointer"
+        >
+          <span>Return to Results</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes aiOrbit {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes aiPulse {
+    0%, 100% { transform: scale(0.96); opacity: 0.85; }
+    50% { transform: scale(1.04); opacity: 1; }
+  }
+
+  .ai-orbit-outer { animation: aiPulse 3s ease-in-out infinite; }
+  .ai-orbit-mid { animation: aiOrbit 12s linear infinite; }
+  .ai-core-glow { animation: aiPulse 2.4s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ai-orbit-outer, .ai-orbit-mid, .ai-core-glow, .animate-bounce, .animate-pulse {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+</style>
+
+<script is:inline define:vars={{ attemptId }}>
+  let isGenerating = false;
+  let currentStage = 1;
+  let stageInterval = null;
+  let generationCompleted = false;
+
+  const modal = document.getElementById('ai-generation-modal');
+  const card = document.getElementById('ai-generation-card');
+  const activeState = document.getElementById('ai-gen-active-state');
+  const successState = document.getElementById('ai-gen-success-state');
+  const errorState = document.getElementById('ai-gen-error-state');
+  const errorMsg = document.getElementById('ai-gen-error-msg');
+  const stageNumEl = document.getElementById('ai-stage-num');
+  const viewReportBtn = document.getElementById('ai-view-report-btn');
+  const retryBtn = document.getElementById('ai-retry-btn');
+  const closeModalBtn = document.getElementById('ai-close-modal-btn');
+
+  function openGenerationModal() {
+    modal?.classList.remove('opacity-0', 'pointer-events-none');
+    modal?.classList.add('opacity-100', 'pointer-events-auto');
+    card?.classList.remove('scale-95');
+    card?.classList.add('scale-100');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeGenerationModal() {
+    modal?.classList.remove('opacity-100', 'pointer-events-auto');
+    modal?.classList.add('opacity-0', 'pointer-events-none');
+    card?.classList.remove('scale-100');
+    card?.classList.add('scale-95');
+    document.body.style.overflow = '';
+    if (stageInterval) clearInterval(stageInterval);
+  }
+
+  function setStage(stage) {
+    currentStage = stage;
+    if (stageNumEl) stageNumEl.innerText = String(Math.min(stage, 6));
+
+    const stageItems = document.querySelectorAll('.ai-stage-item');
+    stageItems.forEach((el) => {
+      const s = parseInt(el.getAttribute('data-stage') || '1', 10);
+      const icon = el.querySelector('.ai-stage-icon');
+      const iconContent = el.querySelector('.ai-icon-content');
+      const title = el.querySelector('.ai-stage-title');
+      const sub = el.querySelector('.ai-stage-sub');
+
+      if (!icon || !title || !sub || !iconContent) return;
+
+      if (s < stage) {
+        icon.className = 'ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs';
+        iconContent.innerText = '✓';
+        title.className = 'ai-stage-title font-semibold text-slate-200';
+        sub.className = 'ai-stage-sub text-[11px] text-slate-400';
+      } else if (s === stage) {
+        icon.className = 'ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-indigo-600 text-white shadow-md shadow-indigo-500/50 text-xs animate-pulse';
+        iconContent.innerText = '●';
+        title.className = 'ai-stage-title font-bold text-white';
+        sub.className = 'ai-stage-sub text-[11px] text-indigo-300 font-medium';
+      } else {
+        icon.className = 'ai-stage-icon w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 bg-slate-800 text-slate-500 border border-slate-700 text-xs';
+        iconContent.innerText = String(s);
+        title.className = 'ai-stage-title font-normal text-slate-500';
+        sub.className = 'ai-stage-sub text-[11px] text-slate-600';
+      }
+    });
+  }
+
+  function startStageProgression() {
+    setStage(1);
+    let stage = 1;
+    stageInterval = setInterval(() => {
+      if (generationCompleted) return;
+      if (stage < 6) {
+        stage += 1;
+        setStage(stage);
+      }
+    }, 2000);
+  }
+
+  async function executeAiGeneration() {
+    if (isGenerating) return;
+    isGenerating = true;
+    generationCompleted = false;
+
+    activeState?.classList.remove('hidden');
+    successState?.classList.add('hidden');
+    errorState?.classList.add('hidden');
+
+    openGenerationModal();
+    startStageProgression();
+
+    try {
+      const res = await fetch('/api/v1/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId })
+      });
+      const data = await res.json();
+
+      generationCompleted = true;
+      if (stageInterval) clearInterval(stageInterval);
+
+      if (data.success && data.data?.reportId) {
+        setStage(7);
+        const reportUrl = `/reports/${data.data.reportId}`;
+        if (viewReportBtn) viewReportBtn.href = reportUrl;
+        activeState?.classList.add('hidden');
+        successState?.classList.remove('hidden');
+        setTimeout(() => {
+          window.location.href = reportUrl;
+        }, 1100);
+      } else {
+        handleGenerationError(res.status, data.error);
+      }
+    } catch (err) {
+      generationCompleted = true;
+      if (stageInterval) clearInterval(stageInterval);
+      handleGenerationError(500, { message: 'Network connection issue. Please check your connection and try again.' });
+    } finally {
+      isGenerating = false;
+    }
+  }
+
+  function handleGenerationError(status, error) {
+    if (status === 401 || error?.code === 'UNAUTHORIZED') {
+      closeGenerationModal();
+      const authModal = document.getElementById('auth-required-modal');
+      authModal?.classList.remove('hidden');
+      return;
+    }
+
+    if (status === 403 && error?.message?.includes('Insufficient credits')) {
+      closeGenerationModal();
+      if (confirm(error.message + '\n\nWould you like to get more credits or upgrade to Pro?')) {
+        window.location.href = '/pricing';
+      }
+      return;
+    }
+
+    activeState?.classList.add('hidden');
+    errorState?.classList.remove('hidden');
+    if (errorMsg && error?.message) {
+      errorMsg.innerText = error.message;
+    }
+  }
+
+  retryBtn?.addEventListener('click', () => {
+    executeAiGeneration();
+  });
+
+  closeModalBtn?.addEventListener('click', () => {
+    closeGenerationModal();
+  });
+
+  window.triggerAiReportGeneration = executeAiGeneration;
+</script>

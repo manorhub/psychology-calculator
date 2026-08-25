@@ -1,29 +1,5 @@
 ---
-import PublicLayout from '@/layouts/PublicLayout.astro';
-import Card from '@/components/ui/Card.astro';
-import { ContentService } from '@/services/content.service';
-import { getD1Database } from '@/lib/db/client';
+export const prerender = false;
 
-const env = Astro.locals.runtime?.env;
-const db = getD1Database(env);
-const contentService = new ContentService(db);
-const page = await contentService.getPageBySlug('privacy');
+return Astro.redirect('/privacy-policy', 301);
 ---
-
-<PublicLayout title={page?.seo_title || page?.title || "Privacy Policy"}>
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-    <Card title={page?.title || "Privacy Policy"} subtitle="Last updated: Dynamic D1 Foundation">
-      <div class="prose prose-slate max-w-none space-y-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-        {page?.content || (
-          `At MindMetrics, we take psychological data privacy and user anonymity with the highest degree of seriousness.
-
-1. Information Collection
-Our platform does not sell assessment responses to third parties or advertising networks. Assessment responses are stored securely in encrypted Cloudflare D1 storage.
-
-2. AI Generation Privacy
-When optional AI report interpretations are generated, no personally identifiable information (PII) is transmitted to third-party LLM providers.`
-        )}
-      </div>
-    </Card>
-  </div>
-</PublicLayout>

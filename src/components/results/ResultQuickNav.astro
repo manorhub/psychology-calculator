@@ -1,0 +1,106 @@
+---
+interface Props {
+  hasDimensions?: boolean;
+  hasStrengths?: boolean;
+  hasGrowth?: boolean;
+  hasContexts?: boolean;
+  hasReflection?: boolean;
+  hasAiReport?: boolean;
+}
+
+const {
+  hasDimensions = true,
+  hasStrengths = true,
+  hasGrowth = true,
+  hasContexts = true,
+  hasReflection = true,
+  hasAiReport = true
+} = Astro.props;
+---
+
+<nav
+  aria-label="Result Sections Navigation"
+  class="sticky top-16 z-30 bg-white/90 backdrop-blur-md border-y border-slate-200 shadow-2xs py-2.5 px-4 sm:px-6 -mx-4 sm:-mx-6 transition-all no-print"
+>
+  <div class="max-w-4xl mx-auto flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-0.5">
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+      <a
+        href="#overview"
+        class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-teal-900 hover:bg-teal-50 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+      >
+        <span>📌</span>
+        <span>Overview</span>
+      </a>
+
+      {hasDimensions && (
+        <a
+          href="#dimensions"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-teal-900 hover:bg-teal-50 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <span>📊</span>
+          <span>Dimensions</span>
+        </a>
+      )}
+
+      {hasStrengths && (
+        <a
+          href="#strengths"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-teal-900 hover:bg-teal-50 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <span>💡</span>
+          <span>Strengths</span>
+        </a>
+      )}
+
+      {hasGrowth && (
+        <a
+          href="#growth"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-teal-900 hover:bg-teal-50 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <span>🌱</span>
+          <span>Growth Areas</span>
+        </a>
+      )}
+
+      {hasContexts && (
+        <a
+          href="#contexts"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-teal-900 hover:bg-teal-50 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <span>💼</span>
+          <span>In Real Life</span>
+        </a>
+      )}
+
+      {hasReflection && (
+        <a
+          href="#reflection"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-teal-900 hover:bg-teal-50 transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+        >
+          <span>🧠</span>
+          <span>Reflection</span>
+        </a>
+      )}
+    </div>
+
+    {hasAiReport && (
+      <a
+        href="#ai-report"
+        class="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-2xs hover:shadow-sm hover:from-indigo-500 hover:to-indigo-600 transition-all flex items-center gap-1.5"
+      >
+        <span>✨</span>
+        <span>AI Deep Dive</span>
+      </a>
+    )}
+  </div>
+</nav>
+
+<style>
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+</style>

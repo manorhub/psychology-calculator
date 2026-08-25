@@ -162,6 +162,28 @@ async function runAIEngineTests() {
   assert.strictEqual(validated.practical_suggestions.length, 2);
   console.log('✔ Valid structured JSON parsed and sanitized successfully');
 
+  // Test JSON with JavaScript single-line and multi-line comments and trailing commas
+  const jsonWithComments = `
+    // Leading comment
+    {
+      "summary": "Evaluation with comments and trailing commas.",
+      /* multi-line comment */
+      "key_traits": ["Trait A", "Trait B",],
+      // another comment
+      "strengths": ["Strength A",],
+    }
+  `;
+  const parsedWithComments = AIValidator.validateAndSanitize(jsonWithComments);
+  assert.strictEqual(parsedWithComments.key_traits.length, 2);
+  assert.strictEqual(parsedWithComments.strengths.length, 1);
+  console.log('✔ JSON with JS comments and trailing commas automatically repaired and parsed');
+
+  // Test truncated JSON cut off at the end
+  const truncatedJson = '{"summary": "A truncated evaluation that stopped abruptly", "key_traits": ["Trait 1", "Trait 2"';
+  const parsedTruncated = AIValidator.validateAndSanitize(truncatedJson);
+  assert.strictEqual(parsedTruncated.key_traits.length, 2);
+  console.log('✔ Truncated JSON successfully auto-completed and parsed');
+
   // Test malformed JSON
   assert.throws(
     () => {
@@ -173,7 +195,17 @@ async function runAIEngineTests() {
   console.log('✔ Malformed AI output caught by schema validator');
 
   console.log('\n--- 5. Testing Report Security & Authorization ---');
-  // Foreign user attempting to access report must fail
+  // Unauthenticated guest blocked from generating AI reports
+  await assert.rejects(
+    async () => {
+      await aiService.generateReportForAttempt(attempt.id, null, 'guest_session_1');
+    },
+    /Authentication required/,
+    'Blocked guest from generating AI report without login/credits'
+  );
+  console.log('✔ Unauthenticated guest strictly blocked from generating AI report without login/credits');
+
+  // Unauthorized user blocked from accessing another user's report
   sqlite.exec("INSERT OR IGNORE INTO users (id, email, role, status) VALUES ('usr_intruder', 'intruder@evil.com', 'user', 'active')");
   await assert.rejects(
     async () => {

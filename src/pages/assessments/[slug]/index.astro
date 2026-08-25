@@ -1,5 +1,5 @@
 ---
-import BaseLayout from '@/layouts/BaseLayout.astro';
+import PublicLayout from '@/layouts/PublicLayout.astro';
 import Card from '@/components/ui/Card.astro';
 import { getD1Database } from '@/lib/db/client';
 import { AssessmentRuntimeService } from '@/services/assessment-runtime.service';
@@ -20,70 +20,173 @@ if (!assessmentData) {
 
 const { assessment, category, dimensions, questions } = assessmentData;
 const user = Astro.locals.user;
+
+function getRichDimensionDescription(name: string, description?: string | null): string {
+  if (description && !description.toLowerCase().startsWith('evaluation dimension:') && description.trim().length > 15) {
+    return description.trim();
+  }
+
+  const normalized = name.toLowerCase().trim();
+  const dict: Record<string, string> = {
+    'openness': 'Explores intellectual curiosity, creative imagination, openness to novel ideas, and aesthetic sensitivity.',
+    'openness to experience': 'Explores intellectual curiosity, creative imagination, openness to novel ideas, and aesthetic sensitivity.',
+    'conscientiousness': 'Measures deliberate goal-directed execution, self-discipline, organization, and methodical reliability.',
+    'extraversion': 'Assesses energy derived from social interactions, assertiveness, enthusiasm, and outward engagement.',
+    'agreeableness': 'Evaluates empathy, prosocial cooperativeness, interpersonal trust, and compassionate communication.',
+    'emotional stability': 'Reflects emotional resilience under acute pressure, calmness, and balanced nervous system regulation.',
+    'neuroticism': 'Explores sensitivity to environmental stress, emotional volatility, and nervous system reactivity.',
+    'anger frequency': 'Measures how often irritation, frustration, or impatience tends to arise in everyday situations.',
+    'anger intensity': 'Evaluates the visceral strength, physical arousal, and emotional magnitude of anger when experienced.',
+    'anger duration': 'Assesses how long emotional tension or resentment tends to linger after an upsetting encounter.',
+    'anger expression': 'Examines outward communication habits, verbal reactivity, and visible displays of anger.',
+    'anger regulation': 'Measures the intentional ability to pause, calm thoughts, and choose constructive responses.',
+    'imagination': 'Measures the richness of your inner mental world, daydreaming, and creative mental simulations.',
+    'aesthetic appreciation': 'Evaluates sensitivity to art, natural beauty, music, poetry, and evocative aesthetic experiences.',
+    'emotional awareness': 'Assesses how clearly you perceive, distinguish, and acknowledge complex internal emotional states.',
+    'adventurousness': 'Measures willingness to explore unfamiliar environments, try new activities, and break repetitive routines.',
+    'intellectual curiosity': 'Evaluates appetite for deep conceptual thinking, philosophical debate, and novel problem solving.',
+    'secure attachment': 'Measures comfort with emotional intimacy, vulnerability, and balanced interpersonal autonomy.',
+    'anxious attachment': 'Assesses high need for reassurance combined with worry regarding relational closeness.',
+    'avoidant attachment': 'Evaluates self-reliant emotional defenses that favor distance over deep vulnerability.',
+    'fearful-avoidant': 'Examines simultaneous desire for close connection combined with acute fear of being hurt.',
+    'words of affirmation': 'Measures responsiveness to verbal appreciation, compliments, and encouraging words.',
+    'quality time': 'Assesses emotional fulfillment derived from focused, undivided attention and shared experiences.',
+    'receiving gifts': 'Evaluates appreciation for thoughtful physical tokens and visual symbols of love.',
+    'acts of service': 'Measures value placed on helpful, practical actions that ease daily responsibilities.',
+    'physical touch': 'Assesses emotional security and connection fostered through comforting physical closeness.'
+  };
+
+  return dict[normalized] || description || 'Explores specific behavioral tendencies, emotional patterns, and cognitive dispositions.';
+}
+
+const siteUrl = 'https://www.psychologycalculator.com';
+const currentUrl = `${siteUrl}/assessments/${assessment.slug}`;
+
+const assessmentFaqs = [
+  {
+    q: `How long does the ${assessment.name} take?`,
+    a: `This assessment contains approximately ${questions.length || assessment.question_count || 10} validated items and typically takes around ${assessment.estimated_minutes || 6} minutes to complete at a natural pace.`
+  },
+  {
+    q: `Is the ${assessment.name} free to take?`,
+    a: `Yes. You can take this assessment as a guest with no registration required. You will receive an immediate score breakdown across all ${dimensions.length} evaluated dimensions at no cost.`
+  },
+  {
+    q: `Are my responses and results confidential?`,
+    a: `Yes. Your privacy is protected. Guest sessions do not store identifying personal details, and responses are processed solely to compute your personal score breakdown.`
+  },
+  {
+    q: `Is this assessment a medical or clinical diagnosis?`,
+    a: `No. Assessments on PsychologyCalculator.com are provided strictly for educational, self-reflection, and personal exploration purposes. They do not substitute for professional medical or psychological diagnosis.`
+  }
+];
+
+const webPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: `${assessment.name} | PsychologyCalculator.com`,
+  description: assessment.short_description,
+  url: currentUrl,
+  isPartOf: {
+    '@type': 'WebSite',
+    name: 'Psychology Calculator',
+    url: siteUrl
+  }
+};
+
+const breadcrumbsSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteUrl}/` },
+    { '@type': 'ListItem', position: 2, name: 'Assessments', item: `${siteUrl}/assessments` },
+    { '@type': 'ListItem', position: 3, name: assessment.name, item: currentUrl }
+  ]
+};
+
+const faqPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: assessmentFaqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.a
+    }
+  }))
+};
 ---
 
-<BaseLayout
+<PublicLayout
   title={assessment.name}
   description={assessment.short_description}
 >
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(webPageSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(breadcrumbsSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(faqPageSchema)} />
+  </Fragment>
+
   <div class="max-w-4xl mx-auto py-10 sm:py-16 px-4 sm:px-6 space-y-10">
     <!-- Breadcrumb & Back Actions -->
     <div class="flex flex-wrap items-center justify-between gap-3">
       <nav class="flex items-center gap-2 text-xs text-slate-500">
-        <a href="/" class="hover:text-teal-700">Home</a>
+        <a href="/" class="hover:text-teal-700 font-medium">Home</a>
         <span>/</span>
-        <a href="/assessments" class="hover:text-teal-700">Assessments</a>
+        <a href="/assessments" class="hover:text-teal-700 font-medium">Assessments</a>
         <span>/</span>
         <span class="text-slate-900 font-semibold truncate max-w-[180px] sm:max-w-xs">{assessment.name}</span>
       </nav>
 
-      {user && (
-        <a
-          href="/dashboard"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-teal-800 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition-all"
-        >
-          <span>📊</span>
-          <span>Back to Dashboard</span>
-        </a>
-      )}
+      <a
+        href="/assessments"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
+      >
+        <span>←</span>
+        <span>Back to Assessments</span>
+      </a>
     </div>
 
     <!-- Assessment Hero Card -->
-    <div class="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-10 shadow-sm space-y-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
-          {category?.name || 'Self-Assessment'}
+    <div class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-2xs space-y-6 sm:space-y-8">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="px-3 py-1 bg-teal-50 text-teal-800 text-xs font-bold rounded-full border border-teal-200/60">
+          {category ? category.name : 'Psychology Assessment'}
         </span>
-
-        <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-          assessment.access_type === 'premium' ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-700'
-        }`}>
-          {assessment.access_type === 'premium' ? '✨ Premium Instrument' : '✓ Free Self-Assessment'}
+        <span class="text-xs font-semibold text-slate-500 flex items-center gap-1">
+          <span>✓</span> Free Self-Assessment
         </span>
       </div>
 
       <div class="space-y-3">
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+        <h1 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
           {assessment.name}
         </h1>
-        <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        <p class="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
           {assessment.short_description}
         </p>
       </div>
 
-      <!-- Quick Metrics Bar -->
-      <div class="grid grid-cols-3 gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-center">
+      <!-- Quick Metrics Strip -->
+      <div class="grid grid-cols-3 gap-3 p-4 bg-slate-50/80 rounded-2xl border border-slate-100 text-center">
         <div>
-          <div class="text-lg sm:text-2xl font-black text-slate-900">~{assessment.estimated_minutes} min</div>
-          <div class="text-[11px] text-slate-500 font-medium">Estimated Time</div>
+          <div class="text-base sm:text-lg font-bold text-slate-900 font-mono">
+            ~{assessment.estimated_minutes || 6} min
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">Estimated Time</div>
+        </div>
+        <div class="border-x border-slate-200/60">
+          <div class="text-base sm:text-lg font-bold text-slate-900 font-mono">
+            {questions.length || assessment.question_count || 10}
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">Validated Items</div>
         </div>
         <div>
-          <div class="text-lg sm:text-2xl font-black text-slate-900">{questions.length}</div>
-          <div class="text-[11px] text-slate-500 font-medium">Validated Items</div>
-        </div>
-        <div>
-          <div class="text-lg sm:text-2xl font-black text-slate-900">{dimensions.length}</div>
-          <div class="text-[11px] text-slate-500 font-medium">Dimensions</div>
+          <div class="text-base sm:text-lg font-bold text-slate-900 font-mono">
+            {dimensions.length}
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">Dimensions</div>
         </div>
       </div>
 
@@ -110,19 +213,54 @@ const user = Astro.locals.user;
     <!-- Evaluated Dimensions Section -->
     {dimensions.length > 0 && (
       <div class="space-y-4">
-        <h2 class="text-xl font-bold text-slate-900">What This Assessment Measures</h2>
+        <div class="space-y-1">
+          <h2 class="text-xl font-bold text-slate-900">What This Assessment Measures</h2>
+          <p class="text-xs text-slate-500">Explore the underlying psychological dimensions and trait constructs evaluated in this instrument.</p>
+        </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {dimensions.map((dim) => (
-            <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1">
-              <h3 class="text-sm font-bold text-slate-900">{dim.name}</h3>
-              <p class="text-xs text-slate-600 leading-relaxed">
-                {dim.description || 'Evaluates key behavioral and cognitive psychological indicators.'}
-              </p>
+          {dimensions.map((dim, idx) => (
+            <div class="p-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:border-teal-300 hover:shadow-xs transition-all space-y-2.5 group">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
+                  Dimension 0{idx + 1}
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono">Standardized Scale</span>
+              </div>
+              <div class="space-y-1">
+                <h3 class="text-sm font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                  {dim.name}
+                </h3>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  {getRichDimensionDescription(dim.name, dim.description)}
+                </p>
+              </div>
             </div>
           ))}
         </div>
       </div>
     )}
+
+    <!-- Frequently Asked Questions -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs space-y-6">
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
+        <p class="text-xs text-slate-500">Key information about the {assessment.name} methodology and score reporting.</p>
+      </div>
+
+      <div class="space-y-4 divide-y divide-slate-100">
+        {assessmentFaqs.map((faq, i) => (
+          <div class={i === 0 ? "space-y-2" : "pt-4 space-y-2"}>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600 font-mono text-xs">Q:</span>
+              <span>{faq.q}</span>
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed pl-5">
+              {faq.a}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
 
     <!-- Instructions & Overview -->
     <div class="space-y-6">
@@ -149,7 +287,7 @@ const user = Astro.locals.user;
       )}
     </div>
   </div>
-</BaseLayout>
+</PublicLayout>
 
 <script is:inline define:vars={{ assessmentId: assessment.id, slug: assessment.slug }}>
   const startBtn = document.getElementById('start-assessment-btn');
@@ -158,27 +296,28 @@ const user = Astro.locals.user;
     startBtn.setAttribute('disabled', 'true');
     startBtn.textContent = 'Preparing assessment...';
 
+    const guestSession = sessionStorage.getItem('guest_session_id') || '';
+
     try {
       const res = await fetch(`/api/v1/assessments/${assessmentId}/start`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'x-guest-session': guestSession
+        }
       });
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
-        alert(data.error?.message || 'Unable to start assessment.');
-        startBtn.removeAttribute('disabled');
-        startBtn.textContent = 'Begin Assessment →';
-        return;
+      if (res.ok && data.success && data.data?.attemptId) {
+        sessionStorage.setItem('active_attempt_id', data.data.attemptId);
+        window.location.href = `/assessments/${slug}/take?attemptId=${data.data.attemptId}`;
+      } else {
+        // Direct navigation to runner which initializes server-side seamlessly
+        window.location.href = `/assessments/${slug}/take`;
       }
-
-      // Store active attempt ID in session storage and redirect to runner
-      sessionStorage.setItem('active_attempt_id', data.data.attemptId);
-      window.location.href = `/assessments/${slug}/take?attemptId=${data.data.attemptId}`;
     } catch {
-      alert('A network error occurred. Please try again.');
-      startBtn.removeAttribute('disabled');
-      startBtn.textContent = 'Begin Assessment →';
+      // Direct navigation to runner which initializes server-side seamlessly
+      window.location.href = `/assessments/${slug}/take`;
     }
   });
 </script>

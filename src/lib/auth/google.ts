@@ -69,21 +69,43 @@ export class GoogleOAuthClient {
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
         logger.error('Google token exchange failed', { status: tokenResponse.status, errorText });
-        throw new Error('Failed to exchange Google authorization code');
+        throw new Error(`Failed to exchange Google authorization code: ${errorText}`);
       }
 
       const tokenData = (await tokenResponse.json()) as { access_token: string; id_token: string };
 
-      // 2. Fetch UserInfo
+      // 2. Fetch UserInfo from OpenID Connect endpoint
       const userInfoResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
         headers: { Authorization: `Bearer ${tokenData.access_token}` }
       });
 
       if (!userInfoResponse.ok) {
-        throw new Error('Failed to fetch Google user profile');
+        const errBody = await userInfoResponse.text();
+        logger.error('Failed to fetch Google user profile', { status: userInfoResponse.status, errBody });
+        throw new Error(`Failed to fetch Google user profile: ${errBody}`);
       }
 
-      const userInfo = (await userInfoResponse.json()) as GoogleUserInfo;
+      const raw = (await userInfoResponse.json()) as any;
+      const id = raw.sub || raw.id || '';
+      const email = raw.email || '';
+      const name = raw.name || raw.given_name || (email ? email.split('@')[0] : 'User');
+      const verified = raw.email_verified === true || raw.verified_email === true;
+
+      if (!id || !email) {
+        throw new Error('Incomplete Google profile returned (missing ID or email)');
+      }
+
+      const userInfo: GoogleUserInfo = {
+        id,
+        email,
+        verified_email: verified,
+        name,
+        given_name: raw.given_name || '',
+        family_name: raw.family_name || '',
+        picture: raw.picture || '',
+        locale: raw.locale || 'en'
+      };
+
       return userInfo;
     } catch (error) {
       logger.error('Google OAuth exchange error', undefined, error instanceof Error ? error : new Error(String(error)));

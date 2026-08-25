@@ -85,8 +85,8 @@ const redirectParam = Astro.url.searchParams.get('redirect') || '';
               class="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
             />
             <label for="terms" class="text-xs text-slate-600 leading-relaxed cursor-pointer">
-              I agree to the <a href="/terms" target="_blank" class="text-teal-700 underline">Terms of Service</a>,{' '}
-              <a href="/privacy" target="_blank" class="text-teal-700 underline">Privacy Policy</a>, and understand the{' '}
+              I agree to the <a href="/terms-of-service" target="_blank" class="text-teal-700 underline">Terms of Service</a>,{' '}
+              <a href="/privacy-policy" target="_blank" class="text-teal-700 underline">Privacy Policy</a>, and understand the{' '}
               <a href="/disclaimer" target="_blank" class="text-teal-700 underline">Psychological Disclaimer</a>.
             </label>
           </div>
@@ -107,7 +107,7 @@ const redirectParam = Astro.url.searchParams.get('redirect') || '';
 
           <!-- Google OAuth Button -->
           <Button
-            href="/auth/google"
+            href={redirectParam ? `/auth/google?redirect=${encodeURIComponent(redirectParam)}` : '/auth/google'}
             variant="outline"
             size="md"
             class="w-full flex items-center justify-center gap-3 text-slate-700 hover:bg-slate-50 border-slate-300"
