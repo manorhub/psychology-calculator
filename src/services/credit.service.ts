@@ -346,6 +346,10 @@ export class CreditService extends BaseService {
 
   // --- Dynamic Credit Packages CRUD ---
 
+  public async getActivePackages(): Promise<CreditPackageRow[]> {
+    return this.getPackages(true);
+  }
+
   public async getPackages(activeOnly = true): Promise<CreditPackageRow[]> {
     if (!this.db) return [];
     if (activeOnly) {

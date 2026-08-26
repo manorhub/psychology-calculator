@@ -91,6 +91,14 @@ export class AssessmentService extends BaseService {
     return this.getAssessments({ status: 'published', featuredOnly: true });
   }
 
+  public async getPublishedAssessments(): Promise<AssessmentWithCategory[]> {
+    return this.getAssessments({ status: 'published' });
+  }
+
+  public async getPublishedAssessmentsByCategory(categoryId: string): Promise<AssessmentWithCategory[]> {
+    return this.getAssessments({ status: 'published', categoryId });
+  }
+
   public async getAssessmentBySlug(slug: string): Promise<AssessmentWithCategory | null> {
     if (!this.db) return null;
     return fetchFirst<AssessmentWithCategory>(
