@@ -58,7 +58,7 @@ const results = await dashboardService.getUserResults(currentUser.id);
                   {res.categoryName}
                 </span>
                 <span class="text-[10px] text-slate-400 font-mono">
-                  {new Date(res.completedAt).toLocaleDateString()}
+                  {res.completedAt ? new Date(res.completedAt).toLocaleDateString() : 'Recent'}
                 </span>
               </div>
 

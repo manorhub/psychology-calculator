@@ -281,7 +281,7 @@ export class AnalyticsService extends BaseService {
         (SELECT COUNT(*) FROM assessment_attempts att WHERE att.assessment_id = a.id AND att.created_at >= ?) as starts,
         (SELECT COUNT(*) FROM assessment_attempts att WHERE att.assessment_id = a.id AND att.status = 'completed' AND att.created_at >= ?) as completions,
         (SELECT COUNT(*) FROM ai_generations ai WHERE ai.assessment_id = a.id AND ai.status = 'completed' AND ai.created_at >= ?) as ai_reports,
-        (SELECT AVG(att.duration_seconds) FROM assessment_attempts att WHERE att.assessment_id = a.id AND att.status = 'completed' AND att.created_at >= ?) as avg_duration
+        (SELECT AVG(CAST((julianday(COALESCE(att.completed_at, att.updated_at)) - julianday(att.started_at)) * 86400 AS INTEGER)) FROM assessment_attempts att WHERE att.assessment_id = a.id AND att.status = 'completed' AND att.created_at >= ?) as avg_duration
        FROM assessments a
        LEFT JOIN assessment_categories c ON a.category_id = c.id
        ${whereClause}

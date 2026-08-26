@@ -249,16 +249,17 @@ export class DashboardService extends BaseService {
          a.assessment_id,
          asm.name as assessment_name,
          asm.slug as assessment_slug,
-         c.name as category_name,
-         a.duration_seconds,
+         COALESCE(c.name, 'Psychology') as category_name,
+         a.started_at,
          a.completed_at,
+         a.created_at,
          rs.snapshot_data
        FROM assessment_attempts a
        JOIN assessments asm ON a.assessment_id = asm.id
        LEFT JOIN assessment_categories c ON asm.category_id = c.id
        LEFT JOIN result_snapshots rs ON a.id = rs.attempt_id
        WHERE a.user_id = ? AND a.status = 'completed'
-       ORDER BY a.completed_at DESC LIMIT ?`,
+       ORDER BY COALESCE(a.completed_at, a.created_at) DESC LIMIT ?`,
       [userId, limit]
     );
 
@@ -268,16 +269,24 @@ export class DashboardService extends BaseService {
         if (r.snapshot_data) snapshotData = JSON.parse(r.snapshot_data);
       } catch {}
 
+      let durationSec = snapshotData.durationSeconds || 0;
+      if (!durationSec && r.started_at && r.completed_at) {
+        try {
+          const diff = Math.round((new Date(r.completed_at).getTime() - new Date(r.started_at).getTime()) / 1000);
+          if (diff > 0) durationSec = diff;
+        } catch {}
+      }
+
       return {
         attemptId: r.attempt_id,
         assessmentId: r.assessment_id,
         assessmentName: r.assessment_name,
         assessmentSlug: r.assessment_slug,
-        categoryName: r.category_name,
+        categoryName: r.category_name || 'Psychology',
         primaryArchetype: snapshotData.primaryResultType?.name || 'Assessed Outcome',
-        normalizedScore: snapshotData.totalNormalizedScore || 0,
-        durationSeconds: r.duration_seconds || 0,
-        completedAt: r.completed_at || r.created_at
+        normalizedScore: Math.round(snapshotData.totalNormalizedScore || 0),
+        durationSeconds: durationSec,
+        completedAt: r.completed_at || r.created_at || new Date().toISOString()
       };
     });
   }
