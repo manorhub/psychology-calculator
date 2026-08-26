@@ -8,10 +8,10 @@ import { getD1Database } from '@/lib/db/client';
 import {
   type SupportedLocale,
   isValidLocale,
-  useTranslations,
   getLocalizedPath,
   normalizeLocale
 } from '@/i18n';
+import { getLandingTranslations } from '@/i18n/landing';
 import { TranslationsService } from '@/i18n/translations.service';
 
 export const prerender = false;
@@ -22,7 +22,7 @@ if (!isValidLocale(lang)) {
 }
 
 const currentLocale = lang as SupportedLocale;
-const { t } = useTranslations(currentLocale);
+const lt = getLandingTranslations(currentLocale);
 
 const env = Astro.locals.runtime?.env;
 const db = getD1Database(env);
@@ -41,6 +41,114 @@ let rawFeaturedAssessments = await assessmentService.getFeaturedAssessments();
 if (rawFeaturedAssessments.length === 0) {
   const allAssessments = await assessmentService.getPublishedAssessments();
   rawFeaturedAssessments = allAssessments.slice(0, 6);
+}
+
+// Fallback seed assessments for safe rendering
+if (rawFeaturedAssessments.length === 0) {
+  rawFeaturedAssessments = [
+    {
+      id: 'asm_big_five',
+      category_id: 'cat_personality',
+      category_name: 'Personality',
+      name: 'Big Five (OCEAN) Personality Test',
+      slug: 'big-five-personality-test',
+      short_description: 'Explore your tendencies across Openness, Conscientiousness, Extraversion, Agreeableness, and Emotional Stability.',
+      estimated_minutes: 6,
+      question_count: 25,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 1,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_openness',
+      category_id: 'cat_personality',
+      category_name: 'Personality',
+      name: 'Openness to Experience Test',
+      slug: 'openness-to-experience-test',
+      short_description: 'Explore how you tend to approach new ideas, imagination, intellectual curiosity, and creative pursuits.',
+      estimated_minutes: 6,
+      question_count: 25,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 2,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_attachment',
+      category_id: 'cat_relationships',
+      category_name: 'Relationships',
+      name: 'Adult Attachment Style Test',
+      slug: 'adult-attachment-style',
+      short_description: 'Reflect on how you relate to closeness, emotional security, communication, and independence in relationships.',
+      estimated_minutes: 6,
+      question_count: 25,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 3,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_eq',
+      category_id: 'cat_eq',
+      category_name: 'Emotional Intelligence',
+      name: 'Emotional Intelligence (EQ) Test',
+      slug: 'emotional-intelligence-eq',
+      short_description: 'Examine your emotional awareness, empathy, self-reflection, and social adaptability in daily life.',
+      estimated_minutes: 6,
+      question_count: 25,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 4,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_career',
+      category_id: 'cat_career',
+      category_name: 'Career & Work',
+      name: 'Workplace Motivation & Style Test',
+      slug: 'work-style-test',
+      short_description: 'Understand what energizes your work, leadership instincts, problem-solving, and professional collaboration.',
+      estimated_minutes: 6,
+      question_count: 25,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 5,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'asm_mindset',
+      category_id: 'cat_mindset',
+      category_name: 'Self-Development',
+      name: 'Resilience & Adaptability Test',
+      slug: 'resilience-test',
+      short_description: 'Gain perspective on how you navigate setbacks, handle uncertainty, and maintain constructive focus under stress.',
+      estimated_minutes: 5,
+      question_count: 20,
+      access_type: 'free',
+      status: 'published',
+      featured: 1,
+      display_order: 6,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
 }
 
 // Localize Categories
@@ -69,128 +177,480 @@ const featuredAssessments = await Promise.all(
   })
 );
 
-// 3. Credit Packages
+// 3. Dynamic Credit Economics
 const creditService = new CreditService(db);
-const creditPackages = await creditService.getActivePackages();
+const reportCost = await creditService.getReportCreditCost();
 
-const categoryColorMap: Record<string, { bg: string; text: string; border: string }> = {
-  personality: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-100' },
-  relationships: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-100' },
-  'emotional-intelligence': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-100' },
-  'self-development': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
-  communication: { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-100' },
-  default: { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-100' }
+// 4. Structured Data Schemas
+const siteUrl = config.siteUrl || 'https://psychologycalculator.com';
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: config.siteName,
+  url: `${siteUrl}/${currentLocale}`,
+  description: lt.hero.subtitle,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${siteUrl}/${currentLocale}/assessments?q={search_term_string}`,
+    'query-input': 'required name=search_term_string'
+  }
+};
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: config.siteName,
+  url: siteUrl,
+  logo: `${siteUrl}/favicon.svg`
+};
+
+const itemListSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: lt.popular.title,
+  itemListElement: featuredAssessments.slice(0, 6).map((asm, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    url: `${siteUrl}/${currentLocale}/assessments/${asm.slug}`,
+    name: asm.name,
+    description: asm.short_description
+  }))
+};
+
+const faqPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: lt.faqs.items.map((faq) => ({
+    '@type': 'Question',
+    name: faq.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.a
+    }
+  }))
 };
 ---
 
 <PublicLayout
-  title={t.hero.title}
-  description={t.hero.subtitle}
+  title={`${lt.hero.title} ${lt.hero.titleHighlight} | PsychologyCalculator.com`}
+  description={lt.hero.subtitle}
   locale={currentLocale}
 >
-  <!-- Hero Section -->
-  <section class="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 bg-gradient-to-b from-teal-50/40 via-white to-slate-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-      <div class="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 text-xs font-semibold shadow-2xs">
-          <span>✨</span>
-          <span>{t.hero.badge}</span>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(faqPageSchema)} />
+  </Fragment>
+
+  <!-- 1. Hero Section -->
+  <section class="relative overflow-hidden bg-gradient-to-b from-slate-50 via-teal-50/20 to-white pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-slate-200/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <!-- Left Hero Copy -->
+        <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 border border-teal-200/80 rounded-full text-teal-800 text-[11px] font-bold tracking-wider uppercase">
+            <span>✦</span>
+            <span>{lt.hero.badge}</span>
+          </div>
+
+          <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12] text-balance">
+            {lt.hero.title} <span class="text-teal-700">{lt.hero.titleHighlight}</span>
+          </h1>
+
+          <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+            {lt.hero.subtitle}
+          </p>
+
+          <div class="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <a
+              href={getLocalizedPath('/assessments/big-five-personality-test', currentLocale)}
+              class="w-full sm:w-auto px-7 py-3.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-extrabold rounded-2xl shadow-md hover:shadow-lg transition-all text-center flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <span>{lt.hero.ctaPrimary}</span>
+              <span class="group-hover:translate-x-0.5 transition-transform">→</span>
+            </a>
+            <a
+              href={getLocalizedPath('/assessments', currentLocale)}
+              class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-2xl text-sm font-bold transition-all text-center cursor-pointer"
+            >
+              {lt.hero.ctaSecondary}
+            </a>
+          </div>
+
+          <!-- Micro-Trust Line -->
+          <div class="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-xs text-slate-500 font-medium">
+            {lt.hero.trustItems.map((item) => (
+              <span class="flex items-center gap-1.5">
+                <span class="text-teal-600 font-bold">✓</span> {item}
+              </span>
+            ))}
+          </div>
         </div>
 
-        <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight">
-          {t.hero.title}
-        </h1>
+        <!-- Right Hero Interactive Visual (Assessment & Dimension Preview) -->
+        <div class="lg:col-span-5 flex justify-center">
+          <div class="relative w-full max-w-md bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-7 space-y-5">
+            <!-- Header of Preview Card -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 block">{lt.hero.preview.tag}</span>
+                <h3 class="text-sm font-black text-slate-900">{lt.hero.preview.title}</h3>
+              </div>
+              <span class="px-2.5 py-1 text-[10px] font-mono font-bold bg-teal-50 text-teal-800 border border-teal-200/60 rounded-full">
+                {lt.hero.preview.alignment}
+              </span>
+            </div>
 
-        <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
-          {t.hero.subtitle}
-        </p>
+            <!-- Active Question Sample -->
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+              <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span>{lt.hero.preview.questionLabel}</span>
+                <span class="text-teal-700">{lt.hero.preview.questionTopic}</span>
+              </div>
+              <p class="text-xs font-semibold text-slate-800 leading-snug">
+                {lt.hero.preview.questionText}
+              </p>
+              <div class="flex gap-1.5 pt-1">
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-teal-500"></span>
+                <span class="h-1.5 flex-1 rounded-full bg-slate-200"></span>
+              </div>
+            </div>
 
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <a
-            href={getLocalizedPath('/assessments', currentLocale)}
-            class="w-full sm:w-auto px-7 py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm rounded-2xl shadow-sm hover:shadow-md transition-all text-center"
-          >
-            {t.hero.ctaPrimary} →
-          </a>
-          <a
-            href={getLocalizedPath('/pricing', currentLocale)}
-            class="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm rounded-2xl border border-slate-200 shadow-2xs transition-all text-center"
-          >
-            {t.hero.ctaSecondary}
-          </a>
-        </div>
+            <!-- Dimensional Breakdown Bars -->
+            <div class="space-y-3 pt-1">
+              <span class="text-[11px] font-bold text-slate-700 block">{lt.hero.preview.breakdownTitle}</span>
+              
+              {lt.hero.preview.dimensions.map((dim) => (
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-medium">
+                    <span class="text-slate-700 font-semibold">{dim.name}</span>
+                    <span class="text-teal-700 font-mono font-bold">{dim.pct}%</span>
+                  </div>
+                  <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style={`width: ${dim.pct}%`}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-        <!-- Metric Badges -->
-        <div class="grid grid-cols-3 gap-2 sm:gap-4 pt-6 max-w-xl mx-auto border-t border-slate-200/60">
-          <div>
-            <div class="text-base sm:text-xl font-bold text-slate-900 font-mono">37+</div>
-            <div class="text-[11px] text-slate-500 font-medium mt-0.5">{t.hero.statAssessments}</div>
-          </div>
-          <div class="border-x border-slate-200/60">
-            <div class="text-base sm:text-xl font-bold text-slate-900 font-mono">250k+</div>
-            <div class="text-[11px] text-slate-500 font-medium mt-0.5">{t.hero.statTakers}</div>
-          </div>
-          <div>
-            <div class="text-base sm:text-xl font-bold text-teal-700 font-mono">100%</div>
-            <div class="text-[11px] text-slate-500 font-medium mt-0.5">{t.hero.statAccuracy}</div>
+            <!-- Footer Badge -->
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span>✓ {lt.hero.preview.freeResult}</span>
+              <a href={getLocalizedPath('/assessments', currentLocale)} class="text-teal-700 font-bold hover:underline">
+                {lt.hero.preview.explorePatterns}
+              </a>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Featured Assessments Grid -->
-  <section class="py-16 sm:py-20 bg-white border-y border-slate-200/80">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div class="space-y-2">
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            {t.common.exploreAssessments}
-          </h2>
-          <p class="text-sm text-slate-600">
-            {t.common.tagline}
+  <!-- 2. Trust / Value Strip -->
+  <section class="py-10 bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> {lt.trustStrip.title1}
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            {lt.trustStrip.desc1}
           </p>
         </div>
 
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> {lt.trustStrip.title2}
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            {lt.trustStrip.desc2}
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> {lt.trustStrip.title3}
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            {lt.trustStrip.desc3}
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <div class="text-xs font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+            <span class="text-teal-600">✦</span> {lt.trustStrip.title4}
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            {lt.trustStrip.desc4}
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Why Use Platform / Approach -->
+  <section id="about" class="py-16 sm:py-24 bg-slate-50/60 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-4 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">{lt.approach.badge}</Badge>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          {lt.approach.title}
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+          {lt.approach.subtitle}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 text-center">
+        {lt.approach.steps.map((step) => (
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
+            <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center mx-auto">{step.num}</div>
+            <h3 class="text-xs font-bold text-slate-900">{step.title}</h3>
+            <p class="text-[11px] text-slate-500">{step.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Assessment Categories Section -->
+  <section id="categories" class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="info" size="sm">{lt.categories.badge}</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          {lt.categories.title}
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600">
+          {lt.categories.subtitle}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Category 1: Personality -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🧠</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                {lt.categories.personality.tag}
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                {lt.categories.personality.title}
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                {lt.categories.personality.desc}
+              </p>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              {lt.categories.personality.tests.map((tItem) => (
+                <li class="flex items-center gap-1.5"><span>•</span> {tItem}</li>
+              ))}
+            </ul>
+          </div>
+          <a
+            href={getLocalizedPath('/assessments/category/personality', currentLocale)}
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>{lt.categories.personality.cta}</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 2: Relationships -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🤝</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                {lt.categories.relationships.tag}
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                {lt.categories.relationships.title}
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                {lt.categories.relationships.desc}
+              </p>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              {lt.categories.relationships.tests.map((tItem) => (
+                <li class="flex items-center gap-1.5"><span>•</span> {tItem}</li>
+              ))}
+            </ul>
+          </div>
+          <a
+            href={getLocalizedPath('/assessments/category/relationships', currentLocale)}
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>{lt.categories.relationships.cta}</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 3: Emotional Intelligence -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🌱</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                {lt.categories.eq.tag}
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                {lt.categories.eq.title}
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                {lt.categories.eq.desc}
+              </p>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              {lt.categories.eq.tests.map((tItem) => (
+                <li class="flex items-center gap-1.5"><span>•</span> {tItem}</li>
+              ))}
+            </ul>
+          </div>
+          <a
+            href={getLocalizedPath('/assessments/category/emotional-intelligence', currentLocale)}
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>{lt.categories.eq.cta}</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 4: Career & Work Style -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">💼</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                {lt.categories.career.tag}
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                {lt.categories.career.title}
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                {lt.categories.career.desc}
+              </p>
+            </div>
+            <ul class="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-200/60">
+              {lt.categories.career.tests.map((tItem) => (
+                <li class="flex items-center gap-1.5"><span>•</span> {tItem}</li>
+              ))}
+            </ul>
+          </div>
+          <a
+            href={getLocalizedPath('/assessments/category/career-work', currentLocale)}
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>{lt.categories.career.cta}</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <!-- Category 5: Self-Development & Resilience -->
+        <div class="p-7 rounded-3xl bg-slate-50/70 border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-6 group md:col-span-2">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🎯</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/60">
+                {lt.categories.growth.tag}
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                {lt.categories.growth.title}
+              </h3>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                {lt.categories.growth.desc}
+              </p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 pt-1 border-t border-slate-200/60">
+              {lt.categories.growth.tests.map((tItem) => (
+                <span class="flex items-center gap-1.5">• {tItem}</span>
+              ))}
+            </div>
+          </div>
+          <a
+            href={getLocalizedPath('/assessments/category/self-development', currentLocale)}
+            class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 pt-2"
+          >
+            <span>{lt.categories.growth.cta}</span>
+            <span>→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Popular Assessments Grid -->
+  <section id="assessments" class="py-16 sm:py-24 bg-slate-50/50 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div class="space-y-2">
+          <Badge variant="default" size="sm">{lt.popular.badge}</Badge>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            {lt.popular.title}
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500">
+            {lt.popular.subtitle}
+          </p>
+        </div>
         <a
           href={getLocalizedPath('/assessments', currentLocale)}
-          class="inline-flex items-center gap-1 text-sm font-semibold text-teal-700 hover:text-teal-800"
+          class="text-xs font-bold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 cursor-pointer"
         >
-          <span>{t.common.viewDetails}</span>
+          <span>{lt.popular.viewAll}</span>
           <span>→</span>
         </a>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         {featuredAssessments.map((asm) => (
-          <div class="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:border-teal-300 hover:shadow-md transition-all flex flex-col justify-between space-y-5 group">
+          <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-5 group">
             <div class="space-y-3">
               <div class="flex items-center justify-between">
-                <span class="px-2.5 py-1 bg-teal-50 text-teal-800 text-[11px] font-bold rounded-lg border border-teal-200/60">
-                  {asm.category_name || t.common.freeAssessment}
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200/60">
+                  {asm.category_name || 'Assessment'}
                 </span>
-                <span class="text-xs text-slate-400 font-mono">~{asm.estimated_minutes || 6} {t.common.minutes}</span>
+                <span class="text-[11px] font-medium text-slate-400">
+                  ~{asm.estimated_minutes || 6} {lt.popular.minEstimated}
+                </span>
               </div>
 
-              <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+              <h3 class="text-base font-bold text-slate-900 group-hover:text-teal-700 transition-colors leading-snug">
                 <a href={getLocalizedPath(`/assessments/${asm.slug}`, currentLocale)}>
                   {asm.name}
                 </a>
               </h3>
 
-              <p class="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-3">
+              <p class="text-xs text-slate-500 leading-relaxed">
                 {asm.short_description}
               </p>
             </div>
 
             <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <span class="text-xs font-semibold text-slate-500">✓ {t.common.freeAssessment}</span>
+              <span class="text-xs text-slate-400 font-medium">
+                {asm.question_count || 25} {lt.popular.questionsCount}
+              </span>
               <a
                 href={getLocalizedPath(`/assessments/${asm.slug}`, currentLocale)}
-                class="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-teal-700 hover:text-white bg-teal-50 hover:bg-teal-600 rounded-xl transition-all"
+                class="px-4 py-1.5 bg-teal-50 hover:bg-teal-600 text-teal-800 hover:text-white text-xs font-bold rounded-xl transition-all"
               >
-                <span>{t.common.continue}</span>
-                <span>→</span>
+                {lt.popular.takeTest} →
               </a>
             </div>
           </div>
@@ -199,36 +659,326 @@ const categoryColorMap: Record<string, { bg: string; text: string; border: strin
     </div>
   </section>
 
-  <!-- Categories Section -->
-  <section class="py-16 sm:py-20 bg-slate-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-      <div class="text-center max-w-2xl mx-auto space-y-2">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          {t.nav.categories}
+  <!-- 6. How It Works -->
+  <section id="how-it-works" class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="info" size="sm">{lt.howItWorks.badge}</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          {lt.howItWorks.title}
         </h2>
-        <p class="text-sm text-slate-600">
-          {t.hero.subtitle}
+        <p class="text-xs sm:text-sm text-slate-500">
+          {lt.howItWorks.subtitle}
         </p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories.map((cat) => (
-          <a
-            href={getLocalizedPath(`/assessments/category/${cat.slug}`, currentLocale)}
-            class="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:border-teal-300 hover:shadow-md transition-all space-y-3 group block"
-          >
-            <h3 class="text-base font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
-              {cat.name}
-            </h3>
-            <p class="text-xs text-slate-600 leading-relaxed line-clamp-2">
-              {cat.description}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {lt.howItWorks.steps.map((step) => (
+          <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <span class="text-2xl font-black text-teal-600 font-mono">{step.num}</span>
+            <h3 class="text-sm font-bold text-slate-900">{step.title}</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              {step.desc}
             </p>
-            <div class="text-xs font-semibold text-teal-700 pt-2 flex items-center gap-1">
-              <span>{t.common.exploreAssessments}</span>
-              <span>→</span>
-            </div>
-          </a>
+          </div>
         ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Free-First Value Proposition -->
+  <section class="py-16 sm:py-20 bg-teal-900 text-white border-b border-teal-950">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        <div class="md:col-span-7 space-y-4 text-center md:text-left">
+          <span class="text-xs font-bold uppercase tracking-wider text-teal-300">{lt.freeFirst.badge}</span>
+          <h2 class="text-3xl sm:text-4xl font-black tracking-tight text-white">
+            {lt.freeFirst.title}
+          </h2>
+          <p class="text-xs sm:text-sm text-teal-100 leading-relaxed max-w-xl">
+            {lt.freeFirst.desc}
+          </p>
+          <div class="pt-2">
+            <a
+              href={getLocalizedPath('/assessments/big-five-personality-test', currentLocale)}
+              class="inline-flex items-center gap-2 px-6 py-3 bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all"
+            >
+              <span>{lt.freeFirst.cta}</span>
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="md:col-span-5 bg-white/10 backdrop-blur-xs rounded-3xl p-6 border border-white/15 space-y-3 text-xs">
+          <div class="font-bold text-teal-200 uppercase tracking-wider text-[10px]">{lt.freeFirst.boxTitle}</div>
+          <ul class="space-y-2 text-slate-100">
+            {lt.freeFirst.items.map((item) => (
+              <li class="flex items-center gap-2"><span>✓</span> {item}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Want to Go Beyond the Score? (AI Reports & One-Time Credits) -->
+  <section class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">{lt.reports.badge}</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          {lt.reports.title}
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+          {lt.reports.subtitle}
+        </p>
+      </div>
+
+      <!-- 3 Packages Mini-Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="p-6 rounded-3xl border border-slate-200 bg-slate-50/50 space-y-3 text-center">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">{lt.reports.starter.name}</span>
+          <div class="text-3xl font-black text-slate-900 font-mono">{lt.reports.starter.price}</div>
+          <div class="text-xs font-bold text-teal-700">{lt.reports.starter.credits}</div>
+          <p class="text-[11px] text-slate-500">{lt.reports.starter.desc}</p>
+        </div>
+
+        <div class="p-6 rounded-3xl border-2 border-teal-500 bg-teal-900 text-white space-y-3 text-center shadow-lg relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-teal-400 text-slate-950 font-black text-[9px] uppercase tracking-wider px-3 py-0.5 rounded-full">
+            {lt.reports.growth.popularBadge}
+          </div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-teal-300">{lt.reports.growth.name}</span>
+          <div class="text-3xl font-black text-white font-mono">{lt.reports.growth.price}</div>
+          <div class="text-xs font-bold text-teal-300">{lt.reports.growth.credits}</div>
+          <p class="text-[11px] text-teal-100/80">{lt.reports.growth.desc}</p>
+        </div>
+
+        <div class="p-6 rounded-3xl border border-slate-200 bg-slate-50/50 space-y-3 text-center">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">{lt.reports.pro.name}</span>
+          <div class="text-3xl font-black text-slate-900 font-mono">{lt.reports.pro.price}</div>
+          <div class="text-xs font-bold text-teal-700">{lt.reports.pro.credits}</div>
+          <p class="text-[11px] text-slate-500">{lt.reports.pro.desc}</p>
+        </div>
+      </div>
+
+      <div class="text-center pt-2">
+        <a
+          href={getLocalizedPath('/pricing', currentLocale)}
+          class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-teal-700 hover:text-teal-800 underline underline-offset-4"
+        >
+          <span>{lt.reports.viewPricing}</span>
+          <span>→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. Why Results Are Different & Example Result Visual -->
+  <section class="py-16 sm:py-24 bg-slate-50/50 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <!-- Text Column -->
+        <div class="lg:col-span-6 space-y-5">
+          <Badge variant="info" size="sm">{lt.dimensionalDepth.badge}</Badge>
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            {lt.dimensionalDepth.title}
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            {lt.dimensionalDepth.desc}
+          </p>
+          <div class="space-y-2.5 text-xs text-slate-600 pt-2">
+            {lt.dimensionalDepth.points.map((pt) => (
+              <div class="flex items-start gap-2">
+                <span class="text-teal-600 font-bold">✓</span>
+                <span><strong>{pt.bold}</strong> {pt.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Example Result Visual Column -->
+        <div class="lg:col-span-6">
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 rounded-md">
+                {lt.dimensionalDepth.exampleTag}
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">{lt.dimensionalDepth.exampleType}</span>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-baseline justify-between">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-slate-400">{lt.dimensionalDepth.alignmentLabel}</span>
+                  <div class="text-2xl font-black text-slate-900 font-mono">{lt.dimensionalDepth.alignmentValue}</div>
+                </div>
+                <Badge variant="success" size="sm">{lt.dimensionalDepth.topBadge}</Badge>
+              </div>
+
+              <!-- Dimension Profile Bars -->
+              <div class="space-y-2.5 pt-1">
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>{lt.dimensionalDepth.dim1}</span>
+                    <span class="text-teal-700 font-mono">82%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 82%"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>{lt.dimensionalDepth.dim2}</span>
+                    <span class="text-teal-700 font-mono">76%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 76%"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>{lt.dimensionalDepth.dim3}</span>
+                    <span class="text-teal-700 font-mono">71%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 71%"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-slate-700">
+                    <span>{lt.dimensionalDepth.dim4}</span>
+                    <span class="text-teal-700 font-mono">79%</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width: 79%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interpretive Callout -->
+              <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1 text-xs">
+                <span class="font-bold text-slate-800 block text-[11px]">{lt.dimensionalDepth.suggestTitle}</span>
+                <p class="text-slate-600 leading-relaxed text-[11px]">
+                  {lt.dimensionalDepth.suggestText}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. Privacy / Trust Section -->
+  <section class="py-16 sm:py-20 bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">{lt.privacy.badge}</Badge>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          {lt.privacy.title}
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          {lt.privacy.subtitle}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs">
+        {lt.privacy.items.map((item) => (
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+            <span class="font-bold text-slate-900 block">{item.title}</span>
+            <p class="text-slate-500 leading-relaxed">{item.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. Who Is It For? -->
+  <section class="py-16 sm:py-20 bg-slate-50/50 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="info" size="sm">{lt.whoFor.badge}</Badge>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          {lt.whoFor.title}
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          {lt.whoFor.subtitle}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
+        {lt.whoFor.groups.map((grp) => (
+          <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+            <div class="text-lg">{grp.icon}</div>
+            <h3 class="font-bold text-slate-900">{grp.title}</h3>
+            <p class="text-slate-500 leading-relaxed">{grp.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. FAQ Section -->
+  <section class="py-16 sm:py-24 bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <Badge variant="default" size="sm">{lt.faqs.badge}</Badge>
+        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          {lt.faqs.title}
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          {lt.faqs.subtitle}
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        {lt.faqs.items.map((faq) => (
+          <details class="group bg-slate-50 rounded-2xl border border-slate-200/80 p-5 open:bg-white open:shadow-xs transition-all">
+            <summary class="flex items-center justify-between font-bold text-slate-900 text-xs sm:text-sm cursor-pointer list-none select-none">
+              <span>{faq.q}</span>
+              <span class="text-slate-400 group-open:rotate-180 transition-transform text-xs">▼</span>
+            </summary>
+            <p class="text-xs text-slate-600 leading-relaxed pt-3 border-t border-slate-100 mt-3">
+              {faq.a}
+            </p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Educational Disclaimer Banner -->
+  <section class="py-6 bg-slate-100 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-[11px] text-slate-500 leading-relaxed">
+      <strong class="text-slate-700">{lt.disclaimer.prefix}</strong> {lt.disclaimer.text}
+    </div>
+  </section>
+
+  <!-- 14. Final CTA -->
+  <section class="py-16 sm:py-24 bg-gradient-to-b from-slate-50 to-white text-center">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <h2 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {lt.finalCta.title}
+      </h2>
+      <p class="text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl mx-auto">
+        {lt.finalCta.subtitle}
+      </p>
+      <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a
+          href={getLocalizedPath('/assessments/big-five-personality-test', currentLocale)}
+          class="w-full sm:w-auto px-8 py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-sm rounded-2xl shadow-md transition-all"
+        >
+          {lt.finalCta.ctaPrimary}
+        </a>
+        <a
+          href={getLocalizedPath('/assessments', currentLocale)}
+          class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-sm rounded-2xl transition-all"
+        >
+          {lt.finalCta.ctaSecondary}
+        </a>
       </div>
     </div>
   </section>
