@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "psychology_db",
-      "database_id": "local-d1-placeholder",
+      "database_id": "2efb24b6-eccc-496d-a18e-cc6d03c07460",
       "migrations_dir": "migrations"
     }
   ],
@@ -26,17 +26,17 @@
       "bucket_name": "psychology-assets"
     }
   ],
-  // Cloudflare KV Namespace for Sessions (Prepared)
+  // Cloudflare KV Namespace for Sessions
   "kv_namespaces": [
     {
       "binding": "SESSION",
-      "id": "local-kv-placeholder"
+      "id": "fc9b3f4a20974cc0af6be368975dc939"
     }
   ],
-  // Public/Runtime Environment Variables (non-secret defaults)
+  // Public/Runtime Environment Variables
   "vars": {
-    "APP_ENV": "development",
-    "APP_URL": "http://localhost:4321",
-    "SITE_NAME": "MindMetrics"
+    "APP_ENV": "production",
+    "APP_URL": "https://www.psychologycalculator.com",
+    "SITE_NAME": "Psychology Calculator"
   }
 }
