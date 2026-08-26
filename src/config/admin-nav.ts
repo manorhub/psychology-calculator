@@ -6,7 +6,6 @@ export interface AdminNavSection {
     href: string;
     icon: string;
     description: string;
-    phase: string;
   }[];
 }
 
@@ -19,32 +18,28 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         label: 'Dashboard',
         href: '/admin',
         icon: 'LayoutDashboard',
-        description: 'System overview, key metrics, and quick actions',
-        phase: 'Phase 0'
+        description: 'System overview, key metrics, and quick actions'
       },
       {
         id: 'assessments',
         label: 'Assessments',
         href: '/admin/assessments',
         icon: 'ClipboardList',
-        description: 'Manage psychology assessment catalog and parameters',
-        phase: 'Phase 1'
+        description: 'Manage psychology assessment catalog and parameters'
       },
       {
         id: 'questions',
         label: 'Questions & Options',
         href: '/admin/questions',
         icon: 'HelpCircle',
-        description: 'Create and organize test items and response scales',
-        phase: 'Phase 1'
+        description: 'Create and organize test items and response scales'
       },
       {
         id: 'results',
         label: 'Scoring & Results',
         href: '/admin/results',
         icon: 'Award',
-        description: 'Scoring rules, dimensions, and baseline interpretations',
-        phase: 'Phase 1'
+        description: 'Scoring rules, dimensions, and baseline interpretations'
       }
     ]
   },
@@ -56,24 +51,21 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         label: 'Users & Profiles',
         href: '/admin/users',
         icon: 'Users',
-        description: 'View registered users, roles, and attempt histories',
-        phase: 'Phase 2'
+        description: 'View registered users, roles, and attempt histories'
       },
       {
         id: 'reports',
         label: 'Reports & Exports',
         href: '/admin/reports',
         icon: 'FileText',
-        description: 'Generated report templates and export logs',
-        phase: 'Phase 2'
+        description: 'Generated report templates and export logs'
       },
       {
         id: 'ai',
         label: 'AI & Interpretations',
         href: '/admin/ai',
         icon: 'Sparkles',
-        description: 'Configure LLM providers, prompts, and token usage',
-        phase: 'Phase 2'
+        description: 'Configure LLM providers, prompts, and token usage'
       }
     ]
   },
@@ -83,63 +75,56 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
       {
         id: 'subscriptions',
         label: 'Subscriptions & Tiers',
-        href: '/admin/subscriptions',
+        href: '/admin/billing',
         icon: 'Layers',
-        description: 'Manage subscription plans and feature access',
-        phase: 'Phase 3'
+        description: 'Manage subscription plans and feature access'
       },
       {
-        id: 'payments',
-        label: 'Payments & Credits',
-        href: '/admin/payments',
+        id: 'credits',
+        label: 'Credit Packages',
+        href: '/admin/credits/packages',
         icon: 'CreditCard',
-        description: 'Transaction logs, credit packages, and Stripe sync',
-        phase: 'Phase 3'
+        description: 'Transaction logs, credit packages, and payments'
       },
       {
-        id: 'seo',
-        label: 'SEO & Landing Pages',
-        href: '/admin/seo',
-        icon: 'Search',
-        description: 'Meta titles, OpenGraph images, and search indexing',
-        phase: 'Phase 4'
+        id: 'growth',
+        label: 'Growth & Experiments',
+        href: '/admin/growth',
+        icon: 'TrendingUp',
+        description: 'Conversion rates and viral referral performance'
       }
     ]
   },
   {
-    title: 'Platform Control',
+    title: 'Platform & CMS',
     items: [
       {
+        id: 'seo',
+        label: 'SEO Engine',
+        href: '/admin/seo',
+        icon: 'Search',
+        description: 'Technical SEO audits, meta tags, and robots directives'
+      },
+      {
         id: 'content',
-        label: 'Site Content (CMS)',
+        label: 'CMS & Legal Pages',
         href: '/admin/content',
-        icon: 'Edit3',
-        description: 'Edit homepage hero, FAQs, legal copy, and disclaimers',
-        phase: 'Phase 4'
+        icon: 'FileCode',
+        description: 'Blog articles, legal terms, and dynamic pages'
+      },
+      {
+        id: 'email',
+        label: 'Email & SMTP',
+        href: '/admin/email/logs',
+        icon: 'Mail',
+        description: 'Transactional email delivery and logs'
       },
       {
         id: 'settings',
         label: 'System Settings',
         href: '/admin/settings',
         icon: 'Sliders',
-        description: 'Dynamic toggles, site branding, and maintenance mode',
-        phase: 'Phase 0'
-      },
-      {
-        id: 'analytics',
-        label: 'Analytics & Funnels',
-        href: '/admin/analytics',
-        icon: 'BarChart3',
-        description: 'Assessment completion rates and drop-off analytics',
-        phase: 'Phase 4'
-      },
-      {
-        id: 'audit-logs',
-        label: 'Audit Logs',
-        href: '/admin/audit-logs',
-        icon: 'ShieldAlert',
-        description: 'Security events, admin changes, and system history',
-        phase: 'Phase 0'
+        description: 'Platform configurations, feature flags, and health'
       }
     ]
   }

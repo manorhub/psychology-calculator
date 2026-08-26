@@ -1,69 +1,167 @@
 ---
-import { ADMIN_NAVIGATION } from '@/config/admin-nav';
-
 interface Props {
-  currentPath?: string;
+  currentPath: string;
 }
 
-const { currentPath = Astro.url.pathname } = Astro.props;
+const { currentPath } = Astro.props;
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  badge?: string;
+  children?: { label: string; href: string }[];
+}
+
+const navSections: { title?: string; items: NavItem[] }[] = [
+  {
+    items: [
+      { label: 'Dashboard', href: '/admin', icon: '📊' }
+    ]
+  },
+  {
+    title: 'Assessments Catalog',
+    items: [
+      { label: 'Assessments', href: '/admin/assessments', icon: '📝' },
+      { label: 'Categories', href: '/admin/assessments/categories', icon: '🗂️' },
+      { label: 'Questions & Scales', href: '/admin/questions', icon: '❓' },
+      { label: 'Results & Scoring', href: '/admin/results', icon: '🎯' },
+      { label: 'Translations', href: '/admin/assessments/translate', icon: '🌐' },
+      { label: 'Import / Export', href: '/admin/assessments/import', icon: '🔄' }
+    ]
+  },
+  {
+    title: 'Intelligence & Reports',
+    items: [
+      { label: 'AI Configuration', href: '/admin/ai', icon: '🤖' },
+      { label: 'AI Reports', href: '/admin/reports', icon: '📑' },
+      { label: 'Generation Logs', href: '/admin/ai/generations', icon: '⚡' }
+    ]
+  },
+  {
+    title: 'Users & Growth',
+    items: [
+      { label: 'Users & Accounts', href: '/admin/users', icon: '👥' },
+      { label: 'Analytics & BI', href: '/admin/analytics', icon: '📈' },
+      { label: 'Growth & Referrals', href: '/admin/growth', icon: '🚀' },
+      { label: 'User Feedback', href: '/admin/feedback', icon: '💬' },
+      { label: 'Audit Logs', href: '/admin/audit-logs', icon: '🛡️' }
+    ]
+  },
+  {
+    title: 'Monetization & Billing',
+    items: [
+      { label: 'Credit Packages', href: '/admin/credits/packages', icon: '💎' },
+      { label: 'Billing & Plans', href: '/admin/billing', icon: '💳' }
+    ]
+  },
+  {
+    title: 'CMS & Platform Settings',
+    items: [
+      { label: 'SEO Engine', href: '/admin/seo', icon: '🔍' },
+      { label: 'CMS & Pages', href: '/admin/content', icon: '📄' },
+      { label: 'Email & SMTP', href: '/admin/email/logs', icon: '✉️' },
+      {
+        label: 'Settings',
+        href: '/admin/settings',
+        icon: '⚙️',
+        children: [
+          { label: 'General & Site', href: '/admin/settings' },
+          { label: 'Email / SMTP', href: '/admin/settings/email' },
+          { label: 'Feature Flags', href: '/admin/settings/features' },
+          { label: 'System Health', href: '/admin/system/health' }
+        ]
+      }
+    ]
+  }
+];
+
+function isActive(href: string): boolean {
+  if (href === '/admin') return currentPath === '/admin';
+  return currentPath.startsWith(href);
+}
 ---
 
-<aside class="w-64 bg-slate-900 text-slate-300 min-h-screen flex flex-col shrink-0 border-r border-slate-800">
+<aside class="w-64 bg-slate-950 text-slate-300 flex flex-col flex-shrink-0 border-r border-slate-800/80 select-none">
   <!-- Brand Header -->
-  <div class="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
-    <div class="w-8 h-8 rounded-lg bg-teal-500 text-white flex items-center justify-center font-bold text-sm">
-      Ψ
-    </div>
-    <div class="flex flex-col">
-      <span class="font-bold text-white text-sm tracking-tight">MindMetrics</span>
-      <span class="text-[10px] text-teal-400 font-semibold uppercase tracking-wider">Admin Console</span>
-    </div>
+  <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800/80 bg-slate-950">
+    <a href="/admin" class="flex items-center gap-2.5 group">
+      <div class="w-8 h-8 rounded-xl bg-teal-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-md shadow-teal-500/20 group-hover:scale-105 transition-transform">
+        Ψ
+      </div>
+      <div class="flex flex-col">
+        <span class="font-extrabold text-white text-sm tracking-tight leading-tight">
+          Psychology<span class="text-teal-400">Calculator</span>
+        </span>
+        <span class="text-[9px] text-teal-400 font-mono font-bold uppercase tracking-widest">
+          ADMIN CONSOLE
+        </span>
+      </div>
+    </a>
   </div>
 
-  <!-- Admin Navigation Groups -->
-  <nav class="flex-1 overflow-y-auto px-4 py-6 space-y-6" aria-label="Admin Sidebar Navigation">
-    {ADMIN_NAVIGATION.map((group) => (
-      <div class="space-y-1.5">
-        <h3 class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          {group.title}
-        </h3>
-        <ul class="space-y-1">
-          {group.items.map((item) => {
-            const isActive = currentPath === item.href || (item.href !== '/admin' && currentPath.startsWith(item.href));
-            return (
-              <li>
-                <a
-                  href={item.href}
-                  class={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-teal-600/20 text-teal-300 font-semibold border border-teal-500/30'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                  }`}
-                  title={item.description}
-                >
+  <!-- Navigation -->
+  <nav class="flex-1 px-3 py-4 space-y-5 overflow-y-auto" aria-label="Admin Navigation">
+    {navSections.map((section) => (
+      <div class="space-y-1">
+        {section.title && (
+          <h4 class="px-3 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+            {section.title}
+          </h4>
+        )}
+        {section.items.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <div>
+              <a
+                href={item.href}
+                class={`flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition-all ${
+                  active
+                    ? 'bg-teal-500/15 text-teal-300 font-bold border border-teal-500/40 shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+                }`}
+              >
+                <div class="flex items-center gap-2.5 truncate">
+                  <span class="text-sm">{item.icon}</span>
                   <span class="truncate">{item.label}</span>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                    {item.phase}
+                </div>
+                {item.badge && (
+                  <span class="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-slate-900 text-teal-300 rounded-md border border-teal-500/30">
+                    {item.badge}
                   </span>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
+                )}
+              </a>
+
+              {/* Sub-navigation */}
+              {item.children && active && (
+                <div class="ml-6 mt-1 space-y-0.5 border-l border-slate-800 pl-3">
+                  {item.children.map((child) => (
+                    <a
+                      href={child.href}
+                      class={`block py-1 text-[11px] font-medium transition-colors ${
+                        currentPath === child.href
+                          ? 'text-teal-400 font-bold'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {child.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     ))}
   </nav>
 
-  <!-- Admin Footer / Environment Indicator -->
-  <div class="p-4 border-t border-slate-800 bg-slate-950/50">
-    <div class="flex items-center justify-between text-xs text-slate-400">
-      <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="font-mono text-[11px]">Edge: Active</span>
-      </div>
-      <a href="/" class="text-teal-400 hover:text-teal-300 font-medium">
-        Public Site &rarr;
-      </a>
+  <!-- Quick Admin Footer -->
+  <div class="p-3.5 border-t border-slate-800/80 bg-slate-950 text-[11px] text-slate-500 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      <span class="text-slate-400 font-mono text-[10px]">Cloudflare Edge</span>
     </div>
+    <span class="text-teal-400 font-mono text-[10px] font-bold">v1.0.0</span>
   </div>
 </aside>
