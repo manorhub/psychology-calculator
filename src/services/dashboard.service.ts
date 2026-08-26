@@ -131,7 +131,7 @@ export class DashboardService extends BaseService {
          a.created_at
        FROM assessment_attempts a
        JOIN assessments asm ON a.assessment_id = asm.id
-       JOIN categories c ON asm.category_id = c.id
+       LEFT JOIN assessment_categories c ON asm.category_id = c.id
        WHERE a.user_id = ? AND a.status = 'in_progress'
        ORDER BY a.updated_at DESC LIMIT 1`,
       [userId]
@@ -142,12 +142,12 @@ export class DashboardService extends BaseService {
     const [totalRow, answeredRow] = await Promise.all([
       fetchFirst<{ count: number }>(
         this.db,
-        'SELECT COUNT(*) as count FROM questions WHERE assessment_id = ?',
+        'SELECT COUNT(*) as count FROM assessment_questions WHERE assessment_id = ?',
         [row.assessment_id]
       ),
       fetchFirst<{ count: number }>(
         this.db,
-        'SELECT COUNT(*) as count FROM user_answers WHERE attempt_id = ?',
+        'SELECT COUNT(*) as count FROM assessment_answers WHERE attempt_id = ?',
         [row.attempt_id]
       )
     ]);
@@ -189,7 +189,7 @@ export class DashboardService extends BaseService {
         a.completed_at
       FROM assessment_attempts a
       JOIN assessments asm ON a.assessment_id = asm.id
-      JOIN categories c ON asm.category_id = c.id
+      LEFT JOIN assessment_categories c ON asm.category_id = c.id
       WHERE a.user_id = ?
     `;
     const params: any[] = [userId];
@@ -209,12 +209,12 @@ export class DashboardService extends BaseService {
         const [totalRow, answeredRow] = await Promise.all([
           fetchFirst<{ count: number }>(
             this.db!,
-            'SELECT COUNT(*) as count FROM questions WHERE assessment_id = ?',
+            'SELECT COUNT(*) as count FROM assessment_questions WHERE assessment_id = ?',
             [r.assessment_id]
           ),
           fetchFirst<{ count: number }>(
             this.db!,
-            'SELECT COUNT(*) as count FROM user_answers WHERE attempt_id = ?',
+            'SELECT COUNT(*) as count FROM assessment_answers WHERE attempt_id = ?',
             [r.attempt_id]
           )
         ]);
@@ -255,7 +255,7 @@ export class DashboardService extends BaseService {
          rs.snapshot_data
        FROM assessment_attempts a
        JOIN assessments asm ON a.assessment_id = asm.id
-       JOIN categories c ON asm.category_id = c.id
+       LEFT JOIN assessment_categories c ON asm.category_id = c.id
        LEFT JOIN result_snapshots rs ON a.id = rs.attempt_id
        WHERE a.user_id = ? AND a.status = 'completed'
        ORDER BY a.completed_at DESC LIMIT ?`,

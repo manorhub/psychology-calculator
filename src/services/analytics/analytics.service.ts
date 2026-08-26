@@ -137,7 +137,7 @@ export class AnalyticsService extends BaseService {
       ),
       fetchFirst<{ count: number }>(
         this.db,
-        `SELECT COUNT(*) as count FROM user_subscriptions WHERE status = 'active'`
+        `SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'`
       ),
       fetchFirst<{ count: number }>(
         this.db,
@@ -221,7 +221,7 @@ export class AnalyticsService extends BaseService {
       fetchFirst<{ count: number }>(this.db, 'SELECT COUNT(*) as count FROM assessment_attempts WHERE created_at >= ?', [startDate]),
       fetchFirst<{ count: number }>(this.db, `SELECT COUNT(*) as count FROM assessment_attempts WHERE status = 'completed' AND created_at >= ?`, [startDate]),
       fetchFirst<{ count: number }>(this.db, `SELECT COUNT(*) as count FROM ai_generations WHERE status = 'completed' AND created_at >= ?`, [startDate]),
-      fetchFirst<{ count: number }>(this.db, `SELECT COUNT(*) as count FROM user_subscriptions WHERE status = 'active'`)
+      fetchFirst<{ count: number }>(this.db, `SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'`)
     ]);
 
     const startsCount = assessmentStarts?.count || 0;
@@ -283,7 +283,7 @@ export class AnalyticsService extends BaseService {
         (SELECT COUNT(*) FROM ai_generations ai WHERE ai.assessment_id = a.id AND ai.status = 'completed' AND ai.created_at >= ?) as ai_reports,
         (SELECT AVG(att.duration_seconds) FROM assessment_attempts att WHERE att.assessment_id = a.id AND att.status = 'completed' AND att.created_at >= ?) as avg_duration
        FROM assessments a
-       LEFT JOIN categories c ON a.category_id = c.id
+       LEFT JOIN assessment_categories c ON a.category_id = c.id
        ${whereClause}
        ORDER BY completions DESC`,
       [...params, startDate, startDate, startDate]
@@ -321,7 +321,7 @@ export class AnalyticsService extends BaseService {
     if (assessmentId) {
       const questions = await executeQuery<{ id: string; step_number: number; title: string }>(
         this.db,
-        `SELECT id, step_number, title FROM questions WHERE assessment_id = ? ORDER BY step_number ASC`,
+        `SELECT id, step_number, title FROM assessment_questions WHERE assessment_id = ? ORDER BY step_number ASC`,
         [assessmentId]
       );
 
@@ -330,7 +330,7 @@ export class AnalyticsService extends BaseService {
         questions.map(async (q) => {
           const answerCountRow = await fetchFirst<{ count: number }>(
             this.db!,
-            `SELECT COUNT(*) as count FROM attempt_answers aa
+            `SELECT COUNT(*) as count FROM assessment_answers aa
              JOIN assessment_attempts att ON aa.attempt_id = att.id
              WHERE aa.question_id = ? AND att.created_at >= ?`,
             [q.id, startDate]
@@ -489,7 +489,7 @@ export class AnalyticsService extends BaseService {
     const [statusCounts, revenueRow, planRows] = await Promise.all([
       executeQuery<{ status: string; count: number }>(
         this.db,
-        `SELECT status, COUNT(*) as count FROM user_subscriptions GROUP BY status`
+        `SELECT status, COUNT(*) as count FROM subscriptions GROUP BY status`
       ),
       fetchFirst<{ revenue: number; orders: number }>(
         this.db,
