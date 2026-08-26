@@ -14,13 +14,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const url = new URL(context.request.url);
   const start = performance.now();
 
-  // 0. Domain Normalization & workers.dev Duplicate Prevention
-  // Ensure non-preferred domains, workers.dev, or non-www 301 redirect to canonical production hostname
+  // 0. Universal Domain Normalization & workers.dev / pages.dev Duplicate Prevention
+  // Enforces 301 redirect for all non-preferred hosts to https://www.psychologycalculator.com
   const targetHost = 'www.psychologycalculator.com';
+  const reqHost = (
+    context.request.headers.get('x-forwarded-host') ||
+    context.request.headers.get('host') ||
+    url.hostname ||
+    ''
+  ).toLowerCase().split(':')[0];
+
+  const isExcluded = url.pathname.startsWith('/api/health') || url.pathname.startsWith('/api/webhooks');
+
   if (
-    (url.hostname === 'psychology-saas.manorhub533.workers.dev' ||
-     url.hostname === 'psychologycalculator.com') &&
-    !url.pathname.startsWith('/api/health')
+    !isExcluded &&
+    reqHost &&
+    reqHost !== 'localhost' &&
+    reqHost !== '127.0.0.1' &&
+    reqHost !== targetHost
   ) {
     const canonicalTarget = `https://${targetHost}${url.pathname}${url.search}`;
     return new Response(null, {
