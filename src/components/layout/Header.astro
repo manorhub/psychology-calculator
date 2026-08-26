@@ -139,6 +139,10 @@ const assessmentsHref = activeLocale === 'en' ? '/assessments' : `/${activeLocal
         Sign In / Register
       </a>
     )}
+    <div class="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between px-3">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Language:</span>
+      <LanguageSwitcher currentLocale={activeLocale} />
+    </div>
   </div>
 </header>
 
