@@ -1,4 +1,21 @@
 export const fr = {
+  sharing: {
+    title: 'Partagez votre résultat',
+    subtitle: 'Partagez votre résultat avec vos proches et comparez vos profils psychométriques.',
+    primaryCta: 'Partager le résultat',
+    downloadCard: "Télécharger l'image",
+    copyLink: 'Copier le lien',
+    copied: 'Copié dans le presse-papier !',
+    whatsapp: 'WhatsApp',
+    facebook: 'Facebook',
+    twitter: 'X / Twitter',
+    linkedin: 'LinkedIn',
+    email: 'E-mail',
+    takeThisTest: 'Passer ce test vous-même',
+    exploreAll: 'Explorer tous les tests',
+    sharedTitle: 'Profil psychométrique partagé',
+    wantYourOwn: 'Voulez-vous découvrir votre propre profil ?'
+  },
   common: {
     brandName: 'Psychology Calculator',
     tagline: 'Psychométrie Scientifique et Connaissance de Soi',

@@ -452,3 +452,93 @@ export interface QuestionWithOptions extends AssessmentQuestionRow {
 export interface ResultTypeWithContent extends ResultTypeRow {
   contents: ResultContentRow[];
 }
+
+// --- Snapshot & Social Sharing Types ---
+export interface SnapshotResultContent {
+  section_type: ResultSectionType;
+  title: string;
+  content: string;
+}
+
+export interface SnapshotPrimaryResultType {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  contents: SnapshotResultContent[];
+}
+
+export interface SnapshotDimensionScore {
+  dimensionId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  rawScore: number;
+  maxScore: number;
+  normalizedScore: number;
+  percentage: number;
+  levelLabel?: string;
+}
+
+export interface ResultSnapshotData {
+  attemptId: string;
+  assessmentId: string;
+  assessmentName: string;
+  assessmentSlug: string;
+  assessmentVersion: number;
+  completedAt: string;
+  durationSeconds: number;
+  totalRawScore: number;
+  totalMaxScore: number;
+  totalNormalizedScore: number;
+  dimensionScores: SnapshotDimensionScore[];
+  primaryResultType?: SnapshotPrimaryResultType | null;
+}
+
+export interface ResultSnapshotRow {
+  id: string;
+  attempt_id: string;
+  assessment_id: string;
+  assessment_version: number;
+  primary_result_type_id: string | null;
+  snapshot_data: string; // JSON
+  share_token: string | null;
+  is_public: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResultShareRow {
+  id: string;
+  share_token: string;
+  attempt_id: string;
+  assessment_id: string;
+  assessment_slug: string;
+  user_id: string | null;
+  language: string;
+  sanitized_data: string; // JSON
+  is_active: number;
+  view_count: number;
+  share_count: number;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SanitizedPublicShareData {
+  assessmentName: string;
+  assessmentSlug: string;
+  resultTitle: string;
+  resultSummary: string;
+  totalScore: number;
+  scorePercent: number;
+  levelLabel: string;
+  language: string;
+  dimensions: Array<{
+    name: string;
+    scorePercent: number;
+    levelLabel?: string;
+  }>;
+  shareToken: string;
+  createdAt: string;
+}

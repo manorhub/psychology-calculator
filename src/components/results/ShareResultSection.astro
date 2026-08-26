@@ -1,0 +1,299 @@
+---
+import type { ResultSnapshotData } from '@/types/database';
+
+interface Props {
+  attemptId: string;
+  assessmentName: string;
+  assessmentSlug: string;
+  resultTitle: string;
+  scorePercent: number;
+  locale?: string;
+}
+
+const {
+  attemptId,
+  assessmentName,
+  assessmentSlug,
+  resultTitle,
+  scorePercent,
+  locale = 'en'
+} = Astro.props;
+---
+
+<section id="share-result-section" class="bg-gradient-to-br from-teal-950 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-10 border border-teal-800/50 shadow-xl space-y-6 no-print">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="space-y-1.5">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-teal-900/60 border border-teal-600/40 rounded-full text-xs font-bold text-teal-200">
+        <span>✨</span>
+        <span>SHARE YOUR RESULT</span>
+      </div>
+      <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+        Share Your Result
+      </h3>
+      <p class="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+        Share your result with friends and see how your profiles compare. Only your summary outcome is shared; your personal responses remain completely private.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        id="btn-primary-share"
+        data-attempt-id={attemptId}
+        data-assessment-name={assessmentName}
+        data-assessment-slug={assessmentSlug}
+        data-result-title={resultTitle}
+        data-locale={locale}
+        class="px-5 py-3 bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-teal-500/20 transition-all flex items-center gap-2 cursor-pointer focus:ring-2 focus:ring-teal-300"
+      >
+        <span>🔗</span>
+        <span>Share Your Result</span>
+      </button>
+
+      <button
+        type="button"
+        id="btn-download-card"
+        data-attempt-id={attemptId}
+        class="px-4 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs sm:text-sm rounded-2xl transition-all flex items-center gap-2 cursor-pointer"
+      >
+        <span>🖼️</span>
+        <span id="download-text">Download Image</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Social Platform Buttons Row -->
+  <div class="border-t border-slate-800/80 pt-6">
+    <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 block mb-3">
+      Direct Social Share Options:
+    </span>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <!-- WhatsApp -->
+      <button
+        type="button"
+        class="share-channel-btn px-3.5 py-2.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+        data-channel="whatsapp"
+      >
+        <span>💬</span>
+        <span>WhatsApp</span>
+      </button>
+
+      <!-- Facebook -->
+      <button
+        type="button"
+        class="share-channel-btn px-3.5 py-2.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-700/50 text-blue-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+        data-channel="facebook"
+      >
+        <span>📘</span>
+        <span>Facebook</span>
+      </button>
+
+      <!-- X / Twitter -->
+      <button
+        type="button"
+        class="share-channel-btn px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+        data-channel="twitter"
+      >
+        <span>𝕏</span>
+        <span>X / Twitter</span>
+      </button>
+
+      <!-- LinkedIn -->
+      <button
+        type="button"
+        class="share-channel-btn px-3.5 py-2.5 bg-sky-950/80 hover:bg-sky-900 border border-sky-700/50 text-sky-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+        data-channel="linkedin"
+      >
+        <span>💼</span>
+        <span>LinkedIn</span>
+      </button>
+
+      <!-- Email -->
+      <button
+        type="button"
+        class="share-channel-btn px-3.5 py-2.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+        data-channel="email"
+      >
+        <span>✉️</span>
+        <span>Email</span>
+      </button>
+
+      <!-- Copy Link -->
+      <button
+        type="button"
+        class="share-channel-btn px-3.5 py-2.5 bg-white text-slate-950 hover:bg-slate-100 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ml-auto"
+        data-channel="copy"
+      >
+        <span>📋</span>
+        <span id="copy-btn-label">Copy Link</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Client Sharing Engine Script -->
+<script>
+  let cachedShareToken: string | null = null;
+  let cachedShareUrl: string | null = null;
+
+  async function getOrCreateShare(attemptId: string, locale: string) {
+    if (cachedShareToken && cachedShareUrl) {
+      return { shareToken: cachedShareToken, shareUrl: cachedShareUrl };
+    }
+
+    const res = await fetch(`/api/v1/results/${attemptId}/share`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: locale })
+    });
+    const json = await res.json();
+    if (!json.success || !json.data) throw new Error(json.error?.message || 'Failed to create share link');
+
+    cachedShareToken = json.data.shareToken;
+    cachedShareUrl = window.location.origin + `/share/${json.data.shareToken}`;
+    return { shareToken: cachedShareToken, shareUrl: cachedShareUrl };
+  }
+
+  // Primary Share CTA Handler
+  const shareBtn = document.getElementById('btn-primary-share');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      const attemptId = shareBtn.dataset.attemptId;
+      const assessmentName = shareBtn.dataset.assessmentName || 'Assessment';
+      const resultTitle = shareBtn.dataset.resultTitle || 'Profile';
+      const locale = shareBtn.dataset.locale || 'en';
+      if (!attemptId) return;
+
+      try {
+        const originalHtml = shareBtn.innerHTML;
+        shareBtn.innerHTML = '<span>⏳</span><span>Generating...</span>';
+
+        const { shareToken, shareUrl } = await getOrCreateShare(attemptId, locale);
+
+        const shareText = `I just completed the ${assessmentName} and discovered my profile: "${resultTitle}". Find out what yours looks like!`;
+
+        if (navigator.share) {
+          await navigator.share({
+            title: `${assessmentName} Result`,
+            text: shareText,
+            url: shareUrl
+          });
+          // Track native share event
+          fetch(`/api/v1/share/${shareToken}/track`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: 'share_native', channel: 'native' })
+          }).catch(() => {});
+        } else {
+          // Fallback to clipboard copy
+          await navigator.clipboard.writeText(shareUrl);
+          alert(`Share link created and copied to clipboard!\n\n${shareUrl}`);
+        }
+
+        shareBtn.innerHTML = '<span>✅</span><span>Shared!</span>';
+        setTimeout(() => {
+          shareBtn.innerHTML = originalHtml;
+        }, 3000);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          alert('Could not share result: ' + (err.message || 'Unknown error'));
+        }
+        shareBtn.innerHTML = '<span>🔗</span><span>Share Your Result</span>';
+      }
+    });
+  }
+
+  // Download Card Image Handler
+  const downloadBtn = document.getElementById('btn-download-card');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', async () => {
+      const attemptId = downloadBtn.dataset.attemptId;
+      const locale = shareBtn?.dataset.locale || 'en';
+      const downloadText = document.getElementById('download-text');
+      if (!attemptId) return;
+
+      try {
+        if (downloadText) downloadText.textContent = 'Preparing Image...';
+        const { shareToken } = await getOrCreateShare(attemptId, locale);
+
+        const imgUrl = `/api/v1/share/${shareToken}/image.svg`;
+        const a = document.createElement('a');
+        a.href = imgUrl;
+        a.download = `PsychologyCalculator-Result-${shareToken}.svg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Track download
+        fetch(`/api/v1/share/${shareToken}/track`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: 'share_downloaded', channel: 'download' })
+        }).catch(() => {});
+
+        if (downloadText) downloadText.textContent = 'Downloaded!';
+        setTimeout(() => {
+          if (downloadText) downloadText.textContent = 'Download Image';
+        }, 3000);
+      } catch (err: any) {
+        alert('Could not download image: ' + err.message);
+        if (downloadText) downloadText.textContent = 'Download Image';
+      }
+    });
+  }
+
+  // Channel Buttons
+  document.querySelectorAll('.share-channel-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const channel = (btn as HTMLElement).dataset.channel;
+      const attemptId = shareBtn?.dataset.attemptId;
+      const assessmentName = shareBtn?.dataset.assessmentName || 'Personality Assessment';
+      const resultTitle = shareBtn?.dataset.resultTitle || 'Profile';
+      const locale = shareBtn?.dataset.locale || 'en';
+      if (!attemptId || !channel) return;
+
+      try {
+        const { shareToken, shareUrl } = await getOrCreateShare(attemptId, locale);
+        const encodedUrl = encodeURIComponent(shareUrl);
+        const shareMsg = `I just completed the ${assessmentName} and discovered my profile: "${resultTitle}". Discover your own profile on PsychologyCalculator:`;
+        const encodedMsg = encodeURIComponent(`${shareMsg} ${shareUrl}`);
+
+        let targetUrl = '';
+        if (channel === 'whatsapp') {
+          targetUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+        } else if (channel === 'facebook') {
+          targetUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        } else if (channel === 'twitter') {
+          targetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMsg)}&url=${encodedUrl}`;
+        } else if (channel === 'linkedin') {
+          targetUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+        } else if (channel === 'email') {
+          targetUrl = `mailto:?subject=${encodeURIComponent('My ' + assessmentName + ' Result')}&body=${encodedMsg}`;
+        } else if (channel === 'copy') {
+          await navigator.clipboard.writeText(shareUrl);
+          const copyLabel = document.getElementById('copy-btn-label');
+          if (copyLabel) {
+            copyLabel.textContent = 'Copied!';
+            setTimeout(() => {
+              copyLabel.textContent = 'Copy Link';
+            }, 2500);
+          }
+        }
+
+        if (targetUrl) {
+          window.open(targetUrl, '_blank', 'noopener,noreferrer,width=600,height=500');
+        }
+
+        // Track channel click
+        fetch(`/api/v1/share/${shareToken}/track`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: `share_${channel}`, channel })
+        }).catch(() => {});
+      } catch (err: any) {
+        alert('Share action failed: ' + err.message);
+      }
+    });
+  });
+</script>

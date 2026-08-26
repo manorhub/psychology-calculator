@@ -10,6 +10,7 @@ import LifeContextSection from '@/components/results/LifeContextSection.astro';
 import ReflectionSection from '@/components/results/ReflectionSection.astro';
 import PremiumAiCta from '@/components/results/PremiumAiCta.astro';
 import GuestSaveBanner from '@/components/results/GuestSaveBanner.astro';
+import ShareResultSection from '@/components/results/ShareResultSection.astro';
 import { getD1Database } from '@/lib/db/client';
 import { ResultService } from '@/services/result.service';
 
@@ -147,6 +148,17 @@ const hasContexts = contextContents.length > 0;
     <!-- 3. Guest Account Conversion Banner (if unauthenticated) -->
     {!currentUser && !isSharedView && (
       <GuestSaveBanner attemptId={snapshot.attemptId} />
+    )}
+
+    <!-- Social Sharing & Viral Growth Section -->
+    {!isSharedView && (
+      <ShareResultSection
+        attemptId={snapshot.attemptId}
+        assessmentName={snapshot.assessmentName}
+        assessmentSlug={snapshot.assessmentSlug}
+        resultTitle={snapshot.primaryResultType?.name || 'Verified Psychometric Profile'}
+        scorePercent={Math.round(snapshot.totalNormalizedScore)}
+      />
     )}
 
     <!-- 4. Result Summary: What Your Result Means -->

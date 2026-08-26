@@ -1,4 +1,21 @@
 export const hi = {
+  sharing: {
+    title: 'अपना परिणाम साझा करें',
+    subtitle: 'दोस्तों के साथ अपना परिणाम साझा करें और देखें कि आपकी प्रोफ़ाइल की तुलना कैसे होती है।',
+    primaryCta: 'परिणाम साझा करें',
+    downloadCard: 'चित्र डाउनलोड करें',
+    copyLink: 'लिंक कॉपी करें',
+    copied: 'क्लिपबोर्ड पर कॉपी किया गया!',
+    whatsapp: 'व्हाट्सएप',
+    facebook: 'फेसबुक',
+    twitter: 'एक्स / ट्विटर',
+    linkedin: 'लिंक्डइन',
+    email: 'ईमेल',
+    takeThisTest: 'यह परीक्षण स्वयं लें',
+    exploreAll: 'सभी परीक्षण देखें',
+    sharedTitle: 'साझा मनोवैज्ञानिक प्रोफ़ाइल',
+    wantYourOwn: 'क्या आप अपनी खुद की प्रोफ़ाइल खोजना चाहते हैं?'
+  },
   common: {
     brandName: 'Psychology Calculator',
     tagline: 'वैज्ञानिक मनोविज्ञान एवं आत्म-खोज',

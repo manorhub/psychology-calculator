@@ -1,0 +1,166 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import ShareResultCard from '@/components/share/ShareResultCard.astro';
+import { getD1Database } from '@/lib/db/client';
+import { ShareService } from '@/services/share.service';
+
+const { token } = Astro.params;
+if (!token) return Astro.redirect('/assessments');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+if (!db) return Astro.redirect('/assessments');
+
+const shareService = new ShareService(db);
+
+let shareData;
+try {
+  shareData = await shareService.getPublicShare(token);
+} catch (error: any) {
+  return new Response(
+    `<!DOCTYPE html><html><head><title>Shared Result Unavailable | Psychology Calculator</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex, nofollow"><link rel="stylesheet" href="https://cdn.tailwindcss.com"></head><body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans"><div class="max-w-md w-full bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-4 text-center"><div class="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold">🔒</div><h2 class="text-xl font-black text-slate-900">Shared Result Not Available</h2><p class="text-xs text-slate-600 leading-relaxed">This shared result link is no longer available, has expired, or was made private by the author.</p><div class="pt-2"><a href="/assessments" class="inline-block px-5 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-colors">Take an Assessment Yourself →</a></div></div></body></html>`,
+    { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  );
+}
+
+const { share, assessmentSlug, relatedAssessments } = shareData;
+const canonicalUrl = `https://www.psychologycalculator.com/share/${share.shareToken}`;
+const ogImageUrl = `https://www.psychologycalculator.com/api/v1/share/${share.shareToken}/image.svg`;
+---
+
+<BaseLayout
+  title={`${share.resultTitle} | ${share.assessmentName} Result`}
+  description={`View the psychometric profile breakdown for ${share.assessmentName} on PsychologyCalculator.com.`}
+  canonical={canonicalUrl}
+>
+  <!-- SEO & Social Directives -->
+  <Fragment slot="head">
+    <meta name="robots" content="noindex, nofollow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={`${share.resultTitle} - ${share.assessmentName}`} />
+    <meta property="og:description" content={share.resultSummary} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="Psychology Calculator" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${share.resultTitle} - ${share.assessmentName}`} />
+    <meta name="twitter:description" content={share.resultSummary} />
+    <meta name="twitter:image" content={ogImageUrl} />
+  </Fragment>
+
+  <div class="max-w-4xl mx-auto py-8 sm:py-12 px-4 sm:px-6 space-y-8 sm:space-y-10">
+    <!-- Top Breadcrumb & Back -->
+    <div class="flex items-center justify-between text-xs text-slate-500">
+      <div class="flex items-center gap-2">
+        <a href="/" class="hover:text-teal-700 font-semibold">Home</a>
+        <span>/</span>
+        <a href="/assessments" class="hover:text-teal-700 font-semibold">Assessments</a>
+        <span>/</span>
+        <span class="text-slate-900 font-bold">Shared Result</span>
+      </div>
+      <a href="/assessments" class="text-teal-700 hover:text-teal-800 font-bold hidden sm:inline-block">
+        Explore All 10+ Tests →
+      </a>
+    </div>
+
+    <!-- Viral Notification Header -->
+    <div class="p-4 sm:p-5 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center text-lg font-bold flex-shrink-0">
+          Ψ
+        </div>
+        <div>
+          <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-teal-800 block">
+            Shared Psychometric Profile
+          </span>
+          <p class="text-xs sm:text-sm font-semibold text-slate-800">
+            Someone shared their verified result from the <strong class="text-slate-950 font-extrabold">{share.assessmentName}</strong>.
+          </p>
+        </div>
+      </div>
+      <a
+        href={`/assessments/${assessmentSlug}?ref=share&share_id=${share.shareToken}`}
+        class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-black rounded-xl shadow-xs transition-all text-center flex-shrink-0"
+      >
+        Take This Test →
+      </a>
+    </div>
+
+    <!-- Primary Interactive Share Result Card -->
+    <ShareResultCard share={share} />
+
+    <!-- Primary Viral CTA Banner -->
+    <div class="bg-gradient-to-br from-slate-900 via-slate-950 to-teal-950 text-white rounded-3xl p-6 sm:p-10 border border-slate-800 shadow-xl text-center space-y-5">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/20 text-teal-300 text-xs font-mono font-bold tracking-wider uppercase border border-teal-500/40">
+        <span>⚡</span>
+        <span>DISCOVER YOUR OWN PROFILE</span>
+      </div>
+      <div class="max-w-xl mx-auto space-y-2">
+        <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          Want to see how your profile compares?
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          Take the free, scientifically grounded {share.assessmentName}. Get immediate dimensional scores, normative percentiles, and actionable psychological insights.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+        <a
+          href={`/assessments/${assessmentSlug}?ref=share&share_id=${share.shareToken}`}
+          class="px-6 py-3.5 bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-teal-500/20 transition-all flex items-center gap-2"
+        >
+          <span>🎯</span>
+          <span>Take This Assessment Yourself</span>
+        </a>
+        <a
+          href="/assessments"
+          class="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold text-xs sm:text-sm rounded-2xl transition-all"
+        >
+          Explore All Tests
+        </a>
+      </div>
+    </div>
+
+    <!-- Related Assessments Catalog Section -->
+    {relatedAssessments.length > 0 && (
+      <section class="space-y-4 pt-4">
+        <div class="flex items-center justify-between">
+          <h4 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+            You Might Also Like
+          </h4>
+          <a href="/assessments" class="text-xs font-bold text-teal-700 hover:text-teal-800">
+            View All →
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {relatedAssessments.map((ra) => (
+            <Card class="p-5 space-y-3 hover:border-teal-500 transition-all flex flex-col justify-between">
+              <div class="space-y-1.5">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md inline-block">
+                  {ra.category_name || 'Psychology'}
+                </span>
+                <h5 class="text-sm font-bold text-slate-900 leading-snug">{ra.name}</h5>
+                <p class="text-xs text-slate-500 line-clamp-2">{ra.short_description}</p>
+              </div>
+              <a
+                href={`/assessments/${ra.slug}?ref=share_related`}
+                class="text-xs font-bold text-teal-700 hover:text-teal-800 pt-2 block border-t border-slate-100"
+              >
+                Take Assessment →
+              </a>
+            </Card>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Privacy & Disclaimer Note -->
+    <div class="text-center text-[11px] text-slate-400 leading-relaxed border-t border-slate-200 pt-6">
+      <p>
+        PsychologyCalculator.com results are intended for self-reflection, educational exploration, and personal growth.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

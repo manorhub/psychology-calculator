@@ -1,4 +1,21 @@
 export const de = {
+  sharing: {
+    title: 'Teilen Sie Ihr Ergebnis',
+    subtitle: 'Teilen Sie Ihr Ergebnis mit Freunden und vergleichen Sie Ihre Persönlichkeitsprofile.',
+    primaryCta: 'Ergebnis teilen',
+    downloadCard: 'Bild herunterladen',
+    copyLink: 'Link kopieren',
+    copied: 'In die Zwischenablage kopiert!',
+    whatsapp: 'WhatsApp',
+    facebook: 'Facebook',
+    twitter: 'X / Twitter',
+    linkedin: 'LinkedIn',
+    email: 'E-Mail',
+    takeThisTest: 'Diesen Test selbst machen',
+    exploreAll: 'Alle Tests ansehen',
+    sharedTitle: 'Geteiltes psychometrisches Profil',
+    wantYourOwn: 'Möchten Sie Ihr eigenes Profil entdecken?'
+  },
   common: {
     brandName: 'Psychology Calculator',
     tagline: 'Wissenschaftliche Psychometrie & Selbsterkenntnis',

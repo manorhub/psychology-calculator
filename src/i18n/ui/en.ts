@@ -1,4 +1,21 @@
 export const en = {
+  sharing: {
+    title: 'Share Your Result',
+    subtitle: 'Share your result with friends and see how your profiles compare. Only your summary outcome is shared.',
+    primaryCta: 'Share Your Result',
+    downloadCard: 'Download Image',
+    copyLink: 'Copy Link',
+    copied: 'Copied to clipboard!',
+    whatsapp: 'WhatsApp',
+    facebook: 'Facebook',
+    twitter: 'X / Twitter',
+    linkedin: 'LinkedIn',
+    email: 'Email',
+    takeThisTest: 'Take This Assessment Yourself',
+    exploreAll: 'Explore All Tests',
+    sharedTitle: 'Shared Psychometric Profile',
+    wantYourOwn: 'Want to discover your own profile?'
+  },
   common: {
     brandName: 'Psychology Calculator',
     tagline: 'Scientific Psychometrics & Self-Discovery',
