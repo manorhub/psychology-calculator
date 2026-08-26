@@ -1,7 +1,7 @@
 export const en = {
   common: {
     brandName: 'Psychology Calculator',
-    tagline: 'Scientific Psychometrics & Self-Discovery',
+    tagline: 'Psychometrics & Self-Discovery',
     back: 'Back',
     backToHome: 'Back to Home',
     backToAssessments: 'Back to Assessments',

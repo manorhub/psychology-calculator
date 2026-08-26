@@ -3,8 +3,8 @@
 
 -- 1. Site Settings
 INSERT OR IGNORE INTO site_settings (key, value, type, is_public, description) VALUES
-('site_name', 'MindMetrics', 'string', 1, 'Public site name'),
-('site_tagline', 'Scientifically grounded self-assessments for clarity, growth, and self-discovery.', 'string', 1, 'Public site tagline'),
+('site_name', 'Psychology Calculator', 'string', 1, 'Public site name'),
+('site_tagline', 'Psychometrics & Self-Discovery', 'string', 1, 'Public site tagline'),
 ('site_description', 'Explore comprehensive personality, emotional intelligence, and relationship assessments designed with psychological rigor.', 'string', 1, 'SEO default meta description'),
 ('disclaimer_text', 'MindMetrics self-assessments are provided for educational and self-exploration purposes only. They are not intended as diagnostic tools or clinical psychological evaluations.', 'string', 1, 'Mandatory psychology assessment disclaimer'),
 ('contact_email', 'support@mindmetrics.io', 'string', 1, 'Public support email'),

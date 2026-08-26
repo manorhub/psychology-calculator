@@ -6,7 +6,7 @@ import type { DynamicSiteConfig } from '@/types/config';
  */
 export const DEFAULT_DYNAMIC_CONFIG: DynamicSiteConfig = {
   siteName: 'Psychology Calculator',
-  siteTagline: 'Psychology tests that turn your answers into useful insights.',
+  siteTagline: 'Psychometrics & Self-Discovery',
   siteDescription: 'Explore comprehensive personality, emotional intelligence, and relationship assessments designed with psychological rigor.',
   primaryCtaText: 'Explore Assessments',
   primaryCtaLink: '/assessments',

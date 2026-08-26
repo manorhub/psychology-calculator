@@ -19,18 +19,18 @@ export interface DefaultSeoConfig {
 }
 
 export const DEFAULT_SEO: DefaultSeoConfig = {
-  titleTemplate: '%s | MindMetrics',
-  defaultTitle: 'MindMetrics — Evidence-Based Psychological Assessments',
+  titleTemplate: '%s | Psychology Calculator',
+  defaultTitle: 'Psychology Calculator — Psychometrics & Self-Discovery',
   defaultDescription: 'Discover deep self-insights with validated personality, emotional intelligence, and cognitive style assessments.',
   openGraph: {
     type: 'website',
-    siteName: 'MindMetrics',
+    siteName: 'Psychology Calculator',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'MindMetrics Psychology Assessment Platform'
+        alt: 'Psychology Calculator — Psychometrics & Self-Discovery'
       }
     ]
   },
