@@ -1,44 +1,45 @@
 import type { DynamicSiteConfig } from '@/types/config';
 
 /**
- * Default Dynamic Business Configuration
- * These values serve as initial defaults and can be updated at runtime via the Admin Panel & D1 database.
+ * Default Dynamic Business Configuration for PsychologyCalculator.com
  */
 export const DEFAULT_DYNAMIC_CONFIG: DynamicSiteConfig = {
-  siteName: 'MindMetrics',
-  siteTagline: 'Scientifically grounded self-assessments for clarity, growth, and self-discovery.',
-  siteDescription: 'Explore comprehensive personality, emotional intelligence, and relationship assessments designed with psychological rigor.',
-  primaryCtaText: 'Explore Assessments',
-  primaryCtaLink: '#assessments',
-  disclaimerText: 'MindMetrics self-assessments are provided for educational and self-exploration purposes only. They are not intended as diagnostic tools or clinical psychological evaluations.',
-  contactEmail: 'support@mindmetrics.io',
+  siteName: 'Psychology Calculator',
+  siteTagline: 'Scientifically validated self-assessments for clarity, psychometrics, and self-discovery.',
+  siteDescription: 'Explore comprehensive personality, emotional intelligence, cognitive, and relationship assessments designed with psychological rigor.',
+  primaryCtaText: 'Take Free Test',
+  primaryCtaLink: '/assessments',
+  disclaimerText: 'PsychologyCalculator.com self-assessments are provided for educational and self-exploration purposes only. They are not intended as diagnostic tools or clinical psychological evaluations.',
+  contactEmail: 'support@psychologycalculator.com',
   headerNavigation: [
-    { label: 'Assessments', href: '/#assessments' },
-    { label: 'How It Works', href: '/#how-it-works' },
-    { label: 'About', href: '/#about' },
-    { label: 'Admin', href: '/admin' }
+    { label: 'Assessments', href: '/assessments' },
+    { label: 'Categories', href: '/#categories' },
+    { label: 'About', href: '/about' },
+    { label: 'Pricing', href: '/pricing' }
   ],
   footerSections: [
     {
-      title: 'Platform',
+      title: 'Psychology Assessments',
       links: [
-        { label: 'All Assessments', href: '/#assessments' },
-        { label: 'Methodology', href: '/#methodology' },
-        { label: 'Pricing', href: '/#pricing' }
+        { label: 'All 10+ Tests', href: '/assessments' },
+        { label: 'Big Five OCEAN', href: '/assessments/big-five-personality-test' },
+        { label: 'Emotional Intelligence', href: '/assessments/emotional-intelligence-eq-assessment' },
+        { label: 'Attachment Style', href: '/assessments/attachment-style-relationship-quiz' }
       ]
     },
     {
-      title: 'Company',
+      title: 'Platform',
       links: [
-        { label: 'About Us', href: '/#about' },
-        { label: 'Contact', href: 'mailto:support@mindmetrics.io' }
+        { label: 'About & Methodology', href: '/about' },
+        { label: 'Credit Packages', href: '/pricing' },
+        { label: 'Contact Us', href: 'mailto:support@psychologycalculator.com' }
       ]
     },
     {
       title: 'Legal & Ethics',
       links: [
-        { label: 'Privacy Policy', href: '/privacy' },
-        { label: 'Terms of Service', href: '/terms' },
+        { label: 'Privacy Policy', href: '/privacy-policy' },
+        { label: 'Terms of Service', href: '/terms-of-service' },
         { label: 'Psychological Disclaimer', href: '/disclaimer' }
       ]
     }
@@ -46,7 +47,7 @@ export const DEFAULT_DYNAMIC_CONFIG: DynamicSiteConfig = {
   features: {
     enableAiReports: true,
     enableUserAccounts: true,
-    enablePayments: false, // Disabled until Phase 3
+    enablePayments: true,
     enableSocialShare: true,
     enableGuestAssessments: true,
     maintenanceMode: false

@@ -1,80 +1,90 @@
 ---
 import type { DynamicSiteConfig } from '@/types/config';
 import Button from '@/components/ui/Button.astro';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher.astro';
+import { type SupportedLocale, DEFAULT_LOCALE, getLocalizedPath } from '@/i18n';
 
 interface Props {
   config: DynamicSiteConfig;
+  currentLocale?: string;
 }
 
-const { config } = Astro.props;
+const { config, currentLocale = DEFAULT_LOCALE } = Astro.props;
 const user = Astro.locals.user;
+const activeLocale = currentLocale || DEFAULT_LOCALE;
+
+const homeHref = activeLocale === 'en' ? '/' : `/${activeLocale}`;
+const assessmentsHref = activeLocale === 'en' ? '/assessments' : `/${activeLocale}/assessments`;
 ---
 
-<header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+<header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16 sm:h-20">
       <!-- Brand Logo -->
       <div class="flex items-center gap-8">
-        <a href="/" class="flex items-center gap-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded-lg">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 flex items-center justify-center text-white shadow-sm shadow-teal-500/20 group-hover:scale-105 transition-transform">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2a8 8 0 0 0-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 0 0-8-8z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
+        <a href={homeHref} class="flex items-center gap-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded-lg">
+          <div class="w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center text-white font-black text-lg shadow-sm shadow-teal-500/20 group-hover:scale-105 transition-transform">
+            Ψ
           </div>
           <div class="flex flex-col">
-            <span class="font-bold text-lg sm:text-xl text-slate-900 tracking-tight leading-none">
-              {config.siteName}
+            <span class="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight leading-none">
+              Psychology<span class="text-teal-600">Calculator</span>.com
             </span>
-            <span class="text-[10px] text-teal-700 font-semibold tracking-wider uppercase mt-0.5">
-              Psychology
+            <span class="text-[10px] text-teal-700 font-bold tracking-wider uppercase mt-0.5">
+              Psychometrics & Self-Discovery
             </span>
           </div>
         </a>
 
-        <!-- Desktop Navigation Links (Dynamic) -->
+        <!-- Desktop Navigation Links -->
         <nav class="hidden md:flex items-center gap-1" aria-label="Main Navigation">
-          {config.headerNavigation.map((item) => (
-            <a
-              href={item.href}
-              class="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
-            >
-              {item.label}
-              {item.badge && (
-                <span class="ml-1.5 px-1.5 py-0.5 text-[10px] bg-teal-100 text-teal-800 rounded-full font-semibold">
-                  {item.badge}
-                </span>
-              )}
-            </a>
-          ))}
+          <a
+            href={assessmentsHref}
+            class="px-3.5 py-2 text-sm font-semibold text-slate-700 hover:text-teal-700 hover:bg-teal-50/60 rounded-xl transition-colors"
+          >
+            Assessments
+          </a>
+          <a
+            href={activeLocale === 'en' ? '/about' : `/${activeLocale}/about`}
+            class="px-3.5 py-2 text-sm font-semibold text-slate-700 hover:text-teal-700 hover:bg-teal-50/60 rounded-xl transition-colors"
+          >
+            About
+          </a>
+          <a
+            href={activeLocale === 'en' ? '/pricing' : `/${activeLocale}/pricing`}
+            class="px-3.5 py-2 text-sm font-semibold text-slate-700 hover:text-teal-700 hover:bg-teal-50/60 rounded-xl transition-colors"
+          >
+            Pricing
+          </a>
         </nav>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-3">
+      <!-- Action Buttons & Language Switcher -->
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <!-- Language Switcher Dropdown -->
+        <LanguageSwitcher currentLocale={activeLocale} />
+
         {user ? (
           <a
-            href="/account"
-            class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+            href="/dashboard"
+            class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-800 hover:text-teal-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
           >
-            <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">
+            <span class="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] font-bold">
               {user.profile.displayName ? user.profile.displayName.substring(0, 1).toUpperCase() : 'U'}
             </span>
-            <span class="max-w-[120px] truncate">{user.profile.displayName || 'Account'}</span>
+            <span class="max-w-[120px] truncate">{user.profile.displayName || 'Dashboard'}</span>
           </a>
         ) : (
-          config.features.enableUserAccounts && (
-            <a
-              href="/login"
-              class="hidden sm:inline-flex px-3.5 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
-            >
-              Sign In
-            </a>
-          )
+          <a
+            href="/login"
+            class="hidden sm:inline-flex px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            Sign In
+          </a>
         )}
 
-        <Button href={config.primaryCtaLink} variant="primary" size="sm">
-          {config.primaryCtaText}
+        <Button href={assessmentsHref} variant="primary" size="sm">
+          Take Free Test →
         </Button>
 
         <!-- Mobile Menu Toggle Button -->
@@ -96,49 +106,60 @@ const user = Astro.locals.user;
 
   <!-- Mobile Dropdown Navigation -->
   <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 shadow-lg">
-    {config.headerNavigation.map((item) => (
-      <a
-        href={item.href}
-        class="block px-3.5 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl"
-      >
-        {item.label}
-      </a>
-    ))}
+    <a
+      href={assessmentsHref}
+      class="block px-3 py-2 text-sm font-bold text-slate-800 hover:bg-teal-50 hover:text-teal-800 rounded-xl"
+    >
+      All Assessments
+    </a>
+    <a
+      href={activeLocale === 'en' ? '/about' : `/${activeLocale}/about`}
+      class="block px-3 py-2 text-sm font-bold text-slate-800 hover:bg-teal-50 hover:text-teal-800 rounded-xl"
+    >
+      About & Methodology
+    </a>
+    <a
+      href={activeLocale === 'en' ? '/pricing' : `/${activeLocale}/pricing`}
+      class="block px-3 py-2 text-sm font-bold text-slate-800 hover:bg-teal-50 hover:text-teal-800 rounded-xl"
+    >
+      Pricing & Credits
+    </a>
     {user ? (
-      <div class="pt-2 border-t border-slate-100">
-        <a
-          href="/account"
-          class="block px-3.5 py-2.5 text-base font-medium text-teal-700 hover:bg-teal-50 rounded-xl"
-        >
-          My Account ({user.profile.displayName || user.email})
-        </a>
-      </div>
+      <a
+        href="/dashboard"
+        class="block px-3 py-2 text-sm font-bold text-teal-800 bg-teal-50 rounded-xl"
+      >
+        My Dashboard ({user.profile.displayName || 'Member'})
+      </a>
     ) : (
-      config.features.enableUserAccounts && (
-        <div class="pt-2 border-t border-slate-100">
-          <a
-            href="/login"
-            class="block px-3.5 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl"
-          >
-            Sign In
-          </a>
-        </div>
-      )
+      <a
+        href="/login"
+        class="block px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl"
+      >
+        Sign In / Register
+      </a>
     )}
   </div>
 </header>
 
 <script is:inline>
-  const toggleBtn = document.getElementById('mobile-menu-toggle');
+  const toggle = document.getElementById('mobile-menu-toggle');
   const menu = document.getElementById('mobile-menu');
   const iconOpen = document.getElementById('menu-icon-open');
   const iconClose = document.getElementById('menu-icon-close');
 
-  toggleBtn?.addEventListener('click', () => {
-    const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-    toggleBtn.setAttribute('aria-expanded', (!isExpanded).toString());
-    menu?.classList.toggle('hidden');
-    iconOpen?.classList.toggle('hidden');
-    iconClose?.classList.toggle('hidden');
-  });
+  if (toggle && menu) {
+    toggle.addEventListener('click', () => {
+      const isHidden = menu.classList.contains('hidden');
+      if (isHidden) {
+        menu.classList.remove('hidden');
+        iconOpen?.classList.add('hidden');
+        iconClose?.classList.remove('hidden');
+      } else {
+        menu.classList.add('hidden');
+        iconOpen?.classList.remove('hidden');
+        iconClose?.classList.add('hidden');
+      }
+    });
+  }
 </script>

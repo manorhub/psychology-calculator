@@ -48,7 +48,7 @@ const siteConfig = await configService.getSiteConfig();
   modifiedTime={modifiedTime}
 >
   <slot name="head" slot="head" />
-  <Header config={siteConfig} />
+  <Header config={siteConfig} currentLocale={locale} />
   <main class="flex-1">
     <slot />
   </main>
