@@ -1,0 +1,211 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import StatCard from '@/components/admin/StatCard.astro';
+import { getD1Database } from '@/lib/db/client';
+import { GrowthService } from '@/services/growth/growth.service';
+import { ExperimentService } from '@/services/growth/experiment.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const growthService = new GrowthService(db);
+const expService = new ExperimentService(db);
+
+const [funnel, assessmentStats, ctaStats, profitability, experiments] = await Promise.all([
+  growthService.getConversionFunnel(30),
+  growthService.getAssessmentConversionStats('traffic'),
+  growthService.getCtaPerformanceStats(),
+  growthService.getAiCostVsRevenue(),
+  expService.getAllExperiments()
+]);
+
+const activeExperimentsCount = experiments.filter((e) => e.status === 'running').length;
+const overallFunnelConversion = funnel[funnel.length - 1]?.overallConversionRate || 0;
+---
+
+<AdminLayout title="Growth & Conversion Optimization">
+  <div class="space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Post-Launch Growth & Conversion</h1>
+        <p class="text-sm text-slate-500">Real production funnel telemetry, assessment drop-off, CTAs, and profitability</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/growth/experiments"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition"
+        >
+          🧪 A/B Experiments ({activeExperimentsCount})
+        </a>
+        <a
+          href="/admin/feedback"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition"
+        >
+          💬 User Feedback
+        </a>
+      </div>
+    </div>
+
+    <!-- Overview Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <StatCard
+        title="Overall Funnel Conversion"
+        value={`${overallFunnelConversion}%`}
+        description="Visitor to Paid Subscriber"
+        icon="TrendingUp"
+        trend={overallFunnelConversion > 1 ? `+${overallFunnelConversion}%` : 'Baseline'}
+        trendDirection="up"
+      />
+      <StatCard
+        title="Total Revenue (Paid)"
+        value={`$${profitability.totalRevenueUsd.toFixed(2)}`}
+        description="Lemon Squeezy settlements"
+        icon="DollarSign"
+        trend="Gross"
+        trendDirection="neutral"
+      />
+      <StatCard
+        title="Estimated AI Model Cost"
+        value={`$${profitability.estimatedAiCostUsd.toFixed(2)}`}
+        description={`${profitability.totalGenerations} AI reports generated`}
+        icon="Cpu"
+        trend="Estimated"
+        trendDirection="neutral"
+      />
+      <StatCard
+        title="Net Margin & ROI"
+        value={`$${profitability.netMarginUsd.toFixed(2)}`}
+        description={`${profitability.roiPercentage}% gross margin`}
+        icon="Zap"
+        trend={`+${profitability.roiPercentage}%`}
+        trendDirection="up"
+      />
+    </div>
+
+    <!-- Centralized Conversion Funnel Visualizer -->
+    <Card title="8-Step Conversion Funnel (Last 30 Days)">
+      <div class="p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+          {funnel.map((step, idx) => (
+            <div class="flex flex-col items-center text-center p-3.5 bg-slate-50 rounded-xl border border-slate-100 relative group hover:bg-indigo-50/40 transition">
+              <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center mb-2">
+                {step.stepIndex}
+              </span>
+              <h4 class="text-xs font-semibold text-slate-800 line-clamp-1 mb-1" title={step.stepName}>
+                {step.stepName}
+              </h4>
+              <p class="text-lg font-extrabold text-slate-900 my-1">
+                {step.count.toLocaleString()}
+              </p>
+              {idx > 0 && (
+                <div class="mt-2 text-[11px] font-medium">
+                  <span class="text-emerald-600">{step.conversionRateFromPrevious}% pass</span>
+                  <span class="text-slate-400 block text-[10px]">{step.dropoffRateFromPrevious}% drop</span>
+                </div>
+              )}
+              {idx === 0 && (
+                <span class="mt-2 text-[11px] text-slate-500">100% top</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+
+    <!-- Assessment Conversion & Drop-off Matrix -->
+    <Card title="Assessment Completion & Drop-Off Diagnostics">
+      <div class="p-6">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Assessment</th>
+                <th class="py-3 px-4 text-center">Views</th>
+                <th class="py-3 px-4 text-center">Starts</th>
+                <th class="py-3 px-4 text-center">Completions</th>
+                <th class="py-3 px-4 text-center">Completion Rate</th>
+                <th class="py-3 px-4 text-center">AI Requests</th>
+                <th class="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {assessmentStats.map((asm) => (
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="py-3.5 px-4 font-semibold text-slate-900">
+                    <a href={`/assessments/${asm.slug}`} target="_blank" class="hover:text-indigo-600">
+                      {asm.name}
+                    </a>
+                  </td>
+                  <td class="py-3.5 px-4 text-center font-medium">{asm.views}</td>
+                  <td class="py-3.5 px-4 text-center font-medium">{asm.starts}</td>
+                  <td class="py-3.5 px-4 text-center font-medium text-emerald-600">{asm.completions}</td>
+                  <td class="py-3.5 px-4 text-center">
+                    <div class="inline-flex items-center gap-2">
+                      <div class="w-16 bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div
+                          class={`h-2 rounded-full ${asm.completionRate > 70 ? 'bg-emerald-500' : asm.completionRate > 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                          style={`width: ${asm.completionRate}%`}
+                        />
+                      </div>
+                      <span class="font-bold text-xs">{asm.completionRate}%</span>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-4 text-center font-medium text-indigo-600">{asm.aiReportRequests}</td>
+                  <td class="py-3.5 px-4 text-right">
+                    <a
+                      href={`/admin/assessments/${asm.assessmentId}/edit`}
+                      class="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                    >
+                      Inspect Questions →
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Card>
+
+    <!-- Dynamic CTA Performance Tracking -->
+    <Card title="Dynamic Call-to-Action (CTA) Performance">
+      <div class="p-6">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">CTA Slug & Placement</th>
+                <th class="py-3 px-4">Headline</th>
+                <th class="py-3 px-4 text-center">Impressions</th>
+                <th class="py-3 px-4 text-center">Clicks</th>
+                <th class="py-3 px-4 text-center">CTR</th>
+                <th class="py-3 px-4 text-center">Conversions</th>
+                <th class="py-3 px-4 text-center">Conv. Rate</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {ctaStats.map((cta) => (
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="py-3.5 px-4">
+                    <span class="font-mono text-xs font-semibold text-slate-800 block">{cta.slug}</span>
+                    <Badge variant="default">{cta.placement}</Badge>
+                  </td>
+                  <td class="py-3.5 px-4 text-slate-700 max-w-xs truncate" title={cta.title}>{cta.title}</td>
+                  <td class="py-3.5 px-4 text-center font-medium">{cta.impressions}</td>
+                  <td class="py-3.5 px-4 text-center font-medium text-indigo-600">{cta.clicks}</td>
+                  <td class="py-3.5 px-4 text-center font-bold text-slate-900">{cta.ctr}%</td>
+                  <td class="py-3.5 px-4 text-center font-medium text-emerald-600">{cta.conversions}</td>
+                  <td class="py-3.5 px-4 text-center font-bold text-slate-900">{cta.conversionRate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

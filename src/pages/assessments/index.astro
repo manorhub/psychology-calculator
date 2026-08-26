@@ -1,0 +1,139 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AssessmentService } from '@/services/assessment.service';
+import { ConfigService } from '@/services/config.service';
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const assessmentService = new AssessmentService(db);
+const configService = new ConfigService(db);
+
+const [config, categories, assessments] = await Promise.all([
+  configService.getSiteConfig(),
+  assessmentService.getCategories('active'),
+  assessmentService.getAssessments({ status: 'published' })
+]);
+
+const user = Astro.locals.user;
+---
+
+<PublicLayout
+  title="Psychology Assessments & Psychometric Calculators | Psychology Calculator"
+  description="Explore our complete catalog of scientifically grounded personality, emotional intelligence, cognitive, and relationship assessments. Free guest access with instant scoring."
+>
+  <div class="max-w-6xl mx-auto py-10 sm:py-16 px-4 sm:px-6 space-y-12">
+    <!-- Header Hero -->
+    <div class="text-center max-w-3xl mx-auto space-y-4">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded-full text-xs font-bold">
+        <span>Ψ Free Public Assessments & Calculators</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
+        Evidence-Based Psychological Assessments
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        Validated psychometric tests designed with psychological rigor. Complete any assessment as a guest and receive your breakdown immediately.
+      </p>
+    </div>
+
+    <!-- Category Filters -->
+    {categories.length > 0 && (
+      <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+        <a
+          href="/assessments"
+          class="px-4 py-2 text-xs font-bold rounded-full bg-slate-900 text-white shadow-sm transition-all"
+        >
+          All Instruments ({assessments.length})
+        </a>
+        {categories.map((cat) => (
+          <a
+            href={`/categories/${cat.slug}`}
+            class="px-4 py-2 text-xs font-semibold rounded-full bg-white text-slate-700 border border-slate-200 hover:border-teal-500 hover:text-teal-700 transition-all"
+          >
+            {cat.name}
+          </a>
+        ))}
+      </div>
+    )}
+
+    <!-- Assessments Grid -->
+    {assessments.length === 0 ? (
+      <div class="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+        <div class="text-4xl">📋</div>
+        <h3 class="text-lg font-bold text-slate-900">No assessments found</h3>
+        <p class="text-xs text-slate-500">Assessments are being published shortly.</p>
+      </div>
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {assessments.map((asm) => (
+          <Card class="p-6 flex flex-col justify-between hover:border-teal-500/80 hover:shadow-md transition-all group">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
+                  {asm.category_name || 'Self-Assessment'}
+                </span>
+                <span class={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  asm.access_type === 'premium' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700'
+                }`}>
+                  {asm.access_type === 'premium' ? '✨ Premium' : '✓ Free Guest Access'}
+                </span>
+              </div>
+
+              <div class="space-y-2">
+                <h3 class="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors leading-snug">
+                  {asm.name}
+                </h3>
+                <p class="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                  {asm.short_description}
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-3 text-xs text-slate-400 font-medium">
+                <span>⏱ ~{asm.estimated_minutes} min</span>
+                <span>•</span>
+                <span>{asm.question_count} items</span>
+              </div>
+
+              <a
+                href={`/assessments/${asm.slug}`}
+                class="inline-flex items-center justify-center px-4 py-2 text-xs font-bold text-teal-700 hover:text-white bg-teal-50 hover:bg-teal-700 border border-teal-200 hover:border-teal-700 rounded-xl transition-all"
+              >
+                Start →
+              </a>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )}
+
+    <!-- Guest Information Banner -->
+    <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-8 sm:p-10 shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="space-y-2 text-center md:text-left">
+        <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+          No Signup Required to Begin
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+          All free psychometric assessments and psychology calculators are open to the public. You can complete tests anonymously as a guest and save your results to a free account at any time.
+        </p>
+      </div>
+
+      <div class="flex-shrink-0 flex gap-3">
+        {user ? (
+          <Button href="/dashboard" variant="primary" size="md">
+            Go to Dashboard →
+          </Button>
+        ) : (
+          <Button href="/register" variant="primary" size="md">
+            Create Free Account
+          </Button>
+        )}
+      </div>
+    </div>
+  </div>
+</PublicLayout>

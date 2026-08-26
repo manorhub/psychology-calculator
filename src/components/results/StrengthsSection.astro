@@ -1,0 +1,57 @@
+---
+import type { SnapshotResultContent } from '@/types/database';
+
+interface Props {
+  strengthsContent?: SnapshotResultContent | null;
+  fallbackStrengths?: string[];
+}
+
+const { strengthsContent = null, fallbackStrengths = [] } = Astro.props;
+
+// Parse strengths into structured items
+let items: string[] = [];
+
+if (strengthsContent?.content) {
+  items = strengthsContent.content
+    .split(/\n|•|-|\*/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 3);
+}
+
+if (items.length === 0 && fallbackStrengths.length > 0) {
+  items = fallbackStrengths;
+}
+
+const icons = ['💡', '🎯', '🛡️', '🤝', '⚡', '🌟', '🧠', '✨'];
+---
+
+{items.length > 0 && (
+  <section id="strengths" class="space-y-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-lg border border-emerald-200">
+        💡
+      </div>
+      <div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          {strengthsContent?.title || 'Your Potential Strengths'}
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500">
+          Core behavioral tendencies and cognitive advantages observed in your assessment profile
+        </p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {items.map((item, idx) => (
+        <div class="bg-gradient-to-br from-emerald-50/60 to-white rounded-3xl p-6 border border-emerald-200/80 shadow-2xs space-y-3 hover:shadow-xs transition-all">
+          <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-bold">
+            {icons[idx % icons.length]}
+          </div>
+          <p class="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
+            {item}
+          </p>
+        </div>
+      ))}
+    </div>
+  </section>
+)}

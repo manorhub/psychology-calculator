@@ -1,0 +1,429 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import Alert from '@/components/ui/Alert.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AdminService } from '@/services/admin.service';
+
+const { id } = Astro.params;
+if (!id) {
+  return Astro.redirect('/admin/users');
+}
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const adminService = new AdminService(db);
+
+const userDetail = await adminService.getUserDetail(id);
+if (!userDetail) {
+  return Astro.redirect('/admin/users');
+}
+
+const { user, profile, attemptCount, reportCount, activeSubscription, creditBalance } = userDetail;
+const currentAdminId = Astro.locals.user?.id;
+const isSelf = currentAdminId === user.id;
+---
+
+<AdminLayout title={`User: ${user.email}`} description="Manage user account, security status, credits, and roles">
+  <div class="max-w-5xl mx-auto space-y-6">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <a href="/admin/users" class="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1 mb-1">
+          ← Back to User Directory
+        </a>
+        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <span>{profile?.display_name || user.email}</span>
+          <Badge
+            variant={
+              user.status === 'active'
+                ? 'success'
+                : user.status === 'suspended'
+                ? 'danger'
+                : 'warning'
+            }
+            size="sm"
+          >
+            {user.status.toUpperCase()}
+          </Badge>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Status Alert Container -->
+    <div id="action-alert" class="hidden">
+      <Alert variant="info" title="Status Update">
+        <span id="action-msg"></span>
+      </Alert>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Left Column: User Profile Overview -->
+      <div class="md:col-span-1 space-y-6">
+        <Card class="p-6 text-center space-y-4">
+          <div class="w-20 h-20 rounded-full bg-slate-900 text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
+            {profile?.display_name ? profile.display_name.substring(0, 2).toUpperCase() : 'U'}
+          </div>
+
+          <div>
+            <h3 class="font-bold text-slate-900 text-lg">{profile?.display_name || 'No Name Set'}</h3>
+            <p class="text-xs text-slate-500 font-mono">{user.email}</p>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 space-y-2 text-left text-xs text-slate-600">
+            <div class="flex justify-between">
+              <span class="text-slate-400">User ID:</span>
+              <span class="font-mono text-[10px] truncate max-w-[120px]">{user.id}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Role:</span>
+              <span class="font-semibold text-slate-900">{user.role.toUpperCase()}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Credit Balance:</span>
+              <span class="font-bold text-teal-700 font-mono">{creditBalance} Credits</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Email Verified:</span>
+              <span class="font-semibold">{user.email_verified_at ? 'Yes' : 'No'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Timezone:</span>
+              <span>{profile?.timezone || 'UTC'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Joined:</span>
+              <span>{new Date(user.created_at).toLocaleDateString()}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Last Login:</span>
+              <span>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'Never'}</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <!-- Right 2 Columns: Activity Stats, Credits, & Admin Actions -->
+      <div class="md:col-span-2 space-y-6">
+        <!-- Activity & Engagement Stats -->
+        <Card title="Activity & Subscription">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="text-2xl font-extrabold text-slate-900">{attemptCount}</div>
+              <div class="text-xs text-slate-500 mt-1">Attempts</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="text-2xl font-extrabold text-slate-900">{reportCount}</div>
+              <div class="text-xs text-slate-500 mt-1">Reports</div>
+            </div>
+            <div class="p-4 rounded-xl bg-teal-50/50 border border-teal-100">
+              <div class="text-2xl font-black text-teal-700 font-mono">{creditBalance}</div>
+              <div class="text-xs text-teal-800 font-bold mt-1">AI Credits</div>
+            </div>
+            <div class="col-span-2 sm:col-span-1 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="text-xs font-bold text-slate-900">
+                {activeSubscription ? activeSubscription.planName : 'Free Tier'}
+              </div>
+              <div class="text-[11px] text-slate-500 mt-1">
+                {activeSubscription ? `Status: ${activeSubscription.status}` : 'No active plan'}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <!-- Credit Adjustment Card -->
+        <Card title="💎 AI Credits Management" subtitle="Add or adjust AI generation credits for this user">
+          <form id="adjust-credits-form" class="space-y-4">
+            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="text-xs font-semibold text-slate-700">Current Balance:</span>
+              <span class="text-sm font-mono font-black text-teal-700">{creditBalance} Credits</span>
+            </div>
+
+            <!-- Quick Add Presets -->
+            <div class="space-y-1.5">
+              <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">Quick Presets</label>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="credit-preset-btn px-3 py-1.5 bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50/50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition-all" data-amount="5">+5 Credits</button>
+                <button type="button" class="credit-preset-btn px-3 py-1.5 bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50/50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition-all" data-amount="20">+20 Credits</button>
+                <button type="button" class="credit-preset-btn px-3 py-1.5 bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50/50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition-all" data-amount="50">+50 Credits</button>
+                <button type="button" class="credit-preset-btn px-3 py-1.5 bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50/50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition-all" data-amount="100">+100 Credits</button>
+                <button type="button" class="credit-preset-btn px-3 py-1.5 bg-white border border-slate-200 hover:border-teal-500 hover:bg-teal-50/50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition-all" data-amount="500">+500 Credits</button>
+              </div>
+            </div>
+
+            <!-- Custom Amount and Reason -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  Amount to Add (+/-)
+                </label>
+                <input
+                  type="number"
+                  id="credit-amount-input"
+                  name="amount"
+                  placeholder="e.g. 10"
+                  class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono font-bold focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  Reason / Internal Note
+                </label>
+                <input
+                  type="text"
+                  id="credit-reason-input"
+                  name="reason"
+                  placeholder="e.g. Customer support reward, promo top-up"
+                  class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-100">
+              <Button type="submit" variant="primary" size="sm">
+                + Grant / Update Credits
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        <!-- Administrative Controls -->
+        <Card title="Administrative Actions" subtitle="Perform role updates and account security actions">
+          <div class="space-y-6">
+            <!-- Role Elevation / Demotion -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <h4 class="text-xs font-bold text-slate-900">Account Role</h4>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Current role is <strong>{user.role}</strong>. Admins have access to the `/admin` portal.
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                {user.role === 'user' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    id="elevate-role-btn"
+                    disabled={isSelf}
+                  >
+                    Promote to Admin
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    id="demote-role-btn"
+                    disabled={isSelf}
+                  >
+                    Demote to User
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <!-- Suspension / Reactivation -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <h4 class="text-xs font-bold text-slate-900">Account Access & Suspension</h4>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  {user.status === 'suspended'
+                    ? 'This account is suspended and cannot log in.'
+                    : 'Suspending this user will immediately invalidate all their active sessions.'}
+                </p>
+              </div>
+
+              <div>
+                {user.status === 'suspended' ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    id="reactivate-btn"
+                    disabled={isSelf}
+                  >
+                    Reactivate Account
+                  </Button>
+                ) : (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    id="suspend-btn"
+                    disabled={isSelf}
+                  >
+                    Suspend Account
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <!-- Manual Email Verification Action -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-xs font-bold text-slate-900">Email Verification Status</h4>
+                  {user.email_verified_at ? (
+                    <Badge variant="success" size="sm">✓ VERIFIED</Badge>
+                  ) : (
+                    <Badge variant="warning" size="sm">UNVERIFIED</Badge>
+                  )}
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  {user.email_verified_at
+                    ? `Verified on ${new Date(user.email_verified_at).toLocaleString()}`
+                    : 'User has not confirmed their email address. Admins can manually verify to grant immediate access.'}
+                </p>
+              </div>
+
+              <div>
+                {user.email_verified_at ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    id="unverify-email-btn"
+                  >
+                    Revoke Verification
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    id="verify-email-btn"
+                  >
+                    ✓ Mark as Verified
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {isSelf && (
+              <p class="text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                ⚠️ You cannot suspend or change the role of your own administrator account.
+              </p>
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script is:inline define:vars={{ userId: user.id }}>
+  async function executeUserAction(endpoint, payload, confirmMsg) {
+    if (confirmMsg && !confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.error?.message || 'Action failed.');
+        return;
+      }
+
+      window.location.reload();
+    } catch {
+      alert('A network error occurred.');
+    }
+  }
+
+  // Credit Presets
+  document.querySelectorAll('.credit-preset-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const amount = btn.getAttribute('data-amount');
+      const input = document.getElementById('credit-amount-input');
+      if (input && amount) {
+        input.value = amount;
+      }
+    });
+  });
+
+  // Credit Adjustment Form Submit
+  document.getElementById('adjust-credits-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const amountInput = document.getElementById('credit-amount-input');
+    const reasonInput = document.getElementById('credit-reason-input');
+
+    const amount = parseInt(amountInput?.value || '0', 10);
+    const reason = reasonInput?.value || 'Admin manual credit top-up';
+
+    if (!amount || isNaN(amount)) {
+      alert('Please enter a valid non-zero credit amount.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/users/credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, amount, reason })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.error?.message || 'Failed to update credits');
+        return;
+      }
+
+      alert(data.data?.message || 'Credits updated successfully!');
+      window.location.reload();
+    } catch {
+      alert('Network error while updating credits');
+    }
+  });
+
+  document.getElementById('suspend-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/status',
+      { userId, status: 'suspended' },
+      'Are you sure you want to suspend this user? All their active sessions will be terminated.'
+    );
+  });
+
+  document.getElementById('reactivate-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/status',
+      { userId, status: 'active' },
+      'Reactivate this user account?'
+    );
+  });
+
+  document.getElementById('elevate-role-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/role',
+      { userId, role: 'admin' },
+      'Promote this user to Administrator? They will have full access to system controls.'
+    );
+  });
+
+  document.getElementById('demote-role-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/role',
+      { userId, role: 'user' },
+      'Demote this administrator to standard user?'
+    );
+  });
+
+  document.getElementById('verify-email-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/verify',
+      { userId, isVerified: true },
+      'Manually mark this user as verified? They will immediately be able to log in without clicking an email link.'
+    );
+  });
+
+  document.getElementById('unverify-email-btn')?.addEventListener('click', () => {
+    executeUserAction(
+      '/api/admin/users/verify',
+      { userId, isVerified: false },
+      'Revoke email verification for this user?'
+    );
+  });
+</script>

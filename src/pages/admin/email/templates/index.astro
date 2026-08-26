@@ -1,0 +1,277 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { EmailService } from '@/services/email.service';
+import type { EmailEventCategory } from '@/types/database';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const emailService = new EmailService(db);
+
+const url = new URL(Astro.request.url);
+const selectedCategory = url.searchParams.get('category') as EmailEventCategory | undefined;
+
+const templates = await emailService.getTemplates(selectedCategory);
+const allTemplates = selectedCategory ? await emailService.getTemplates() : templates;
+
+const categoryCounts = {
+  all: allTemplates.length,
+  auth_security: allTemplates.filter((t) => t.category === 'auth_security').length,
+  assessments: allTemplates.filter((t) => t.category === 'assessments').length,
+  reports: allTemplates.filter((t) => t.category === 'reports').length,
+  credits_billing: allTemplates.filter((t) => t.category === 'credits_billing').length,
+  system_optional: allTemplates.filter((t) => t.category === 'system_optional').length
+};
+---
+
+<AdminLayout title="Transactional Email Templates">
+  <div class="space-y-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/settings/email" class="text-xs font-semibold text-indigo-600 hover:underline">SMTP Settings</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Email Templates</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Transactional Email Templates</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Manage transactional email copy, subject lines, CTA buttons, and status across all account and billing lifecycles.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/email/logs"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5"
+        >
+          📋 Delivery Logs
+        </a>
+        <a
+          href="/admin/settings/email"
+          class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5"
+        >
+          ⚙️ SMTP Settings
+        </a>
+      </div>
+    </div>
+
+    <!-- Category Filter Tabs -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1">
+      <a
+        href="/admin/email/templates"
+        class={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+          !selectedCategory ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        }`}
+      >
+        All Templates ({categoryCounts.all})
+      </a>
+      <a
+        href="/admin/email/templates?category=auth_security"
+        class={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+          selectedCategory === 'auth_security' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        }`}
+      >
+        🔐 Auth & Security ({categoryCounts.auth_security})
+      </a>
+      <a
+        href="/admin/email/templates?category=assessments"
+        class={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+          selectedCategory === 'assessments' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        }`}
+      >
+        📝 Assessments ({categoryCounts.assessments})
+      </a>
+      <a
+        href="/admin/email/templates?category=reports"
+        class={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+          selectedCategory === 'reports' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        }`}
+      >
+        📊 Reports ({categoryCounts.reports})
+      </a>
+      <a
+        href="/admin/email/templates?category=credits_billing"
+        class={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+          selectedCategory === 'credits_billing' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        }`}
+      >
+        💳 Credits & Billing ({categoryCounts.credits_billing})
+      </a>
+      <a
+        href="/admin/email/templates?category=system_optional"
+        class={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+          selectedCategory === 'system_optional' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        }`}
+      >
+        📢 Optional Reminders ({categoryCounts.system_optional})
+      </a>
+    </div>
+
+    <!-- Templates Table -->
+    <Card class="border-slate-200 bg-white overflow-hidden shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+            <tr>
+              <th class="p-3.5">Template Name / Event</th>
+              <th class="p-3.5">Subject & Preview</th>
+              <th class="p-3.5">Category</th>
+              <th class="p-3.5">Status</th>
+              <th class="p-3.5">Updated</th>
+              <th class="p-3.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            {templates.map((t) => {
+              const vars: string[] = JSON.parse(t.allowed_variables || '[]');
+              return (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="p-3.5">
+                    <div class="font-bold text-slate-900">{t.name}</div>
+                    <div class="font-mono text-[11px] text-indigo-600 font-medium">{t.event_key}</div>
+                  </td>
+                  <td class="p-3.5 max-w-sm">
+                    <div class="font-semibold text-slate-800 truncate">{t.subject}</div>
+                    {t.preview_text && (
+                      <div class="text-[11px] text-slate-400 truncate mt-0.5">{t.preview_text}</div>
+                    )}
+                  </td>
+                  <td class="p-3.5 whitespace-nowrap">
+                    <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-semibold uppercase tracking-wider">
+                      {t.category.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td class="p-3.5 whitespace-nowrap">
+                    <button
+                      onclick={`toggleStatus('${t.id}', '${t.status === 'active' ? 'inactive' : 'active'}')`}
+                      class="cursor-pointer"
+                      title="Click to toggle status"
+                    >
+                      <Badge variant={t.status === 'active' ? 'success' : 'default'} size="sm">
+                        {t.status === 'active' ? '● Active' : '○ Disabled'}
+                      </Badge>
+                    </button>
+                  </td>
+                  <td class="p-3.5 font-mono text-slate-400 whitespace-nowrap">
+                    {t.updated_at ? new Date(t.updated_at).toLocaleDateString() : '—'}
+                  </td>
+                  <td class="p-3.5 text-right whitespace-nowrap space-x-1.5">
+                    <button
+                      onclick={`openPreviewModal('${t.event_key}')`}
+                      class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
+                      title="Preview rendered email with sample data"
+                    >
+                      👁️ Preview
+                    </button>
+                    <button
+                      onclick={`sendTestModal('${t.event_key}')`}
+                      class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
+                      title="Send test email to your inbox"
+                    >
+                      ✉️ Test
+                    </button>
+                    <a
+                      href={`/admin/email/templates/${t.id}`}
+                      class="px-3 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg font-bold text-xs transition-colors inline-block"
+                    >
+                      Edit &rarr;
+                    </a>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+
+    <!-- Live Preview Modal -->
+    <div id="preview-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+          <div>
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Live Preview (Sample Data)</div>
+            <div id="preview-subject-header" class="text-sm text-indigo-700 font-bold mt-0.5"></div>
+          </div>
+          <button type="button" onclick="closePreviewModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold p-1">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 bg-slate-100/60">
+          <div id="preview-html-container" class="bg-white rounded-xl shadow-xs border border-slate-200"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    async function toggleStatus(id, newStatus) {
+      try {
+        const res = await fetch('/api/v1/admin/email-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'toggle_status', id, status: newStatus })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          window.location.reload();
+        } else {
+          alert(data.message || 'Failed to update status');
+        }
+      } catch {
+        alert('Network error updating status');
+      }
+    }
+
+    async function openPreviewModal(eventKey) {
+      const modal = document.getElementById('preview-modal');
+      const subjectHeader = document.getElementById('preview-subject-header');
+      const htmlContainer = document.getElementById('preview-html-container');
+
+      subjectHeader.textContent = 'Rendering preview...';
+      htmlContainer.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">Loading template preview...</div>';
+      modal.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/v1/admin/email-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'preview', eventKey })
+        });
+        const data = await res.json();
+        if (data.success) {
+          subjectHeader.textContent = `Subject: ${data.subject}`;
+          htmlContainer.innerHTML = data.html;
+        } else {
+          htmlContainer.innerHTML = `<div class="p-8 text-center text-rose-500 text-xs">${data.message}</div>`;
+        }
+      } catch {
+        htmlContainer.innerHTML = '<div class="p-8 text-center text-rose-500 text-xs">Error loading preview</div>';
+      }
+    }
+
+    function closePreviewModal() {
+      document.getElementById('preview-modal').classList.add('hidden');
+    }
+
+    async function sendTestModal(eventKey) {
+      const email = prompt(`Send sample test email for "${eventKey}" to:`, '');
+      if (!email) return;
+
+      try {
+        const res = await fetch('/api/v1/admin/email-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'send_test', eventKey, testEmail: email })
+        });
+        const data = await res.json();
+        alert(data.message);
+      } catch {
+        alert('Network error sending test email');
+      }
+    }
+  </script>
+</AdminLayout>

@@ -1,0 +1,99 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Badge from '@/components/ui/Badge.astro';
+
+export const prerender = false;
+---
+
+<PublicLayout
+  title="About Us & Methodology | PsychologyCalculator.com"
+  description="Learn about the mission, psychometric foundations, and educational philosophy behind PsychologyCalculator.com."
+>
+  <div class="max-w-4xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-16">
+    <!-- Header -->
+    <div class="text-center space-y-4 max-w-2xl mx-auto">
+      <Badge variant="info" size="sm">Our Mission & Approach</Badge>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        Thoughtful Self-Reflection, <span class="text-teal-700">Made Accessible</span>
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        We believe that self-understanding should be grounded, respectful, and genuinely useful—never reduced to superficial labels or commercial gimmicks.
+      </p>
+    </div>
+
+    <!-- 1. What We Do -->
+    <div class="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-2xs space-y-6">
+      <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+        Why PsychologyCalculator.com Exists
+      </h2>
+      <div class="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
+        <p>
+          Most online personality tests reduce complex human psychology into four arbitrary letters or a rigid binary box. After reading a generic description, people are often left wondering: <em>"What do I actually do with this?"</em>
+        </p>
+        <p>
+          PsychologyCalculator.com was created to offer a better alternative. We break down psychological instruments into their constituent dimensions (such as intellectual curiosity, emotional regulation, conscientiousness, and communication styles) so that you can see where your tendencies actually sit on a continuum.
+        </p>
+      </div>
+    </div>
+
+    <!-- 2. Core Principles Grid -->
+    <div class="space-y-6">
+      <h2 class="text-xl sm:text-2xl font-black text-slate-900 text-center">Our Core Principles</h2>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div class="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2.5">
+          <div class="text-xl">🆓</div>
+          <h3 class="text-sm font-bold text-slate-900">Free-First Access</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            All assessments are completely free to take without creating an account. You can view your baseline score breakdown instantly.
+          </p>
+        </div>
+
+        <div class="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2.5">
+          <div class="text-xl">🔒</div>
+          <h3 class="text-sm font-bold text-slate-900">Private by Design</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Your responses and personal reports are strictly private. We never publish or sell personal assessment results.
+          </p>
+        </div>
+
+        <div class="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2.5">
+          <div class="text-xl">📊</div>
+          <h3 class="text-sm font-bold text-slate-900">Dimensional Insight</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            We evaluate trait spectrums and dimensional nuance rather than assigning rigid, oversimplified personality boxes.
+          </p>
+        </div>
+
+        <div class="p-6 bg-slate-50 rounded-3xl border border-slate-200/80 space-y-2.5">
+          <div class="text-xl">💎</div>
+          <h3 class="text-sm font-bold text-slate-900">Transparent Pricing</h3>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            No recurring monthly subscriptions. In-depth AI synthesis reports are unlocked with simple one-time credits that never expire.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Educational Notice -->
+    <div class="p-6 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 leading-relaxed space-y-1.5">
+      <strong class="font-bold block text-sm">Educational Disclaimer</strong>
+      <p>
+        Assessments on PsychologyCalculator.com are developed for educational, professional, and personal self-reflection purposes. They do not constitute a clinical psychiatric diagnosis and are not intended to replace consultation with a licensed healthcare or mental health professional.
+      </p>
+    </div>
+
+    <!-- 4. CTA -->
+    <div class="text-center pt-4 space-y-4">
+      <h3 class="text-xl font-bold text-slate-900">Ready to begin?</h3>
+      <div class="flex items-center justify-center gap-4">
+        <a
+          href="/assessments"
+          class="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-black rounded-xl shadow-sm transition-all"
+        >
+          Explore All Assessments →
+        </a>
+      </div>
+    </div>
+  </div>
+</PublicLayout>

@@ -1,0 +1,110 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { CreditService } from '@/services/credit.service';
+import { getD1Database } from '@/lib/db/client';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const creditService = new CreditService(db);
+const transactions = await creditService.getAllTransactions(100);
+---
+
+<AdminLayout title="Credit Transaction Ledger — Admin Control">
+  <div class="space-y-8 max-w-6xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Credit Activity & Transaction Ledger
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Complete auditable log of credit purchases, AI report consumption, refunds, and administrative adjustments
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/credits/packages"
+          class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all"
+        >
+          📦 Credit Packages
+        </a>
+        <a
+          href="/admin/billing/transactions"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+        >
+          💳 Lemon Squeezy Orders
+        </a>
+      </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">
+          Recorded Ledger Entries ({transactions.length})
+        </h2>
+      </div>
+
+      {transactions.length === 0 ? (
+        <div class="p-12 text-center text-slate-400 text-xs">
+          No credit transactions recorded yet.
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-3">Date & Time</th>
+                <th class="px-4 py-3">User ID</th>
+                <th class="px-4 py-3">Description</th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3 text-right">Amount</th>
+                <th class="px-4 py-3 text-right">Balance Delta</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {transactions.map((tx) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-4 py-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                    {new Date(tx.createdAt).toLocaleString()}
+                  </td>
+                  <td class="px-4 py-3 font-mono text-[11px] text-slate-700">
+                    {tx.userId.substring(0, 12)}...
+                  </td>
+                  <td class="px-4 py-3 font-medium text-slate-900">
+                    <div>{tx.description}</div>
+                    {tx.reason && <div class="text-[10px] text-slate-400 italic">Reason: {tx.reason}</div>}
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge
+                      variant={tx.amount > 0 ? 'success' : tx.transactionType === 'refund' ? 'warning' : 'default'}
+                      size="sm"
+                    >
+                      {tx.transactionType.replace(/_/g, ' ')}
+                    </Badge>
+                  </td>
+                  <td class={`px-4 py-3 text-right font-mono font-bold ${tx.amount > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                    {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
+                  </td>
+                  <td class="px-4 py-3 text-right font-mono text-slate-500">
+                    {tx.balanceBefore !== null && tx.balanceAfter !== null ? (
+                      <span>{tx.balanceBefore} → {tx.balanceAfter}</span>
+                    ) : (
+                      <span>—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+</AdminLayout>

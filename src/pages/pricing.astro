@@ -1,0 +1,293 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { CreditService } from '@/services/credit.service';
+import { getD1Database } from '@/lib/db/client';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const creditService = new CreditService(db);
+const packages = await creditService.getPackages(true);
+const reportCost = await creditService.getReportCreditCost();
+const user = Astro.locals.user || null;
+
+// Fallback seed packages if DB is empty
+const defaultPackages = [
+  {
+    id: 'pkg_starter',
+    name: 'Starter',
+    slug: 'starter-ai-report-credits',
+    price: 4.00,
+    currency: 'USD',
+    credits: 20,
+    description: '20 AI Report Credits for detailed personalized assessment reports.',
+    short_description: '4 detailed reports',
+    is_featured: 0
+  },
+  {
+    id: 'pkg_growth',
+    name: 'Growth',
+    slug: 'growth-ai-report-credits',
+    price: 9.00,
+    currency: 'USD',
+    credits: 50,
+    description: '50 AI Report Credits for users who want multiple detailed assessment reports.',
+    short_description: '10 detailed reports',
+    is_featured: 1
+  },
+  {
+    id: 'pkg_pro',
+    name: 'Pro',
+    slug: 'pro-ai-report-credits',
+    price: 19.00,
+    currency: 'USD',
+    credits: 120,
+    description: '120 AI Report Credits for users who want to explore multiple assessments in depth.',
+    short_description: '24 detailed reports',
+    is_featured: 0
+  }
+];
+
+const activePackages = packages.length > 0 ? packages : defaultPackages;
+---
+
+<BaseLayout
+  title="AI Report Credits & Pricing — Psychology Calculator"
+  description="Pay-as-you-go AI report credits. Starter, Growth, and Pro one-time packages. Deep personalized psychological synthesis and vector PDF reports. Credits never expire."
+>
+  <div class="max-w-6xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-16">
+    <!-- Header -->
+    <div class="text-center space-y-4 max-w-3xl mx-auto">
+      <Badge variant="info" size="md">Pay As You Go • No Subscriptions</Badge>
+      <h1 class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        One-Time <span class="text-teal-600">AI Report Credits</span>
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        All assessments are 100% free to take with instant basic results. When you want full in-depth AI psychological analysis and downloadable PDF dossiers, unlock them with credits.
+      </p>
+    </div>
+
+    <!-- 3 Credit Packages Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+      {activePackages.map((pkg) => {
+        const calculatedReports = creditService.calculateReportsAvailable(pkg.credits, reportCost);
+        const isFeatured = pkg.is_featured === 1;
+
+        return (
+          <div
+            class={`relative rounded-3xl p-8 flex flex-col justify-between space-y-8 transition-all ${
+              isFeatured
+                ? 'bg-gradient-to-b from-teal-900 to-slate-900 text-white shadow-xl border-2 border-teal-500 ring-4 ring-teal-500/10 md:-translate-y-2'
+                : 'bg-white rounded-3xl border border-slate-200 text-slate-900 shadow-sm hover:shadow-md'
+            }`}
+          >
+            {isFeatured && (
+              <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-teal-400 text-slate-950 font-black text-[11px] uppercase tracking-widest px-4 py-1 rounded-full shadow-sm">
+                MOST POPULAR
+              </div>
+            )}
+
+            <div class="space-y-6">
+              <div class="space-y-1.5">
+                <span class={`text-[11px] font-bold uppercase tracking-wider ${isFeatured ? 'text-teal-300' : 'text-teal-700'}`}>
+                  One-Time Pack
+                </span>
+                <h2 class={`text-2xl font-black tracking-tight ${isFeatured ? 'text-white' : 'text-slate-900'}`}>
+                  {pkg.name}
+                </h2>
+                <p class={`text-xs leading-relaxed ${isFeatured ? 'text-slate-300' : 'text-slate-500'}`}>
+                  {pkg.description}
+                </p>
+              </div>
+
+              <div class="pt-2">
+                <div class="flex items-baseline gap-1.5">
+                  <span class={`text-4xl sm:text-5xl font-black font-mono ${isFeatured ? 'text-white' : 'text-slate-900'}`}>
+                    ${pkg.price.toFixed(0)}
+                  </span>
+                  <span class={`text-xs font-semibold uppercase ${isFeatured ? 'text-teal-200' : 'text-slate-400'}`}>
+                    {pkg.currency} One-Time
+                  </span>
+                </div>
+                <div class={`text-xs font-bold pt-1 ${isFeatured ? 'text-teal-300' : 'text-teal-600'}`}>
+                  {pkg.credits} Credits • Up to {calculatedReports} detailed reports
+                </div>
+              </div>
+
+              <!-- Feature List -->
+              <ul class={`space-y-2.5 text-xs ${isFeatured ? 'text-slate-200' : 'text-slate-600'}`}>
+                <li class="flex items-center gap-2">
+                  <span class={`font-bold ${isFeatured ? 'text-teal-300' : 'text-teal-600'}`}>✓</span>
+                  <span><strong>{pkg.credits} AI Report Credits</strong></span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class={`font-bold ${isFeatured ? 'text-teal-300' : 'text-teal-600'}`}>✓</span>
+                  <span>Up to <strong>{calculatedReports} Detailed AI Reports</strong> ({reportCost} credits/report)</span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class={`font-bold ${isFeatured ? 'text-teal-300' : 'text-teal-600'}`}>✓</span>
+                  <span>Downloadable Vector PDF reports included</span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class={`font-bold ${isFeatured ? 'text-teal-300' : 'text-teal-600'}`}>✓</span>
+                  <span><strong>Credits never expire</strong></span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <span class={`font-bold ${isFeatured ? 'text-teal-300' : 'text-teal-600'}`}>✓</span>
+                  <span>Use whenever you want</span>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                class="buy-package-btn w-full py-3.5 text-center text-xs sm:text-sm font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                class:list={[
+                  isFeatured
+                    ? 'bg-teal-400 hover:bg-teal-300 text-slate-950 active:scale-[0.99]'
+                    : 'bg-slate-900 hover:bg-black text-white'
+                ]}
+                data-pkg-id={pkg.id}
+                data-pkg-slug={pkg.slug}
+                data-pkg-name={pkg.name}
+              >
+                <span>Get {pkg.name} — ${pkg.price.toFixed(0)}</span>
+                <span>→</span>
+              </button>
+              <p class={`text-[10px] text-center mt-2 ${isFeatured ? 'text-slate-400' : 'text-slate-400'}`}>
+                One-time payment • Encrypted Lemon Squeezy checkout
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- Package Comparison Table -->
+    <div class="space-y-6 pt-12 border-t border-slate-200">
+      <div class="text-center space-y-2 max-w-2xl mx-auto">
+        <h3 class="text-2xl font-extrabold text-slate-900">Package Comparison</h3>
+        <p class="text-xs text-slate-500">
+          Compare one-time credit packages. All packages include full access to deep AI narrative synthesis and permanent report archiving.
+        </p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full max-w-4xl mx-auto text-left text-xs bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+          <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-4 sm:px-6">Package</th>
+              <th class="p-4 sm:px-6">Price</th>
+              <th class="p-4 sm:px-6">Credits</th>
+              <th class="p-4 sm:px-6">Reports</th>
+              <th class="p-4 sm:px-6 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {activePackages.map((pkg) => {
+              const reps = creditService.calculateReportsAvailable(pkg.credits, reportCost);
+              return (
+                <tr class="hover:bg-slate-50/50">
+                  <td class="p-4 sm:px-6 font-bold text-slate-900">
+                    <div class="flex items-center gap-2">
+                      <span>{pkg.name}</span>
+                      {pkg.is_featured === 1 && (
+                        <span class="px-2 py-0.5 text-[9px] font-black uppercase bg-teal-100 text-teal-800 rounded-full">
+                          Most Popular
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td class="p-4 sm:px-6 font-mono font-bold text-slate-900">${pkg.price.toFixed(0)} USD</td>
+                  <td class="p-4 sm:px-6 font-mono text-teal-700 font-bold">{pkg.credits} Credits</td>
+                  <td class="p-4 sm:px-6 font-medium text-slate-700">Up to {reps} detailed reports</td>
+                  <td class="p-4 sm:px-6 text-right">
+                    <button
+                      type="button"
+                      class="buy-package-btn px-4 py-1.5 text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg transition-colors cursor-pointer"
+                      data-pkg-id={pkg.id}
+                      data-pkg-slug={pkg.slug}
+                      data-pkg-name={pkg.name}
+                    >
+                      Buy {pkg.name}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="max-w-3xl mx-auto space-y-6 pt-10 border-t border-slate-200">
+      <h3 class="text-xl font-bold text-slate-900 text-center">Frequently Asked Questions</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <span class="font-bold text-slate-900 block">Do credits expire?</span>
+          <p class="text-slate-500 leading-relaxed">No. Purchased credits never expire. You can use them days, weeks, or months later.</p>
+        </div>
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <span class="font-bold text-slate-900 block">How many credits does a report cost?</span>
+          <p class="text-slate-500 leading-relaxed">Each comprehensive AI psychological report costs {reportCost} credits.</p>
+        </div>
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <span class="font-bold text-slate-900 block">Is PDF download charged separately?</span>
+          <p class="text-slate-500 leading-relaxed">No. Once a report is generated, you can view the web dossier and download the PDF anytime without extra credits.</p>
+        </div>
+        <div class="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+          <span class="font-bold text-slate-900 block">What if report generation fails?</span>
+          <p class="text-slate-500 leading-relaxed">If an AI service timeout or error occurs, the {reportCost} credits are automatically refunded to your wallet immediately.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ isAuthenticated: !!user }}>
+  const buyButtons = document.querySelectorAll('.buy-package-btn');
+
+  buyButtons.forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!isAuthenticated) {
+        window.location.href = `/login?redirect=/pricing`;
+        return;
+      }
+
+      const pkgId = btn.getAttribute('data-pkg-id');
+      const pkgSlug = btn.getAttribute('data-pkg-slug');
+      const pkgName = btn.getAttribute('data-pkg-name');
+      const originalText = btn.innerHTML;
+
+      btn.setAttribute('disabled', 'true');
+      btn.innerText = 'Preparing checkout...';
+
+      try {
+        const res = await fetch('/api/v1/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packageId: pkgId, packageSlug: pkgSlug })
+        });
+        const data = await res.json();
+
+        if (data.success && data.data?.checkoutUrl) {
+          window.location.href = data.data.checkoutUrl;
+        } else {
+          alert(data.error?.message || 'Could not initialize checkout. Please try again.');
+          btn.removeAttribute('disabled');
+          btn.innerHTML = originalText;
+        }
+      } catch {
+        alert('A network error occurred. Please check your connection and try again.');
+        btn.removeAttribute('disabled');
+        btn.innerHTML = originalText;
+      }
+    });
+  });
+</script>

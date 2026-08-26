@@ -1,0 +1,279 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { CreditService } from '@/services/credit.service';
+import { getD1Database } from '@/lib/db/client';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const creditService = new CreditService(db);
+const packages = await creditService.getPackages(false);
+const reportCost = await creditService.getReportCreditCost();
+---
+
+<AdminLayout title="Credit Packages — Admin Control">
+  <div class="space-y-8 max-w-6xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          One-Time Credit Packages
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Configure pay-as-you-go credit packages, price points, and Lemon Squeezy product/variant mapping
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          id="create-pkg-btn"
+          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+        >
+          <span>+</span>
+          <span>Create Package</span>
+        </button>
+        <a
+          href="/admin/credits/transactions"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+        >
+          📋 Transactions
+        </a>
+      </div>
+    </div>
+
+    <!-- Active Packages List -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {packages.map((pkg) => {
+        const reps = creditService.calculateReportsAvailable(pkg.credits, reportCost);
+        return (
+          <Card class="p-6 space-y-4 border-slate-200 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-bold text-slate-900">{pkg.name}</h3>
+                    {pkg.is_featured === 1 && (
+                      <span class="px-2 py-0.5 text-[9px] font-black uppercase bg-teal-100 text-teal-800 rounded-full">
+                        Popular
+                      </span>
+                    )}
+                  </div>
+                  <p class="text-[11px] text-slate-400 font-mono">slug: {pkg.slug}</p>
+                </div>
+                <Badge variant={pkg.is_active ? 'success' : 'default'} size="sm">
+                  {pkg.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
+
+              <div class="flex items-baseline gap-1 pt-1">
+                <span class="text-3xl font-black text-slate-900 font-mono">${pkg.price.toFixed(2)}</span>
+                <span class="text-[10px] text-slate-400 uppercase font-semibold">{pkg.currency} One-Time</span>
+              </div>
+
+              <p class="text-xs text-slate-600 leading-relaxed min-h-[36px]">{pkg.description}</p>
+
+              <div class="p-3 bg-slate-50 rounded-xl grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Credits</span>
+                  <strong class="text-slate-900 font-mono">{pkg.credits}</strong>
+                </div>
+                <div>
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Reports Unlocked</span>
+                  <strong class="text-teal-700 font-mono">{reps} Reports</strong>
+                </div>
+                <div class="col-span-2 pt-1 border-t border-slate-200/60">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Lemon Squeezy Variant</span>
+                  <span class="font-mono text-slate-600 text-[11px] truncate block">{pkg.lemon_squeezy_variant_id || 'None'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                class="edit-pkg-btn text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                data-package={JSON.stringify(pkg)}
+              >
+                Edit Details ✎
+              </button>
+
+              <button
+                type="button"
+                class="toggle-pkg-btn text-xs font-bold cursor-pointer"
+                class:list={[pkg.is_active ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700']}
+                data-id={pkg.id}
+                data-active={pkg.is_active}
+              >
+                {pkg.is_active ? 'Deactivate' : 'Activate'}
+              </button>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  </div>
+
+  <!-- Package Edit / Create Modal -->
+  <dialog id="pkg-modal" class="p-0 rounded-3xl shadow-2xl backdrop:bg-slate-900/60 max-w-lg w-full border border-slate-200">
+    <form id="pkg-form" class="p-6 sm:p-8 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="modal-title" class="text-lg font-black text-slate-900">Configure Credit Package</h3>
+        <button type="button" id="close-modal-btn" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+
+      <input type="hidden" id="pkg-id" name="id" />
+
+      <div class="grid grid-cols-2 gap-4 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-slate-700">Package Name</label>
+          <input type="text" id="pkg-name" name="name" required class="w-full px-3 py-2 border rounded-xl" placeholder="e.g. Starter" />
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-slate-700">Slug</label>
+          <input type="text" id="pkg-slug" name="slug" required class="w-full px-3 py-2 border rounded-xl" placeholder="starter-ai-report-credits" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-slate-700">Price (USD)</label>
+          <input type="number" step="0.01" id="pkg-price" name="price" required class="w-full px-3 py-2 border rounded-xl" placeholder="4.00" />
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-slate-700">Credits</label>
+          <input type="number" id="pkg-credits" name="credits" required class="w-full px-3 py-2 border rounded-xl" placeholder="20" />
+        </div>
+      </div>
+
+      <div class="space-y-1 text-xs">
+        <label class="font-bold text-slate-700">Description</label>
+        <textarea id="pkg-desc" name="description" rows="2" class="w-full px-3 py-2 border rounded-xl" placeholder="20 AI Report Credits for detailed personalized assessment reports."></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-slate-700">LS Product ID</label>
+          <input type="text" id="pkg-ls-prod" name="lemon_squeezy_product_id" class="w-full px-3 py-2 border rounded-xl" placeholder="prod_starter" />
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-slate-700">LS Variant ID</label>
+          <input type="text" id="pkg-ls-var" name="lemon_squeezy_variant_id" class="w-full px-3 py-2 border rounded-xl" placeholder="var_starter_credits_20" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-xs pt-2">
+        <label class="flex items-center gap-2 font-bold text-slate-700">
+          <input type="checkbox" id="pkg-featured" name="is_featured" class="w-4 h-4 text-teal-600 rounded" />
+          <span>Most Popular (Featured)</span>
+        </label>
+        <label class="flex items-center gap-2 font-bold text-slate-700">
+          <input type="checkbox" id="pkg-active" name="is_active" checked class="w-4 h-4 text-teal-600 rounded" />
+          <span>Active</span>
+        </label>
+      </div>
+
+      <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+        <button type="button" id="cancel-modal-btn" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+        <button type="submit" id="save-pkg-btn" class="px-5 py-2 text-xs font-black text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs">Save Package</button>
+      </div>
+    </form>
+  </dialog>
+</AdminLayout>
+
+<script is:inline>
+  const modal = document.getElementById('pkg-modal');
+  const form = document.getElementById('pkg-form');
+  const createBtn = document.getElementById('create-pkg-btn');
+  const closeBtn = document.getElementById('close-modal-btn');
+  const cancelBtn = document.getElementById('cancel-modal-btn');
+
+  createBtn?.addEventListener('click', () => {
+    form.reset();
+    document.getElementById('pkg-id').value = '';
+    document.getElementById('modal-title').textContent = 'Create Credit Package';
+    modal.showModal();
+  });
+
+  closeBtn?.addEventListener('click', () => modal.close());
+  cancelBtn?.addEventListener('click', () => modal.close());
+
+  document.querySelectorAll('.edit-pkg-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const data = JSON.parse(btn.getAttribute('data-package'));
+      document.getElementById('pkg-id').value = data.id;
+      document.getElementById('pkg-name').value = data.name;
+      document.getElementById('pkg-slug').value = data.slug;
+      document.getElementById('pkg-price').value = data.price;
+      document.getElementById('pkg-credits').value = data.credits;
+      document.getElementById('pkg-desc').value = data.description || '';
+      document.getElementById('pkg-ls-prod').value = data.lemon_squeezy_product_id || '';
+      document.getElementById('pkg-ls-var').value = data.lemon_squeezy_variant_id || '';
+      document.getElementById('pkg-featured').checked = data.is_featured === 1;
+      document.getElementById('pkg-active').checked = data.is_active === 1;
+      document.getElementById('modal-title').textContent = `Edit Package: ${data.name}`;
+      modal.showModal();
+    });
+  });
+
+  document.querySelectorAll('.toggle-pkg-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      const currentActive = btn.getAttribute('data-active') === '1';
+      const newActive = currentActive ? 0 : 1;
+
+      try {
+        const res = await fetch('/api/admin/credits/packages', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, is_active: newActive, name: 'temp', slug: 'temp', price: 1, credits: 1 })
+        });
+        const json = await res.json();
+        if (json.success) window.location.reload();
+        else alert(json.error?.message || 'Failed to toggle status');
+      } catch {
+        alert('Network error');
+      }
+    });
+  });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('pkg-id').value;
+    const isUpdate = !!id;
+
+    const payload = {
+      id: id || undefined,
+      name: document.getElementById('pkg-name').value,
+      slug: document.getElementById('pkg-slug').value,
+      price: parseFloat(document.getElementById('pkg-price').value),
+      credits: parseInt(document.getElementById('pkg-credits').value, 10),
+      description: document.getElementById('pkg-desc').value,
+      lemon_squeezy_product_id: document.getElementById('pkg-ls-prod').value,
+      lemon_squeezy_variant_id: document.getElementById('pkg-ls-var').value,
+      is_featured: document.getElementById('pkg-featured').checked ? 1 : 0,
+      is_active: document.getElementById('pkg-active').checked ? 1 : 0
+    };
+
+    try {
+      const res = await fetch('/api/admin/credits/packages', {
+        method: isUpdate ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.error?.message || 'Failed to save package');
+      }
+    } catch {
+      alert('Network error while saving package');
+    }
+  });
+</script>

@@ -1,0 +1,362 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Badge from '@/components/ui/Badge.astro';
+
+export const prerender = false;
+
+const lastUpdated = "August 24, 2026";
+const canonicalUrl = "https://psychologycalculator.com/terms-of-service";
+---
+
+<PublicLayout
+  title="Terms of Service — PsychologyCalculator.com"
+  description="Read the PsychologyCalculator.com Terms of Service covering assessments, AI-generated reports, credits, purchases, accounts, acceptable use, intellectual property, and service limitations."
+  canonicalUrl={canonicalUrl}
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 space-y-12">
+    <!-- Header Section -->
+    <div class="space-y-4 border-b border-slate-200 pb-8">
+      <div class="flex items-center gap-2">
+        <Badge variant="info" size="sm">Legal Agreement</Badge>
+        <span class="text-xs text-slate-500 font-medium">Last Updated: {lastUpdated}</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+        Terms of Service
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
+        These Terms explain the rules for using <strong>PsychologyCalculator.com</strong>, including our self-assessments, calculated scores, AI-generated reports, credit purchases, and user accounts.
+      </p>
+    </div>
+
+    <!-- Quick Navigation Table of Contents -->
+    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-3">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+        Table of Contents
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-teal-700 font-medium">
+        <a href="#acceptance" class="hover:underline">1. Acceptance of These Terms</a>
+        <a href="#eligibility" class="hover:underline">2. Eligibility</a>
+        <a href="#description" class="hover:underline">3. Description of Service</a>
+        <a href="#non-clinical" class="hover:underline">4. Educational & Non-Clinical Disclaimer</a>
+        <a href="#assessments-results" class="hover:underline">5. Assessments & Calculated Results</a>
+        <a href="#ai-reports" class="hover:underline">6. AI-Generated Reports</a>
+        <a href="#credits-purchases" class="hover:underline">7. Credits & One-Time Purchases</a>
+        <a href="#payments" class="hover:underline">8. Payments & Merchant of Record</a>
+        <a href="#refunds" class="hover:underline">9. Refunds & Cancellations</a>
+        <a href="#user-accounts" class="hover:underline">10. User Accounts & Security</a>
+        <a href="#acceptable-use" class="hover:underline">11. Acceptable Use & Prohibited Activities</a>
+        <a href="#anti-scraping" class="hover:underline">12. Automated Scraping & Content Protection</a>
+        <a href="#intellectual-property" class="hover:underline">13. Intellectual Property Rights</a>
+        <a href="#third-parties" class="hover:underline">14. Third-Party Services & Links</a>
+        <a href="#service-availability" class="hover:underline">15. Service Availability & Changes</a>
+        <a href="#termination" class="hover:underline">16. Suspension & Termination</a>
+        <a href="#limitation-liability" class="hover:underline">17. Limitation of Liability</a>
+        <a href="#indemnification" class="hover:underline">18. Indemnification</a>
+        <a href="#governing-law" class="hover:underline">19. Governing Law & Dispute Resolution</a>
+        <a href="#changes-terms" class="hover:underline">20. Changes to These Terms</a>
+        <a href="#contact" class="hover:underline">21. Contact Information & Privacy Link</a>
+      </div>
+    </div>
+
+    <!-- Terms Body -->
+    <div class="prose prose-slate max-w-none space-y-10 text-sm sm:text-base text-slate-700 leading-relaxed">
+      
+      <!-- 1. Acceptance of Terms -->
+      <section id="acceptance" class="space-y-3 pt-2">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          1. Acceptance of These Terms
+        </h2>
+        <p>
+          These Terms of Service ("Terms") constitute a legally binding agreement between you and <strong>PsychologyCalculator.com</strong> ("we", "us", or "our") governing your access to and use of our website, applications, assessments, scoring engines, and AI report generation services (collectively, the "Service").
+        </p>
+        <p>
+          By accessing the website, taking an assessment, creating an account, purchasing report credits, or unlocking an AI synthesis report, you acknowledge that you have read, understood, and agree to be bound by these Terms, as well as our <a href="/privacy-policy" class="text-teal-700 font-bold hover:underline">Privacy Policy</a>. If you do not agree to these Terms, please do not use the Service.
+        </p>
+      </section>
+
+      <!-- 2. Eligibility -->
+      <section id="eligibility" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          2. Eligibility
+        </h2>
+        <p>
+          You must be legally capable of entering into a binding contract under the laws of your applicable jurisdiction to use this Service. If you are under the age of legal majority in your jurisdiction, you may only use the Service with the consent and supervision of a parent or legal guardian who agrees to be bound by these Terms.
+        </p>
+      </section>
+
+      <!-- 3. Description of Service -->
+      <section id="description" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          3. Description of the Service
+        </h2>
+        <p>
+          PsychologyCalculator.com provides structured online self-assessments, psychometric scoring models, dimension profiles, and personalized AI-generated analytical dossiers across personality, emotional wellbeing, relationship dynamics, communication styles, and workplace traits.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div class="p-4 bg-white rounded-xl border border-slate-200 space-y-1">
+            <h3 class="text-sm font-bold text-slate-900">Free / Standard Features:</h3>
+            <p class="text-xs text-slate-600">
+              Taking self-assessments as a guest or registered user, receiving calculated dimension scores, and reviewing basic archetype summaries without payment.
+            </p>
+          </div>
+          <div class="p-4 bg-white rounded-xl border border-slate-200 space-y-1">
+            <h3 class="text-sm font-bold text-slate-900">Paid / Premium Features:</h3>
+            <p class="text-xs text-slate-600">
+              Purchasing one-time credit packages to generate in-depth, personalized AI synthesis reports and accessing downloadable PDF dossiers.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Non-Clinical Disclaimer -->
+      <section id="non-clinical" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          4. Educational & Non-Clinical Disclaimer
+        </h2>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 text-xs sm:text-sm text-amber-900 space-y-2">
+          <p class="font-bold text-amber-950 text-sm">⚠️ Not Medical, Psychiatric, or Clinical Advice:</p>
+          <p>
+            The assessments, scoring calculations, archetype descriptions, and AI reports on PsychologyCalculator.com are provided solely for <strong>informational, educational, and personal self-reflection purposes</strong>.
+          </p>
+          <ul class="list-disc pl-5 space-y-1 text-xs">
+            <li>Our tools do <strong>NOT</strong> provide psychiatric diagnosis, medical evaluations, clinical psychotherapy, or crisis intervention services.</li>
+            <li>Assessment scores should never be used as a substitute for professional clinical judgment or mental health consultation.</li>
+            <li>If you are experiencing severe emotional distress or a mental health emergency, please contact qualified medical professionals or local crisis support lines immediately.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 5. Assessments & Calculated Results -->
+      <section id="assessments-results" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          5. Assessments & Calculated Results
+        </h2>
+        <p>
+          Calculated scores and archetype classifications are generated directly from your voluntary answers to questionnaire prompts. You acknowledge that:
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li>Result accuracy depends on the honesty and consistency of your responses.</li>
+          <li>Psychological traits and emotional states fluctuate over time; results reflect your self-reported state at the time of submission.</li>
+          <li>Assessments should not be treated as definitive evaluations of your intelligence, character, or future potential.</li>
+        </ul>
+      </section>
+
+      <!-- 6. AI-Generated Reports -->
+      <section id="ai-reports" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          6. AI-Generated Reports
+        </h2>
+        <p>
+          When you unlock a detailed report using credits, our system uses automated large language model inference to synthesize your psychometric scores into a comprehensive analysis.
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li>AI-generated text is produced algorithmically based on statistical language patterns and psychometric frameworks.</li>
+          <li>AI outputs may occasionally contain generalized commentary or interpretive nuances. You agree to exercise critical personal judgment when reviewing AI reports.</li>
+          <li>AI reports do not constitute legal, financial, career, or relationship guarantees.</li>
+        </ul>
+      </section>
+
+      <!-- 7. Credits & One-Time Purchases -->
+      <section id="credits-purchases" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          7. Credits & One-Time Purchases
+        </h2>
+        <p>
+          PsychologyCalculator.com utilizes a <strong>pay-as-you-go credit system</strong>. There are <strong>no recurring monthly subscriptions</strong> for MVP report unlocks.
+        </p>
+        <div class="space-y-2 text-xs sm:text-sm text-slate-600">
+          <p><strong>Package Pricing:</strong> Available credit packages (e.g. Starter, Growth, Pro), current prices, and included credit amounts are clearly displayed on the <a href="/pricing" class="text-teal-700 font-bold hover:underline">Pricing page</a> before purchase.</p>
+          <p><strong>Nature of Credits:</strong> Credits are digital usage units on our platform. They possess no cash value, are not legal tender or bank balances, and cannot be redeemed for fiat currency except where strictly required by applicable consumer law.</p>
+          <p><strong>Non-Transferable:</strong> Credits are linked exclusively to your account wallet and may not be sold, resold, or transferred between different user accounts.</p>
+        </div>
+      </section>
+
+      <!-- 8. Payments & Merchant of Record -->
+      <section id="payments" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          8. Payments & Merchant of Record
+        </h2>
+        <p>
+          All credit transactions are processed through our third-party Merchant of Record, <strong>Lemon Squeezy</strong>.
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li>Lemon Squeezy manages billing, checkout security, currency conversion, and applicable sales tax / VAT compliance.</li>
+          <li>PsychologyCalculator.com never collects, stores, or handles full credit card numbers or banking secrets.</li>
+          <li>By completing a purchase, you also agree to Lemon Squeezy's Terms of Service and checkout policies.</li>
+        </ul>
+      </section>
+
+      <!-- 9. Refunds & Cancellations -->
+      <section id="refunds" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          9. Refunds & Cancellations
+        </h2>
+        <p>
+          Due to the immediate digital delivery and automated compute costs associated with AI report generation:
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-xs sm:text-sm text-slate-600">
+          <li><strong>Consumed Credits:</strong> Credits that have already been consumed to generate completed AI reports are generally non-refundable.</li>
+          <li><strong>Unused Packages:</strong> If you experience technical errors or billing discrepancies with an unused credit package, please contact <a href="mailto:support@psychologycalculator.com" class="text-teal-700 font-bold hover:underline">support@psychologycalculator.com</a> within 14 days of purchase.</li>
+          <li><strong>Statutory Rights:</strong> Nothing in these Terms limits statutory consumer refund rights that cannot be legally excluded under applicable local laws.</li>
+        </ul>
+      </section>
+
+      <!-- 10. User Accounts & Security -->
+      <section id="user-accounts" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          10. User Accounts & Security
+        </h2>
+        <p>
+          When creating an account, you agree to provide an accurate email address and maintain the confidentiality of your password. You are responsible for all activities occurring under your account credentials.
+        </p>
+        <p>
+          If you suspect unauthorized access to your account or wallet, you must notify us immediately at <a href="mailto:support@psychologycalculator.com" class="text-teal-700 font-bold hover:underline">support@psychologycalculator.com</a>.
+        </p>
+      </section>
+
+      <!-- 11. Acceptable Use & Prohibited Activities -->
+      <section id="acceptable-use" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          11. Acceptable Use & Prohibited Activities
+        </h2>
+        <p>You agree to use the Service in compliance with all applicable laws. You shall not:</p>
+        <ul class="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-600">
+          <li>Attempt to gain unauthorized access to servers, user accounts, databases, or API infrastructure.</li>
+          <li>Bypass or exploit payment mechanisms, credit consumption logic, or rate limits.</li>
+          <li>Submit fraudulent, stolen, or unauthorized payment information.</li>
+          <li>Introduce malware, viruses, Trojan horses, or harmful code into the platform.</li>
+          <li>Interfere with or disrupt the security, integrity, or network availability of the Service.</li>
+          <li>Impersonate any individual, organization, or administrator.</li>
+          <li>Use the platform for any illegal, deceptive, or harmful purpose.</li>
+        </ul>
+      </section>
+
+      <!-- 12. Automated Scraping & Content Protection -->
+      <section id="anti-scraping" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          12. Automated Scraping & Content Protection
+        </h2>
+        <p>
+          All assessment questions, scoring algorithms, dimension rubrics, and website texts are proprietary intellectual property. Unauthorized automated harvesting, web scraping, data extraction, bot crawling (other than verified public search engine indexers), or mass programmatic reproduction of assessment content is strictly prohibited without prior written authorization.
+        </p>
+      </section>
+
+      <!-- 13. Intellectual Property Rights -->
+      <section id="intellectual-property" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          13. Intellectual Property Rights
+        </h2>
+        <p>
+          Except for user-submitted response data, all website design, graphics, branding, logos, software code, psychometric questionnaires, dimension formulas, and AI report synthesis templates are owned by or licensed to PsychologyCalculator.com.
+        </p>
+        <p>
+          We grant you a personal, non-exclusive, non-transferable, revocable license to access the website and view your personal assessment reports for private, non-commercial use.
+        </p>
+      </section>
+
+      <!-- 14. Third-Party Services & Links -->
+      <section id="third-parties" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          14. Third-Party Services & Links
+        </h2>
+        <p>
+          The Service relies on verified third-party partners (such as Cloudflare for cloud hosting, Lemon Squeezy for payment processing, Google for authentication/analytics, and AI inference providers). The Service may also contain links to external websites. We do not control or endorse external websites and are not responsible for their content or privacy practices.
+        </p>
+      </section>
+
+      <!-- 15. Service Availability & Changes -->
+      <section id="service-availability" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          15. Service Availability & Changes
+        </h2>
+        <p>
+          We provide the Service on an "as is" and "as available" basis. While we strive for continuous reliability, the platform may experience scheduled maintenance, updates, or third-party outages.
+        </p>
+        <p>
+          We reserve the right to modify, add, or discontinue assessments, features, credit packages, or report formats over time. If changes materially impact your active account or unused credits, we will handle them reasonably and in accordance with applicable law.
+        </p>
+      </section>
+
+      <!-- 16. Suspension & Termination -->
+      <section id="termination" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          16. Suspension & Termination
+        </h2>
+        <p>
+          We may suspend or terminate your account or access to the Service if you violate these Terms, engage in fraud or chargeback abuse, compromise system security, or act unlawfully.
+        </p>
+        <p>
+          You may close your account at any time through your account settings or by requesting deletion via <a href="mailto:support@psychologycalculator.com" class="text-teal-700 font-bold hover:underline">support@psychologycalculator.com</a>.
+        </p>
+      </section>
+
+      <!-- 17. Limitation of Liability -->
+      <section id="limitation-liability" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          17. Limitation of Liability
+        </h2>
+        <p>
+          To the maximum extent permitted by applicable law, PsychologyCalculator.com, its operators, directors, employees, and licensors shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, loss of data, personal decisions made based on assessment results, or service interruptions.
+        </p>
+        <p>
+          To the extent permitted by law, our total cumulative liability for any claims arising out of or relating to these Terms or the Service shall not exceed the amount paid by you to PsychologyCalculator.com in the twelve (12) months preceding the claim.
+        </p>
+      </section>
+
+      <!-- 18. Indemnification -->
+      <section id="indemnification" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          18. Indemnification
+        </h2>
+        <p>
+          To the extent permitted by applicable law, you agree to indemnify and hold harmless PsychologyCalculator.com, its affiliates, and its operators from and against any claims, damages, liabilities, and expenses arising out of your misuse of the Service, your violation of these Terms, or your infringement of any third-party intellectual property or privacy rights.
+        </p>
+      </section>
+
+      <!-- 19. Governing Law & Dispute Resolution -->
+      <section id="governing-law" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          19. Governing Law & Dispute Resolution
+        </h2>
+        <p>
+          These Terms and any disputes arising out of or related to the Service shall be governed by and construed in accordance with applicable laws, without giving effect to conflict-of-law principles.
+        </p>
+        <p class="text-xs text-slate-500">
+          [GOVERNING JURISDICTION: Subject to applicable consumer protection laws, disputes shall be resolved in the competent courts of the operator's registered jurisdiction.]
+        </p>
+      </section>
+
+      <!-- 20. Changes to These Terms -->
+      <section id="changes-terms" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          20. Changes to These Terms
+        </h2>
+        <p>
+          We may revise these Terms from time to time to reflect operational or legal updates. The revised Terms will be posted on this page with an updated "Last Updated" date. Your continued use of the Service following the posting of revised Terms indicates your acceptance of the changes.
+        </p>
+      </section>
+
+      <!-- 21. Contact Information -->
+      <section id="contact" class="space-y-3 pt-4 border-t border-slate-200">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          21. Contact Information & Privacy Reference
+        </h2>
+        <p>
+          Your privacy is important to us. For details on how we collect and process personal data, please review our <a href="/privacy-policy" class="text-teal-700 font-bold hover:underline">Privacy Policy</a>.
+        </p>
+        <p>If you have questions regarding these Terms of Service, please contact our support team:</p>
+        <div class="p-5 bg-white rounded-2xl border border-slate-200 space-y-2">
+          <div class="text-xs text-slate-500 font-bold uppercase tracking-wider">Legal & User Support</div>
+          <div class="text-sm font-bold text-slate-900">PsychologyCalculator.com</div>
+          <div class="text-xs text-slate-600">
+            Email: <a href="mailto:support@psychologycalculator.com" class="text-teal-700 font-bold hover:underline">support@psychologycalculator.com</a>
+          </div>
+          <div class="text-xs text-slate-600">
+            Help & Information: <a href="https://psychologycalculator.com/about" class="text-teal-700 font-bold hover:underline">https://psychologycalculator.com/about</a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</PublicLayout>

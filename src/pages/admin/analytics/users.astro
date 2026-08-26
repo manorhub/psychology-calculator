@@ -1,0 +1,129 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AnalyticsService } from '@/services/analytics/analytics.service';
+import type { AnalyticsRange } from '@/types/database';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const analyticsService = new AnalyticsService(db);
+
+const url = new URL(Astro.request.url);
+const range = (url.searchParams.get('range') as AnalyticsRange) || '30d';
+
+const data = await analyticsService.getUserAnalytics(range);
+
+const ranges: { key: AnalyticsRange; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 Days' },
+  { key: '30d', label: 'Last 30 Days' },
+  { key: '90d', label: 'Last 90 Days' },
+  { key: 'this_year', label: 'This Year' },
+  { key: 'all', label: 'All Time' }
+];
+---
+
+<AdminLayout title="User Growth & Funnel Analytics">
+  <div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/analytics" class="text-xs font-semibold text-indigo-600 hover:underline">Analytics</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Users & Funnel</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">User Growth & Conversion Funnel</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Tracking progression from initial guest assessment engagement through account registration and premium upgrade.
+        </p>
+      </div>
+
+      <!-- Date Range Selector -->
+      <div class="flex items-center gap-2 flex-wrap">
+        {ranges.map((r) => (
+          <a
+            href={`/admin/analytics/users?range=${r.key}`}
+            class={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              range === r.key
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {r.label}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Registered</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.totalUsers}</div>
+        <span class="text-xs text-teal-600 font-semibold">+{data.newUsers} in period</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Verified Accounts</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.verifiedUsers}</div>
+        <span class="text-xs text-slate-500 font-semibold">
+          {data.totalUsers > 0 ? Math.round((data.verifiedUsers / data.totalUsers) * 100) : 0}% of registered
+        </span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Guest Assessments</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.guestAttempts}</div>
+        <span class="text-xs text-slate-500 font-semibold">Anonymous participants</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Guest Conversion</span>
+        <div class="text-2xl font-black text-indigo-700 font-mono">
+          {data.guestAttempts > 0 ? Math.round((data.newUsers / data.guestAttempts) * 100) : 0}%
+        </div>
+        <span class="text-xs text-slate-500 font-semibold">Guest to Registered ratio</span>
+      </Card>
+    </div>
+
+    <!-- Multi-Step Registration & Monetization Funnel -->
+    <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-6">
+      <div class="border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-bold text-slate-900">End-to-End Product Funnel</h3>
+        <p class="text-xs text-slate-500">Step-by-step conversion from discovery to paid membership</p>
+      </div>
+
+      <div class="space-y-4">
+        {data.funnel.map((step, idx) => (
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-[10px]">
+                  {idx + 1}
+                </span>
+                <span class="font-bold text-slate-900">{step.step}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="font-mono text-slate-700 font-bold">{step.count}</span>
+                <Badge variant={step.rate > 50 ? 'success' : step.rate > 20 ? 'warning' : 'default'} size="sm">
+                  {step.rate}% step rate
+                </Badge>
+              </div>
+            </div>
+            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                style={`width: ${Math.max(2, step.rate)}%`}
+              ></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

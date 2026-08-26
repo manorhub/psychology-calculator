@@ -1,0 +1,133 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { SettingsService } from '@/services/settings/settings.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const settingsService = new SettingsService(db);
+
+const maintenance = await settingsService.getGroup('maintenance');
+---
+
+<AdminLayout title="Maintenance Mode">
+  <div class="space-y-8 max-w-3xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/settings" class="text-xs font-semibold text-indigo-600 hover:underline">Settings</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Maintenance</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Platform Maintenance Mode</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Lock public visitor access during major database migrations or psychometric scoring upgrades.
+        </p>
+      </div>
+    </div>
+
+    <!-- Safety Notice -->
+    <div class="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 leading-relaxed space-y-1">
+      <div class="font-bold flex items-center gap-1.5 text-blue-950">
+        <span>🛡️ Admin Bypass Safeguard</span>
+      </div>
+      <p>
+        Authenticated administrators retain full access to <code>/admin/*</code> and <code>/api/*</code> endpoints even when maintenance mode is turned ON. Webhook receivers (Lemon Squeezy) remain active.
+      </p>
+    </div>
+
+    <!-- Maintenance Form -->
+    <form id="maintenance-form" class="space-y-6">
+      <Card class="p-6 border-slate-200 bg-white shadow-xs space-y-5">
+        <label class="flex items-center gap-3 cursor-pointer pb-4 border-b border-slate-100">
+          <input
+            type="checkbox"
+            name="maintenance_mode"
+            checked={maintenance.maintenance_mode === true}
+            class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+          />
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-900">Enable Maintenance Mode</span>
+              {maintenance.maintenance_mode ? (
+                <Badge variant="warning" size="sm">ACTIVE</Badge>
+              ) : (
+                <Badge variant="neutral" size="sm">DISABLED</Badge>
+              )}
+            </div>
+            <p class="text-xs text-slate-500">When checked, public traffic will see the maintenance landing page</p>
+          </div>
+        </label>
+
+        <div class="space-y-3">
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Visitor Notice Headline / Message</label>
+            <textarea
+              name="maintenance_message"
+              rows="3"
+              class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+            >{maintenance.maintenance_message || 'Psychology Calculator is currently undergoing scheduled maintenance to improve scoring systems.'}</textarea>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700">Estimated Duration</label>
+            <input
+              type="text"
+              name="maintenance_estimated_return"
+              value={maintenance.maintenance_estimated_return || '1 hour'}
+              placeholder="e.g. 30 minutes, 2 hours, Today at 6:00 PM UTC"
+              class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 font-medium"
+            />
+          </div>
+        </div>
+      </Card>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="submit"
+          class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+        >
+          Save Maintenance Settings
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('maintenance-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        group: 'maintenance',
+        settings: {
+          maintenance_mode: formData.has('maintenance_mode'),
+          maintenance_message: formData.get('maintenance_message'),
+          maintenance_estimated_return: formData.get('maintenance_estimated_return')
+        }
+      };
+
+      try {
+        const res = await fetch('/api/v1/admin/settings/group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('Maintenance settings saved successfully!');
+          window.location.reload();
+        } else {
+          alert('Failed to save settings: ' + (json.error?.message || 'Error'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    });
+  </script>
+</AdminLayout>

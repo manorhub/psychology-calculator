@@ -1,0 +1,40 @@
+---
+import type { SnapshotResultContent } from '@/types/database';
+
+interface Props {
+  section: SnapshotResultContent;
+}
+
+const { section } = Astro.props;
+
+// Section Badge & Color map
+const sectionConfig: Record<string, { label: string; badgeClass: string; borderClass: string }> = {
+  overview: { label: 'Psychological Overview', badgeClass: 'bg-teal-100 text-teal-900', borderClass: 'border-teal-200' },
+  strengths: { label: 'Core Cognitive Strengths', badgeClass: 'bg-emerald-100 text-emerald-900', borderClass: 'border-emerald-200' },
+  challenges: { label: 'Growth Opportunities & Blindspots', badgeClass: 'bg-amber-100 text-amber-900', borderClass: 'border-amber-200' },
+  communication: { label: 'Communication Style', badgeClass: 'bg-sky-100 text-sky-900', borderClass: 'border-sky-200' },
+  relationships: { label: 'Interpersonal Dynamics', badgeClass: 'bg-rose-100 text-rose-900', borderClass: 'border-rose-200' },
+  work_style: { label: 'Professional & Work Style', badgeClass: 'bg-indigo-100 text-indigo-900', borderClass: 'border-indigo-200' },
+  growth_suggestions: { label: 'Actionable Growth Pathway', badgeClass: 'bg-purple-100 text-purple-900', borderClass: 'border-purple-200' },
+  recommendations: { label: 'Psychological Recommendations', badgeClass: 'bg-teal-100 text-teal-900', borderClass: 'border-teal-200' },
+  custom: { label: 'Analysis', badgeClass: 'bg-slate-100 text-slate-900', borderClass: 'border-slate-200' }
+};
+
+const config = sectionConfig[section.section_type] || sectionConfig.custom;
+---
+
+<div class={`p-6 sm:p-8 bg-white rounded-3xl border ${config.borderClass} shadow-sm space-y-4`}>
+  <div class="flex items-center justify-between gap-3">
+    <span class={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase ${config.badgeClass}`}>
+      {config.label}
+    </span>
+  </div>
+
+  <h3 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+    {section.title}
+  </h3>
+
+  <div class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line space-y-2">
+    {section.content}
+  </div>
+</div>

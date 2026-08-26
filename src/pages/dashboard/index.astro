@@ -1,0 +1,206 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { DashboardService } from '@/services/dashboard.service';
+
+const currentUser = Astro.locals.user;
+if (!currentUser) return Astro.redirect('/login?redirect=/dashboard');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const dashboardService = new DashboardService(db);
+
+const overview = await dashboardService.getDashboardOverview(currentUser.id);
+const { activeAttempt, recentResults, recentReports } = overview;
+---
+
+<DashboardLayout title="User Dashboard" description="Overview of your psychometric assessments and reports">
+  <div class="space-y-8">
+    <!-- Welcome Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          Welcome back, {currentUser.profile.displayName || 'Member'}! 👋
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Explore your self-discovery journey, track psychometric dimensions, and review in-depth AI reports.
+        </p>
+      </div>
+
+      <a
+        href="/"
+        class="inline-flex items-center justify-center px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
+      >
+        + Take New Assessment
+      </a>
+    </div>
+
+    <!-- Overview Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card class="p-5 space-y-1">
+        <span class="text-xs font-semibold text-slate-500">Completed Assessments</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{overview.completedCount}</div>
+        <span class="text-[10px] text-teal-700 font-bold block">Verified evaluations</span>
+      </Card>
+
+      <Card class="p-5 space-y-1">
+        <span class="text-xs font-semibold text-slate-500">Available Results</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{overview.completedCount}</div>
+        <span class="text-[10px] text-slate-400 font-mono block">Dimensional breakdowns</span>
+      </Card>
+
+      <Card class="p-5 space-y-1">
+        <span class="text-xs font-semibold text-slate-500">Detailed AI Reports</span>
+        <div class="text-2xl font-black text-indigo-700 font-mono">{overview.reportsCount}</div>
+        <span class="text-[10px] text-indigo-600 font-bold block">Synthesized narratives</span>
+      </Card>
+
+      <Card class="p-5 space-y-1">
+        <span class="text-xs font-semibold text-slate-500">AI Credit Balance</span>
+        <div class="text-2xl font-black text-teal-700 font-mono">{overview.creditBalance}</div>
+        <a href="/dashboard/credits" class="text-[10px] text-slate-400 hover:text-teal-700 font-bold block">
+          Usage history →
+        </a>
+      </Card>
+    </div>
+
+    <!-- Continue Active Assessment Banner (If any) -->
+    {activeAttempt && (
+      <div class="p-6 bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-3xl shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-teal-800/80 rounded-full text-[10px] font-bold text-teal-200 uppercase tracking-wider">
+            <span>⏳ In Progress</span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">
+            Continue: {activeAttempt.assessmentName}
+          </h2>
+          <p class="text-xs text-teal-200">
+            Progress: <span class="font-bold text-white">{activeAttempt.answeredCount} of {activeAttempt.totalQuestions} questions answered</span>
+          </p>
+        </div>
+
+        <a
+          href={`/assessments/${activeAttempt.assessmentSlug}`}
+          class="px-6 py-3 bg-white hover:bg-teal-50 text-slate-950 rounded-xl text-xs font-bold shadow-xs transition-all flex-shrink-0"
+        >
+          Resume Assessment →
+        </a>
+      </div>
+    )}
+
+    <!-- Recent Completed Results -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-900">Recent Completed Results</h2>
+        <a href="/dashboard/results" class="text-xs font-semibold text-teal-700 hover:text-teal-800">
+          View All Results →
+        </a>
+      </div>
+
+      {recentResults.length === 0 ? (
+        <Card class="p-8 text-center space-y-3">
+          <div class="text-3xl">📝</div>
+          <h3 class="text-sm font-bold text-slate-800">You haven't completed an assessment yet.</h3>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">
+            Take your first scientifically grounded psychology self-assessment to discover your personality dimensions.
+          </p>
+          <div class="pt-2">
+            <a
+              href="/"
+              class="inline-flex px-4 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700"
+            >
+              Explore Assessments
+            </a>
+          </div>
+        </Card>
+      ) : (
+        <Card class="p-0 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-4">Assessment</th>
+                  <th class="p-4">Category</th>
+                  <th class="p-4">Primary Outcome</th>
+                  <th class="p-4">Completed Date</th>
+                  <th class="p-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {recentResults.map((res) => (
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="p-4 font-bold text-slate-900">{res.assessmentName}</td>
+                    <td class="p-4 text-slate-500">{res.categoryName}</td>
+                    <td class="p-4 font-semibold text-teal-900">{res.primaryArchetype}</td>
+                    <td class="p-4 text-slate-400 font-mono text-[11px]">
+                      {new Date(res.completedAt).toLocaleDateString()}
+                    </td>
+                    <td class="p-4 text-right">
+                      <a
+                        href={`/results/${res.attemptId}`}
+                        class="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold rounded-lg text-xs"
+                      >
+                        View Result →
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+
+    <!-- Recent AI Reports -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-900">Personalized AI Narrative Reports</h2>
+        <a href="/dashboard/reports" class="text-xs font-semibold text-teal-700 hover:text-teal-800">
+          View All Reports →
+        </a>
+      </div>
+
+      {recentReports.length === 0 ? (
+        <Card class="p-8 text-center space-y-3">
+          <div class="text-3xl">✨</div>
+          <h3 class="text-sm font-bold text-slate-800">No AI reports generated yet.</h3>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">
+            After completing any assessment, generate an in-depth AI psychological narrative report to analyze your communication style, relationship dynamics, and growth roadmap.
+          </p>
+        </Card>
+      ) : (
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {recentReports.map((rep) => (
+            <Card class="p-5 space-y-3 flex flex-col justify-between hover:border-indigo-300 transition-colors">
+              <div class="space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] uppercase font-bold text-indigo-700">✨ AI Synthesis</span>
+                  <Badge variant={rep.status === 'completed' ? 'success' : 'default'} size="sm">
+                    {rep.status}
+                  </Badge>
+                </div>
+                <h3 class="font-bold text-xs text-slate-900">{rep.assessmentName}</h3>
+                <p class="text-[11px] text-slate-500">{rep.primaryArchetype}</p>
+              </div>
+
+              <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[10px] text-slate-400 font-mono">
+                  {new Date(rep.generatedAt).toLocaleDateString()}
+                </span>
+                <a
+                  href={`/reports/${rep.reportId}`}
+                  class="text-xs font-bold text-indigo-700 hover:text-indigo-800"
+                >
+                  Read Report →
+                </a>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</DashboardLayout>

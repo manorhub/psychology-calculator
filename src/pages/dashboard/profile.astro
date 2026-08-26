@@ -1,0 +1,122 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Input from '@/components/ui/Input.astro';
+import Button from '@/components/ui/Button.astro';
+
+const currentUser = Astro.locals.user;
+if (!currentUser) return Astro.redirect('/login?redirect=/dashboard/profile');
+
+const profile = currentUser.profile;
+---
+
+<DashboardLayout title="Profile Preferences" description="Update your personal details and localization preferences">
+  <div class="max-w-2xl space-y-6">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 tracking-tight">Profile Preferences</h1>
+      <p class="text-xs text-slate-500 mt-1">
+        Manage how your name appears on assessment reports and adjust your regional timezone.
+      </p>
+    </div>
+
+    <Card class="p-6 sm:p-8 space-y-6">
+      <form id="profile-form" class="space-y-4">
+        <Input
+          label="Display Name"
+          name="displayName"
+          id="displayName"
+          type="text"
+          value={profile.displayName || ''}
+          placeholder="e.g. Alex Johnson"
+          required
+        />
+
+        <div class="space-y-1.5">
+          <label for="timezone" class="block text-xs font-semibold text-slate-700">
+            Timezone
+          </label>
+          <select
+            id="timezone"
+            name="timezone"
+            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+          >
+            <option value="UTC" selected={profile.timezone === 'UTC'}>UTC (Coordinated Universal Time)</option>
+            <option value="America/New_York" selected={profile.timezone === 'America/New_York'}>America/New_York (EST/EDT)</option>
+            <option value="America/Chicago" selected={profile.timezone === 'America/Chicago'}>America/Chicago (CST/CDT)</option>
+            <option value="America/Los_Angeles" selected={profile.timezone === 'America/Los_Angeles'}>America/Los_Angeles (PST/PDT)</option>
+            <option value="Europe/London" selected={profile.timezone === 'Europe/London'}>Europe/London (GMT/BST)</option>
+            <option value="Europe/Paris" selected={profile.timezone === 'Europe/Paris'}>Europe/Paris (CET/CEST)</option>
+            <option value="Asia/Kolkata" selected={profile.timezone === 'Asia/Kolkata'}>Asia/Kolkata (IST)</option>
+            <option value="Asia/Tokyo" selected={profile.timezone === 'Asia/Tokyo'}>Asia/Tokyo (JST)</option>
+            <option value="Australia/Sydney" selected={profile.timezone === 'Australia/Sydney'}>Australia/Sydney (AEST)</option>
+          </select>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="locale" class="block text-xs font-semibold text-slate-700">
+            Language / Locale
+          </label>
+          <select
+            id="locale"
+            name="locale"
+            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+          >
+            <option value="en" selected={profile.locale === 'en'}>English (United States / Global)</option>
+            <option value="es" selected={profile.locale === 'es'}>Español</option>
+            <option value="fr" selected={profile.locale === 'fr'}>Français</option>
+            <option value="de" selected={profile.locale === 'de'}>Deutsch</option>
+          </select>
+        </div>
+
+        <div id="profile-msg" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+
+        <div class="pt-2">
+          <Button type="submit" variant="primary" size="md" id="save-profile-btn">
+            Save Preferences
+          </Button>
+        </div>
+      </form>
+    </Card>
+  </div>
+</DashboardLayout>
+
+<script is:inline>
+  const form = document.getElementById('profile-form');
+  const msgEl = document.getElementById('profile-msg');
+  const submitBtn = document.getElementById('save-profile-btn');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!submitBtn || !msgEl) return;
+
+    submitBtn.disabled = true;
+    msgEl.className = 'hidden';
+
+    const formData = new FormData(form);
+    const displayName = formData.get('displayName');
+    const timezone = formData.get('timezone');
+    const locale = formData.get('locale');
+
+    try {
+      const res = await fetch('/api/v1/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName, timezone, locale })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        msgEl.className = 'p-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+        msgEl.innerText = '✓ Profile updated successfully!';
+      } else {
+        msgEl.className = 'p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200 block';
+        msgEl.innerText = data.error?.message || 'Failed to update profile';
+      }
+    } catch {
+      msgEl.className = 'p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200 block';
+      msgEl.innerText = 'Network error occurred. Please try again.';
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>

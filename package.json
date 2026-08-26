@@ -1,0 +1,43 @@
+{
+  "name": "psychology-saas",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "tsc --noEmit",
+    "db:setup": "node scripts/apply-local-d1.js",
+    "test:db": "tsx scripts/test-db.js",
+    "test:auth": "tsx scripts/test-auth.js",
+    "test:admin": "tsx scripts/test-admin.js",
+    "test:assessment": "tsx scripts/test-assessment-builder.js",
+    "test:engine": "tsx scripts/test-assessment-engine.js",
+    "test:result": "tsx scripts/test-result-engine.js",
+    "test:initial": "tsx scripts/test-initial-assessments.js",
+    "test:ai": "tsx scripts/test-ai-engine.js",
+    "test:dashboard": "tsx scripts/test-user-dashboard.js"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/cloudflare": "^12.2.3",
+    "@lucide/astro": "^1.33.0",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@tailwindcss/vite": "^4.0.9",
+    "@types/nodemailer": "^8.0.1",
+    "astro": "^5.3.0",
+    "nodemailer": "^9.0.5",
+    "pdf-lib": "^1.17.1",
+    "shiki": "^4.4.3",
+    "tailwindcss": "^4.0.9",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.109.2"
+  }
+}

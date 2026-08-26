@@ -1,0 +1,97 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { executeQuery } from '@/lib/db/query';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+// Query SEO keyword targets and underperforming / opportunity URLs
+const opportunities = db ? await executeQuery<{
+  keyword: string;
+  target_url: string;
+  search_volume: number;
+  current_position: number;
+  target_position: number;
+  difficulty: number;
+}>(
+  db,
+  `SELECT keyword, target_url, search_volume, current_position, target_position, difficulty 
+   FROM seo_keywords 
+   WHERE current_position BETWEEN 4 AND 20 OR current_position IS NULL 
+   ORDER BY search_volume DESC LIMIT 50`
+) : [];
+---
+
+<AdminLayout title="SEO Content & Ranking Opportunities">
+  <div class="space-y-8">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">SEO Content & Growth Opportunities</h1>
+        <p class="text-sm text-slate-500">Actionable ranking opportunities based on target search volume and striking-distance rankings (Pos 4–20)</p>
+      </div>
+      <a
+        href="/admin/growth"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition"
+      >
+        ← Back to Growth Dashboard
+      </a>
+    </div>
+
+    <Card title="Striking Distance Keywords (Positions 4–20)">
+      <div class="p-6">
+        {opportunities.length === 0 ? (
+          <div class="p-8 text-center text-slate-500 text-sm">
+            No striking distance keyword opportunities currently tracked.
+          </div>
+        ) : (
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Keyword</th>
+                  <th class="py-3 px-4">Target Landing Page</th>
+                  <th class="py-3 px-4 text-center">Monthly Volume</th>
+                  <th class="py-3 px-4 text-center">Current Rank</th>
+                  <th class="py-3 px-4 text-center">Opportunity Tier</th>
+                  <th class="py-3 px-4 text-right">Optimization</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {opportunities.map((opp) => (
+                  <tr class="hover:bg-slate-50/80 transition">
+                    <td class="py-3.5 px-4 font-semibold text-slate-900">{opp.keyword}</td>
+                    <td class="py-3.5 px-4 font-mono text-xs text-slate-700 max-w-xs truncate" title={opp.target_url}>
+                      {opp.target_url}
+                    </td>
+                    <td class="py-3.5 px-4 text-center font-medium">{opp.search_volume?.toLocaleString() || '1,000+'}</td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-900">
+                      {opp.current_position ? `#${opp.current_position}` : 'Unranked'}
+                    </td>
+                    <td class="py-3.5 px-4 text-center">
+                      <Badge variant={opp.current_position && opp.current_position <= 10 ? 'default' : 'secondary'}>
+                        {opp.current_position && opp.current_position <= 10 ? 'High Priority' : 'Content Expansion'}
+                      </Badge>
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                      <a
+                        href="/admin/seo"
+                        class="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                      >
+                        Edit Meta & FAQs →
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

@@ -1,0 +1,212 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { getD1Database } from '@/lib/db/client';
+import { NotificationService } from '@/services/notifications/notification.service';
+
+export const prerender = false;
+
+const currentUser = Astro.locals.user;
+if (!currentUser) {
+  return Astro.redirect('/login');
+}
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const notificationService = new NotificationService(db);
+const preferences = await notificationService.getPreferences(currentUser.id);
+---
+
+<DashboardLayout title="Notification Preferences">
+  <div class="space-y-6 max-w-3xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/dashboard/settings" class="text-xs font-semibold text-teal-600 hover:underline">Settings</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Notifications</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Notification & Email Preferences</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Customize which email updates and in-app communications you receive.
+        </p>
+      </div>
+    </div>
+
+    <form id="preferences-form" class="space-y-6">
+      <!-- Mandatory Security Emails (Informational) -->
+      <Card class="p-6 border-slate-200 bg-slate-50/50 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span>🔒</span> Mandatory Security & Account Emails
+            </h3>
+            <p class="text-xs text-slate-500">
+              Critical account communications such as password resets, email verification, and account security alerts cannot be disabled.
+            </p>
+          </div>
+          <Badge variant="default" size="sm">Required</Badge>
+        </div>
+      </Card>
+
+      <!-- Optional Activity Notifications -->
+      <Card class="p-6 border-slate-200 bg-white space-y-6 shadow-xs">
+        <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
+          Activity & Evaluation Alerts
+        </h3>
+
+        <div class="space-y-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-0.5">
+              <label for="assessment_reminders" class="text-xs font-bold text-slate-900 block cursor-pointer">
+                Assessment Results & Completion
+              </label>
+              <p class="text-xs text-slate-500">
+                Receive notifications and direct result links whenever you complete a psychology assessment.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="assessment_reminders"
+              name="assessment_reminders"
+              checked={preferences.assessment_reminders === 1}
+              class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-1 cursor-pointer"
+            />
+          </div>
+
+          <div class="flex items-start justify-between gap-4 pt-4 border-t border-slate-100">
+            <div class="space-y-0.5">
+              <label for="ai_report_alerts" class="text-xs font-bold text-slate-900 block cursor-pointer">
+                AI Interpretation Synthesis
+              </label>
+              <p class="text-xs text-slate-500">
+                Get notified immediately when your deep AI psychological interpretation report finishes generating.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="ai_report_alerts"
+              name="ai_report_alerts"
+              checked={preferences.ai_report_alerts === 1}
+              class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-1 cursor-pointer"
+            />
+          </div>
+
+          <div class="flex items-start justify-between gap-4 pt-4 border-t border-slate-100">
+            <div class="space-y-0.5">
+              <label for="billing_alerts" class="text-xs font-bold text-slate-900 block cursor-pointer">
+                Subscription & Billing Updates
+              </label>
+              <p class="text-xs text-slate-500">
+                Receive renewal receipts, cancellation confirmations, and payment status updates.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="billing_alerts"
+              name="billing_alerts"
+              checked={preferences.billing_alerts === 1}
+              class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-1 cursor-pointer"
+            />
+          </div>
+        </div>
+      </Card>
+
+      <!-- Optional Product & Marketing Updates -->
+      <Card class="p-6 border-slate-200 bg-white space-y-6 shadow-xs">
+        <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
+          Research & Feature Updates
+        </h3>
+
+        <div class="space-y-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-0.5">
+              <label for="product_updates" class="text-xs font-bold text-slate-900 block cursor-pointer">
+                New Psychometric Assessments & Features
+              </label>
+              <p class="text-xs text-slate-500">
+                Occasional updates when new psychology instruments, personality models, or tools are released.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="product_updates"
+              name="product_updates"
+              checked={preferences.product_updates === 1}
+              class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-1 cursor-pointer"
+            />
+          </div>
+
+          <div class="flex items-start justify-between gap-4 pt-4 border-t border-slate-100">
+            <div class="space-y-0.5">
+              <label for="marketing_emails" class="text-xs font-bold text-slate-900 block cursor-pointer">
+                Educational Articles & Research Insights
+              </label>
+              <p class="text-xs text-slate-500">
+                Quarterly psychology digests, psychometric deep dives, and scientific articles from our editorial team.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="marketing_emails"
+              name="marketing_emails"
+              checked={preferences.marketing_emails === 1}
+              class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 mt-1 cursor-pointer"
+            />
+          </div>
+        </div>
+      </Card>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <Button type="submit" id="save-prefs-btn" variant="primary" size="md">
+          Save Notification Preferences
+        </Button>
+      </div>
+    </form>
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('preferences-form');
+    const saveBtn = document.getElementById('save-prefs-btn');
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        const formData = new FormData(form);
+        const payload = {
+          assessment_reminders: formData.get('assessment_reminders') ? 1 : 0,
+          ai_report_alerts: formData.get('ai_report_alerts') ? 1 : 0,
+          billing_alerts: formData.get('billing_alerts') ? 1 : 0,
+          product_updates: formData.get('product_updates') ? 1 : 0,
+          marketing_emails: formData.get('marketing_emails') ? 1 : 0
+        };
+
+        try {
+          const res = await fetch('/api/v1/dashboard/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_preferences', preferences: payload })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert('Preferences saved successfully!');
+            window.location.reload();
+          } else {
+            alert(data.message || 'Failed to save preferences');
+          }
+        } catch {
+          alert('Network error saving preferences');
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Notification Preferences';
+        }
+      });
+    }
+  </script>
+</DashboardLayout>

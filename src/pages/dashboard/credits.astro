@@ -1,0 +1,253 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { CreditService } from '@/services/credit.service';
+
+export const prerender = false;
+
+const currentUser = Astro.locals.user;
+if (!currentUser) return Astro.redirect('/login?redirect=/dashboard/credits');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const creditService = new CreditService(db);
+
+const wallet = await creditService.getUserWallet(currentUser.id);
+const reportCost = await creditService.getReportCreditCost();
+const packages = await creditService.getPackages(true);
+const transactions = await creditService.getUserTransactions(currentUser.id, 50);
+
+const defaultPackages = [
+  {
+    id: 'pkg_starter',
+    name: 'Starter',
+    slug: 'starter-ai-report-credits',
+    price: 4.00,
+    credits: 20,
+    short_description: '4 detailed reports',
+    is_featured: 0
+  },
+  {
+    id: 'pkg_growth',
+    name: 'Growth',
+    slug: 'growth-ai-report-credits',
+    price: 9.00,
+    credits: 50,
+    short_description: '10 detailed reports',
+    is_featured: 1
+  },
+  {
+    id: 'pkg_pro',
+    name: 'Pro',
+    slug: 'pro-ai-report-credits',
+    price: 19.00,
+    credits: 120,
+    short_description: '24 detailed reports',
+    is_featured: 0
+  }
+];
+
+const availablePackages = packages.length > 0 ? packages : defaultPackages;
+const reportsAvailable = creditService.calculateReportsAvailable(wallet.balance, reportCost);
+---
+
+<DashboardLayout title="Credit Balance & Ledger — Psychology Calculator" description="Manage your AI credits balance and review transaction history">
+  <div class="space-y-8 max-w-5xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Credit Balance & Activity</h1>
+        <p class="text-xs text-slate-500 mt-1">
+          Credits are consumed when generating comprehensive, in-depth AI psychological reports.
+        </p>
+      </div>
+
+      <a
+        href="/pricing"
+        class="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+      >
+        <span>💎</span>
+        <span>View All Packages</span>
+      </a>
+    </div>
+
+    <!-- 1. Wallet Balance Hero -->
+    <div class="p-8 bg-gradient-to-br from-teal-900 via-slate-900 to-indigo-950 text-white rounded-3xl shadow-lg flex flex-col justify-between space-y-6">
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-teal-300">Your Credit Wallet</span>
+          <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-teal-500/20 text-teal-200 border border-teal-400/30 rounded-full">
+            Never Expires
+          </span>
+        </div>
+        <div class="text-4xl sm:text-5xl font-black text-white font-mono flex items-center gap-2 pt-1">
+          <span>💎</span> {wallet.balance} <span class="text-xs font-normal text-teal-200 uppercase tracking-widest">Credits</span>
+        </div>
+        <p class="text-xs text-teal-100/90 leading-relaxed pt-1">
+          You currently have enough credits to generate <strong class="text-teal-300">{reportsAvailable} detailed AI psychological reports</strong> ({reportCost} credits per report).
+        </p>
+      </div>
+
+      <div class="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-[11px] text-teal-200/80">
+        <span>Report Cost: {reportCost} credits</span>
+        <span>Web Dossier & PDF Download: 0 extra credits</span>
+      </div>
+    </div>
+
+    <!-- 2. One-Time Credit Packages Quick Purchase -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-900">Add Credits (One-Time Payment)</h2>
+        <span class="text-xs text-slate-400 font-medium">Credits never expire</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {availablePackages.map((pkg) => {
+          const reps = creditService.calculateReportsAvailable(pkg.credits, reportCost);
+          const isFeatured = pkg.is_featured === 1;
+
+          return (
+            <div
+              class={`rounded-2xl p-5 border flex flex-col justify-between space-y-4 transition-all ${
+                isFeatured
+                  ? 'bg-teal-950 text-white border-teal-500 ring-2 ring-teal-500/20 shadow-md'
+                  : 'bg-white border-slate-200 text-slate-900 shadow-2xs hover:border-slate-300'
+              }`}
+            >
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class={`text-[10px] font-bold uppercase tracking-wider ${isFeatured ? 'text-teal-300' : 'text-teal-700'}`}>
+                    {pkg.name}
+                  </span>
+                  {isFeatured && (
+                    <span class="px-2 py-0.5 text-[9px] font-black uppercase bg-teal-400 text-slate-950 rounded-full">
+                      Popular
+                    </span>
+                  )}
+                </div>
+
+                <div class="flex items-baseline gap-1">
+                  <span class="text-2xl sm:text-3xl font-black font-mono">${pkg.price.toFixed(0)}</span>
+                  <span class={`text-[10px] uppercase font-semibold ${isFeatured ? 'text-teal-200' : 'text-slate-400'}`}>USD</span>
+                </div>
+
+                <div class={`text-xs font-bold ${isFeatured ? 'text-teal-300' : 'text-teal-600'}`}>
+                  {pkg.credits} Credits • Up to {reps} reports
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="dashboard-buy-btn w-full py-2.5 text-center text-xs font-black rounded-xl shadow-xs transition-all cursor-pointer"
+                class:list={[
+                  isFeatured
+                    ? 'bg-teal-400 hover:bg-teal-300 text-slate-950'
+                    : 'bg-slate-900 hover:bg-black text-white'
+                ]}
+                data-pkg-id={pkg.id}
+                data-pkg-slug={pkg.slug}
+                data-pkg-name={pkg.name}
+              >
+                Get {pkg.name} — ${pkg.price.toFixed(0)} →
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- 3. Transaction Ledger -->
+    <div class="space-y-4 pt-4">
+      <h2 class="text-lg font-bold text-slate-900">Credit Transaction Ledger</h2>
+
+      {transactions.length === 0 ? (
+        <Card class="p-8 text-center space-y-2">
+          <div class="text-2xl">📋</div>
+          <h3 class="text-xs font-bold text-slate-700">No credit activity recorded yet.</h3>
+          <p class="text-[11px] text-slate-400">Transactions will appear here when credits are purchased, spent, or refunded.</p>
+        </Card>
+      ) : (
+        <Card class="p-0 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-4">Date & Time</th>
+                  <th class="p-4">Activity Description</th>
+                  <th class="p-4">Type</th>
+                  <th class="p-4 text-right">Amount</th>
+                  <th class="p-4 text-right">Balance After</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {transactions.map((tx) => (
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="p-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                      {new Date(tx.createdAt).toLocaleDateString()} {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td class="p-4 font-semibold text-slate-900">
+                      {tx.description}
+                    </td>
+                    <td class="p-4">
+                      <Badge
+                        variant={tx.amount > 0 ? 'success' : tx.transactionType === 'refund' ? 'warning' : 'default'}
+                        size="sm"
+                      >
+                        {tx.transactionType.replace(/_/g, ' ')}
+                      </Badge>
+                    </td>
+                    <td class={`p-4 text-right font-mono font-bold ${tx.amount > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
+                    </td>
+                    <td class="p-4 text-right font-mono text-slate-500 font-medium">
+                      {tx.balanceAfter !== null ? `${tx.balanceAfter} credits` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  </div>
+</DashboardLayout>
+
+<script is:inline>
+  const buyButtons = document.querySelectorAll('.dashboard-buy-btn');
+
+  buyButtons.forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const pkgId = btn.getAttribute('data-pkg-id');
+      const pkgSlug = btn.getAttribute('data-pkg-slug');
+      const pkgName = btn.getAttribute('data-pkg-name');
+      const originalText = btn.innerHTML;
+
+      btn.setAttribute('disabled', 'true');
+      btn.innerText = 'Initializing...';
+
+      try {
+        const res = await fetch('/api/v1/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packageId: pkgId, packageSlug: pkgSlug })
+        });
+        const data = await res.json();
+
+        if (data.success && data.data?.checkoutUrl) {
+          window.location.href = data.data.checkoutUrl;
+        } else {
+          alert(data.error?.message || 'Could not initialize checkout.');
+          btn.removeAttribute('disabled');
+          btn.innerHTML = originalText;
+        }
+      } catch {
+        alert('A network error occurred. Please try again.');
+        btn.removeAttribute('disabled');
+        btn.innerHTML = originalText;
+      }
+    });
+  });
+</script>

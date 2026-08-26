@@ -1,0 +1,59 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
+import Card from '@/components/ui/Card.astro';
+import { getD1Database } from '@/lib/db/client';
+import { fetchFirst } from '@/lib/db/query';
+import { InternalLinkService } from '@/services/seo/internal-link.service';
+import type { PageRow } from '@/types/database';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const page = db
+  ? await fetchFirst<PageRow>(
+      db,
+      `SELECT * FROM pages WHERE slug = ? AND status = 'published'`,
+      [slug]
+    )
+  : null;
+
+if (!page) {
+  Astro.response.status = 404;
+  return Astro.redirect('/404');
+}
+
+const linkService = new InternalLinkService(db);
+const breadcrumbItems = linkService.getBreadcrumbs([
+  { name: page.title, path: `/p/${page.slug}` }
+]);
+---
+
+<PublicLayout
+  title={page.title}
+  description={page.meta_description || `Read about ${page.title} on Psychology Calculator.`}
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <Breadcrumbs items={breadcrumbItems} />
+
+    <div class="space-y-4">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+        {page.title}
+      </h1>
+      <p class="text-xs text-slate-400">
+        Last revised: {new Date(page.updated_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+      </p>
+    </div>
+
+    <Card class="p-6 sm:p-10 border-slate-200 bg-white shadow-xs">
+      <div class="prose prose-slate max-w-none text-slate-700 leading-relaxed text-sm sm:text-base space-y-4">
+        {page.content}
+      </div>
+    </Card>
+  </div>
+</PublicLayout>

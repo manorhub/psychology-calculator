@@ -1,0 +1,938 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Button from '@/components/ui/Button.astro';
+import { requireAdmin } from '@/lib/auth/guards';
+import { getD1Database } from '@/lib/db/client';
+
+const user = requireAdmin(Astro.locals);
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+---
+
+<AdminLayout title="Import Assessment (JSON & CSV)" description="Upload, validate, and bulk import psychometric assessments from Schema v1.0 JSON or multi-assessment CSV spreadsheets.">
+  <div class="max-w-5xl mx-auto space-y-8">
+    <!-- Header Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/assessments" class="text-xs font-semibold text-slate-500 hover:text-teal-700">
+            ← Assessments
+          </a>
+          <span class="text-slate-300">/</span>
+          <span class="text-xs font-bold text-teal-700">Importer Hub</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+          📥 Assessment Import Hub
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+          Bulk import psychometric instruments, questions, dimensions, and scoring models via JSON or CSV.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <a
+          href="/admin/assessments/export"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-2xs transition-all cursor-pointer"
+        >
+          <span>📤</span>
+          <span>Export Catalog</span>
+        </a>
+        <a
+          href="/admin/assessments/import-history"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all"
+        >
+          <span>📋</span>
+          <span>Import History</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Format Tabs: JSON vs CSV -->
+    <div class="flex items-center gap-2 border-b border-slate-200 pb-2">
+      <button
+        id="tab-btn-json"
+        type="button"
+        class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all bg-teal-700 text-white shadow-xs cursor-pointer"
+      >
+        <span>📄</span>
+        <span>JSON Import (Full Schema v1.0)</span>
+      </button>
+      <button
+        id="tab-btn-csv"
+        type="button"
+        class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-600 hover:bg-slate-100 cursor-pointer"
+      >
+        <span>📊</span>
+        <span>CSV Import (Bulk Spreadsheets)</span>
+      </button>
+    </div>
+
+    <!-- Schema Version Banner -->
+    <div class="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-indigo-950">
+      <div class="flex items-center gap-2.5">
+        <span class="text-lg">🛡️</span>
+        <div>
+          <span class="font-bold">Atomic Rollback & Draft Protection:</span>
+          <span class="text-indigo-800 ml-1">All imports default to <strong>Draft</strong> status and are protected by transactional rollback against partial records.</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 font-mono text-[11px] font-bold text-indigo-700 bg-indigo-100/60 px-3 py-1.5 rounded-lg">
+        <span>Unicode & Multi-Language Active</span>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 1: JSON IMPORTER TAB -->
+    <!-- ========================================================================= -->
+    <div id="section-json-importer" class="space-y-6">
+      <Card class="p-6 border-slate-200">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900">Upload Schema v1.0 JSON File</h2>
+            <p class="text-xs text-slate-500">Supports full psychometric graph (dimensions, questions, result archetypes, FAQs, and SEO).</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a
+              href="/api/admin/assessments/import/template"
+              download="assessment-demo-template-v1.0.json"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
+            >
+              <span>📄</span>
+              <span>Download JSON Template</span>
+            </a>
+            <button
+              id="json-load-sample-btn"
+              type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-all cursor-pointer"
+            >
+              <span>⚡</span>
+              <span>Load Sample</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div
+          id="json-drop-zone"
+          class="border-2 border-dashed border-slate-300 hover:border-teal-500 bg-slate-50/50 hover:bg-teal-50/30 rounded-2xl p-8 text-center transition-all cursor-pointer"
+        >
+          <input type="file" id="json-file-input" accept=".json,application/json" class="hidden" />
+          <div class="space-y-2">
+            <div class="text-3xl">📥</div>
+            <div class="font-bold text-sm text-slate-800">
+              Drag & Drop your JSON file here, or <span class="text-teal-700 underline">browse</span>
+            </div>
+            <p class="text-xs text-slate-400">Strictly validates Schema v1.0 syntax, types, and dimension references</p>
+          </div>
+        </div>
+
+        <!-- Direct Raw JSON Paste Box -->
+        <div class="mt-4 space-y-2">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+            <span>Or paste raw JSON payload:</span>
+            <button id="json-clear-btn" type="button" class="text-rose-600 hover:underline hidden">Clear</button>
+          </div>
+          <textarea
+            id="json-text-input"
+            rows="6"
+            placeholder="Paste your JSON payload here..."
+            class="w-full text-xs font-mono bg-slate-900 text-emerald-400 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-slate-600"
+          ></textarea>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end">
+          <button
+            id="json-validate-btn"
+            type="button"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+          >
+            <span>🔍</span>
+            <span>Validate JSON</span>
+          </button>
+        </div>
+      </Card>
+
+      <!-- JSON Validation Status & Preview Card -->
+      <div id="json-validation-result-container" class="hidden space-y-6">
+        <!-- Live Errors & Warnings Box -->
+        <div id="json-issues-box" class="space-y-3"></div>
+
+        <!-- Assessment Preview Card -->
+        <Card id="json-preview-card" class="p-6 border-slate-200">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">✨</span>
+              <h3 class="text-base font-extrabold text-slate-900">Pre-Import Assessment Preview</h3>
+            </div>
+            <span id="json-preview-badge" class="px-2.5 py-1 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+              Valid Schema 1.0
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div class="p-3 bg-slate-50 rounded-xl space-y-1">
+              <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Title & Slug</span>
+              <div id="json-preview-title" class="font-extrabold text-slate-900 text-sm">--</div>
+              <div id="json-preview-slug" class="font-mono text-teal-700">/--</div>
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-xl space-y-1">
+              <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Category & Access</span>
+              <div id="json-preview-category" class="font-bold text-slate-800">--</div>
+              <div id="json-preview-access" class="text-slate-500 capitalize">--</div>
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-xl space-y-1">
+              <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Content Counts</span>
+              <div class="font-bold text-slate-900">
+                <span id="json-preview-questions">0</span> Questions • <span id="json-preview-dimensions">0</span> Dimensions
+              </div>
+              <div class="text-slate-500">
+                <span id="json-preview-profiles">0</span> Archetypes • <span id="json-preview-faqs">0</span> FAQs
+              </div>
+            </div>
+          </div>
+
+          <!-- Slug Conflict Alert & Mode Selector -->
+          <div id="json-conflict-section" class="hidden mt-4 p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-3">
+            <div class="flex items-center gap-2 font-bold text-amber-900 text-xs">
+              <span class="text-base">⚠️</span>
+              <span>Duplicate Slug Detected: Assessment "<span id="json-conflict-name"></span>" already exists.</span>
+            </div>
+            <p class="text-xs text-amber-800">
+              Select how to handle this conflict before continuing:
+            </p>
+            <div class="flex flex-wrap gap-4 text-xs font-semibold text-slate-800">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="json-conflict-mode" value="create_with_new_slug" checked class="text-teal-600 focus:ring-teal-500" />
+                <span>Import as New with modified slug (<code id="json-suggested-slug" class="font-mono bg-white px-1.5 py-0.5 rounded border"></code>)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="json-conflict-mode" value="update_existing" class="text-rose-600 focus:ring-rose-500" />
+                <span class="text-rose-800 font-bold">Update existing assessment (Replaces questions & scoring rules)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Commit Import Action Button -->
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-400 font-medium">Draft status prevents premature public taking.</span>
+            <button
+              id="json-commit-import-btn"
+              type="button"
+              class="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <span>🚀</span>
+              <span>Confirm & Import as Draft</span>
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      <!-- JSON Schema Documentation Accordion -->
+      <details class="bg-white border border-slate-200 rounded-2xl overflow-hidden text-xs text-slate-700">
+        <summary class="p-4 font-extrabold cursor-pointer hover:bg-slate-50 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span>📚</span>
+            <span>JSON Schema v1.0 Reference Specification</span>
+          </span>
+          <span class="text-slate-400 font-mono text-[11px]">Click to expand</span>
+        </summary>
+        <div class="p-6 border-t border-slate-100 bg-slate-50/50 space-y-4 font-mono text-[11px]">
+          <p class="text-slate-600 font-sans">Every JSON assessment payload must include <code>schema_version: "1.0"</code> and define matching dimension keys in its questions and result profiles.</p>
+          <pre class="bg-slate-900 text-emerald-300 p-4 rounded-xl overflow-x-auto">{`{
+  "schema_version": "1.0",
+  "assessment": {
+    "name": "Workplace Stress & Resilience Inventory",
+    "slug": "workplace-stress-resilience-inventory",
+    "short_description": "Evaluate your cognitive endurance and boundary setting.",
+    "category_slug": "mental-wellbeing",
+    "access_type": "free",
+    "estimated_minutes": 8,
+    "status": "draft"
+  },
+  "dimensions": [
+    { "key": "exhaustion", "name": "Emotional Exhaustion", "description": "Occupational strain" }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "dimension_key": "exhaustion",
+      "text": "I feel emotionally drained at the end of a typical work day.",
+      "type": "likert",
+      "options": [
+        { "text": "Strongly Disagree", "value": "1", "score": 1.0 },
+        { "text": "Strongly Agree", "value": "5", "score": 5.0 }
+      ]
+    }
+  ]
+}`}</pre>
+        </div>
+      </details>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 2: CSV IMPORTER TAB -->
+    <!-- ========================================================================= -->
+    <div id="section-csv-importer" class="hidden space-y-6">
+      <Card class="p-6 border-slate-200">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900">Upload Bulk Assessment CSV Spreadsheet</h2>
+            <p class="text-xs text-slate-500">Supports single or multi-assessment spreadsheets with 21 standard columns and reverse scoring.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <a
+              href="/api/admin/assessments/import/csv-template?type=template"
+              download="assessment_template.csv"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
+            >
+              <span>📊</span>
+              <span>Download CSV Template</span>
+            </a>
+            <a
+              href="/api/admin/assessments/import/csv-template?type=example"
+              download="full_example_assessments.csv"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-all"
+            >
+              <span>🌐</span>
+              <span>Download Full Example (Hindi/Marathi)</span>
+            </a>
+            <button
+              id="csv-load-sample-btn"
+              type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-all cursor-pointer"
+            >
+              <span>⚡</span>
+              <span>Load Sample</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div
+          id="csv-drop-zone"
+          class="border-2 border-dashed border-slate-300 hover:border-teal-500 bg-slate-50/50 hover:bg-teal-50/30 rounded-2xl p-8 text-center transition-all cursor-pointer"
+        >
+          <input type="file" id="csv-file-input" accept=".csv,text/csv,text/plain,application/vnd.ms-excel" class="hidden" />
+          <div class="space-y-2">
+            <div class="text-3xl">📊</div>
+            <div class="font-bold text-sm text-slate-800">
+              Drag & Drop your CSV file here, or <span class="text-teal-700 underline">browse</span>
+            </div>
+            <p class="text-xs text-slate-400">RFC 4180 compliant with UTF-8, Unicode, quotes, commas, and Hindi/Marathi support</p>
+          </div>
+        </div>
+
+        <!-- Direct Raw CSV Paste Box -->
+        <div class="mt-4 space-y-2">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+            <span>Or paste raw CSV text:</span>
+            <button id="csv-clear-btn" type="button" class="text-rose-600 hover:underline hidden">Clear</button>
+          </div>
+          <textarea
+            id="csv-text-input"
+            rows="6"
+            placeholder="assessment_slug,assessment_title,category_slug,question_id,question_order,question_text,question_type,required,dimension,weight,reverse,option_1,option_2,option_3,option_4,option_5,score_1,score_2,score_3,score_4,score_5"
+            class="w-full text-xs font-mono bg-slate-900 text-cyan-300 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-slate-600"
+          ></textarea>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end">
+          <button
+            id="csv-validate-btn"
+            type="button"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+          >
+            <span>🔍</span>
+            <span>Validate CSV</span>
+          </button>
+        </div>
+      </Card>
+
+      <!-- CSV Validation Status & Multi-Assessment Previews -->
+      <div id="csv-validation-result-container" class="hidden space-y-6">
+        <!-- Live Errors & Warnings Box -->
+        <div id="csv-issues-box" class="space-y-3"></div>
+
+        <!-- Batch Overview Card -->
+        <Card class="p-6 border-slate-200">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📦</span>
+              <h3 class="text-base font-extrabold text-slate-900">
+                Found <span id="csv-assessment-count" class="text-teal-700 font-black">0</span> Assessment(s) in CSV
+              </h3>
+            </div>
+            <span id="csv-batch-badge" class="px-2.5 py-1 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-800">
+              Valid CSV Schema
+            </span>
+          </div>
+
+          <!-- Dynamic Assessment Cards Container -->
+          <div id="csv-assessments-list" class="space-y-4"></div>
+
+          <!-- Commit CSV Batch Action Button -->
+          <div class="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span class="text-xs text-slate-400 font-medium">All items will be created as Drafts with sensible defaults.</span>
+            <button
+              id="csv-commit-import-btn"
+              type="button"
+              class="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <span>🚀</span>
+              <span>Confirm & Import All Drafts</span>
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      <!-- CSV 21-Column Documentation Accordion -->
+      <details class="bg-white border border-slate-200 rounded-2xl overflow-hidden text-xs text-slate-700">
+        <summary class="p-4 font-extrabold cursor-pointer hover:bg-slate-50 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span>📚</span>
+            <span>CSV 21-Column Specification & Reverse Scoring Guide</span>
+          </span>
+          <span class="text-slate-400 font-mono text-[11px]">Click to expand</span>
+        </summary>
+        <div class="p-6 border-t border-slate-100 bg-slate-50/50 space-y-4 text-[11px]">
+          <p class="text-slate-600 font-sans">CSV imports require exactly 21 headers in the first row. Quoted values with commas, double quotes, and Unicode text are fully supported.</p>
+          <div class="overflow-x-auto">
+            <table class="w-full border border-slate-200 rounded-lg text-left bg-white">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-2 border-r">Header</th>
+                  <th class="p-2 border-r">Type</th>
+                  <th class="p-2">Description</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 font-mono text-[10px]">
+                <tr><td class="p-2 border-r font-bold text-teal-800">assessment_slug</td><td class="p-2 border-r">String</td><td class="p-2">Unique URL slug (e.g. <code>workplace-stress</code>). Groups rows into assessments.</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">assessment_title</td><td class="p-2 border-r">String</td><td class="p-2">Display name of the assessment instrument.</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">category_slug</td><td class="p-2 border-r">String</td><td class="p-2">Existing category slug (<code>personality</code>, <code>relationships</code>, <code>mental-wellbeing</code>, etc.).</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">question_id</td><td class="p-2 border-r">String</td><td class="p-2">Unique question ID within the assessment (e.g. <code>wsri_q1</code>).</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">question_order</td><td class="p-2 border-r">Number</td><td class="p-2">Display sequence (1, 2, 3...).</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">question_text</td><td class="p-2 border-r">String</td><td class="p-2">Prompt statement (supports Unicode, Hindi, Marathi, quotes).</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">question_type</td><td class="p-2 border-r">String</td><td class="p-2"><code>likert</code>, <code>multiple_choice</code>, <code>yes_no</code>, <code>scale</code>.</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">required</td><td class="p-2 border-r">Boolean</td><td class="p-2"><code>1</code> or <code>true</code> for mandatory questions.</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">dimension</td><td class="p-2 border-r">String</td><td class="p-2">Dimension/Trait name (e.g. <code>Emotional Exhaustion</code>).</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">weight</td><td class="p-2 border-r">Number</td><td class="p-2">Scoring weight factor (default <code>1.0</code>).</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">reverse</td><td class="p-2 border-r">Boolean</td><td class="p-2"><code>1</code> or <code>true</code> to flag reverse scoring logic.</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">option_1 .. option_5</td><td class="p-2 border-r">String</td><td class="p-2">Text labels for up to 5 response options (min 2 required).</td></tr>
+                <tr><td class="p-2 border-r font-bold text-teal-800">score_1 .. score_5</td><td class="p-2 border-r">Number</td><td class="p-2">Point values awarded for selecting each option.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+</AdminLayout>
+
+<script is:inline>
+  // =========================================================================
+  // Client Controller: Tab Switching, JSON & CSV Upload and Validation
+  // =========================================================================
+  let currentTab = 'json';
+  let activeValidatedJson: any = null;
+  let activeValidatedCsvResult: any = null;
+  let activeCsvContent: string = '';
+
+  // Tab Buttons
+  const tabBtnJson = document.getElementById('tab-btn-json') as HTMLButtonElement;
+  const tabBtnCsv = document.getElementById('tab-btn-csv') as HTMLButtonElement;
+  const sectionJson = document.getElementById('section-json-importer') as HTMLDivElement;
+  const sectionCsv = document.getElementById('section-csv-importer') as HTMLDivElement;
+
+  tabBtnJson?.addEventListener('click', () => switchTab('json'));
+  tabBtnCsv?.addEventListener('click', () => switchTab('csv'));
+
+  function switchTab(tab: 'json' | 'csv') {
+    currentTab = tab;
+    if (tab === 'json') {
+      tabBtnJson.className = 'flex items-center gap-2 px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all bg-teal-700 text-white shadow-xs cursor-pointer';
+      tabBtnCsv.className = 'flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-600 hover:bg-slate-100 cursor-pointer';
+      sectionJson.classList.remove('hidden');
+      sectionCsv.classList.add('hidden');
+    } else {
+      tabBtnCsv.className = 'flex items-center gap-2 px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all bg-teal-700 text-white shadow-xs cursor-pointer';
+      tabBtnJson.className = 'flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-600 hover:bg-slate-100 cursor-pointer';
+      sectionCsv.classList.remove('hidden');
+      sectionJson.classList.add('hidden');
+    }
+  }
+
+  // =========================================================================
+  // JSON LOGIC
+  // =========================================================================
+  const jsonDropZone = document.getElementById('json-drop-zone') as HTMLDivElement;
+  const jsonFileInput = document.getElementById('json-file-input') as HTMLInputElement;
+  const jsonTextInput = document.getElementById('json-text-input') as HTMLTextAreaElement;
+  const jsonValidateBtn = document.getElementById('json-validate-btn') as HTMLButtonElement;
+  const jsonClearBtn = document.getElementById('json-clear-btn') as HTMLButtonElement;
+  const jsonLoadSampleBtn = document.getElementById('json-load-sample-btn') as HTMLButtonElement;
+  const jsonResultContainer = document.getElementById('json-validation-result-container') as HTMLDivElement;
+  const jsonIssuesBox = document.getElementById('json-issues-box') as HTMLDivElement;
+  const jsonCommitBtn = document.getElementById('json-commit-import-btn') as HTMLButtonElement;
+
+  jsonDropZone?.addEventListener('click', () => jsonFileInput?.click());
+  jsonDropZone?.addEventListener('dragover', (e) => { e.preventDefault(); jsonDropZone.classList.add('border-teal-500', 'bg-teal-50/50'); });
+  jsonDropZone?.addEventListener('dragleave', () => { jsonDropZone.classList.remove('border-teal-500', 'bg-teal-50/50'); });
+  jsonDropZone?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    jsonDropZone.classList.remove('border-teal-500', 'bg-teal-50/50');
+    if (e.dataTransfer?.files?.length) {
+      handleJsonFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  jsonFileInput?.addEventListener('change', () => {
+    if (jsonFileInput.files?.length) {
+      handleJsonFile(jsonFileInput.files[0]);
+    }
+  });
+
+  function handleJsonFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (jsonTextInput) {
+        jsonTextInput.value = e.target?.result as string;
+        jsonClearBtn?.classList.remove('hidden');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  jsonClearBtn?.addEventListener('click', () => {
+    if (jsonTextInput) jsonTextInput.value = '';
+    jsonResultContainer?.classList.add('hidden');
+    jsonClearBtn.classList.add('hidden');
+  });
+
+  jsonLoadSampleBtn?.addEventListener('click', async () => {
+    try {
+      jsonLoadSampleBtn.textContent = 'Loading...';
+      const res = await fetch('/api/admin/assessments/import/template');
+      const data = await res.json();
+      if (jsonTextInput) {
+        jsonTextInput.value = JSON.stringify(data, null, 2);
+        jsonClearBtn?.classList.remove('hidden');
+      }
+      jsonLoadSampleBtn.innerHTML = '<span>⚡</span><span>Load Sample</span>';
+    } catch {
+      alert('Failed to load sample template');
+      jsonLoadSampleBtn.innerHTML = '<span>⚡</span><span>Load Sample</span>';
+    }
+  });
+
+  jsonValidateBtn?.addEventListener('click', async () => {
+    const raw = jsonTextInput?.value?.trim();
+    if (!raw) {
+      alert('Please paste or upload JSON first.');
+      return;
+    }
+
+    try {
+      jsonValidateBtn.disabled = true;
+      jsonValidateBtn.textContent = 'Validating...';
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (err: any) {
+        renderJsonErrors([{ field: 'syntax', message: `Invalid JSON syntax: ${err.message}` }], []);
+        jsonResultContainer.classList.remove('hidden');
+        document.getElementById('json-preview-card')?.classList.add('hidden');
+        jsonValidateBtn.disabled = false;
+        jsonValidateBtn.textContent = 'Validate JSON';
+        return;
+      }
+
+      const res = await fetch('/api/admin/assessments/import/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed)
+      });
+      const data = await res.json();
+
+      if (!res.ok && !data.preview) {
+        renderJsonErrors([{ field: 'server', message: data.error || 'Server error' }], []);
+        jsonResultContainer.classList.remove('hidden');
+        document.getElementById('json-preview-card')?.classList.add('hidden');
+        return;
+      }
+
+      activeValidatedJson = parsed;
+      renderJsonValidationResult(data);
+    } catch (err: any) {
+      alert(`Validation request failed: ${err.message}`);
+    } finally {
+      jsonValidateBtn.disabled = false;
+      jsonValidateBtn.textContent = 'Validate JSON';
+    }
+  });
+
+  function renderJsonErrors(errors: any[], warnings: any[]) {
+    if (!jsonIssuesBox) return;
+    jsonIssuesBox.innerHTML = '';
+
+    if (errors.length > 0) {
+      const errEl = document.createElement('div');
+      errEl.className = 'p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1.5';
+      errEl.innerHTML = `
+        <div class="font-extrabold flex items-center gap-1.5 text-rose-800">
+          <span>✕</span><span>Validation Blocked with ${errors.length} Error(s):</span>
+        </div>
+        <ul class="list-disc pl-5 space-y-1 font-mono text-[11px]">
+          ${errors.map((e) => `<li><strong class="text-rose-950">${e.field ? `[${e.field}] ` : ''}</strong>${e.message}</li>`).join('')}
+        </ul>
+      `;
+      jsonIssuesBox.appendChild(errEl);
+    }
+
+    if (warnings.length > 0) {
+      const warnEl = document.createElement('div');
+      warnEl.className = 'p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5';
+      warnEl.innerHTML = `
+        <div class="font-extrabold flex items-center gap-1.5 text-amber-800">
+          <span>⚠️</span><span>${warnings.length} Warning(s):</span>
+        </div>
+        <ul class="list-disc pl-5 space-y-1 font-mono text-[11px]">
+          ${warnings.map((w) => `<li><strong class="text-amber-950">${w.field ? `[${w.field}] ` : ''}</strong>${w.message}</li>`).join('')}
+        </ul>
+      `;
+      jsonIssuesBox.appendChild(warnEl);
+    }
+  }
+
+  function renderJsonValidationResult(data: any) {
+    jsonResultContainer?.classList.remove('hidden');
+    renderJsonErrors(data.errors || [], data.warnings || []);
+
+    const previewCard = document.getElementById('json-preview-card');
+    if (!data.valid) {
+      previewCard?.classList.add('hidden');
+      return;
+    }
+
+    previewCard?.classList.remove('hidden');
+    const p = data.preview;
+
+    document.getElementById('json-preview-title')!.textContent = p.title || 'Untitled';
+    document.getElementById('json-preview-slug')!.textContent = `/${p.slug}`;
+    document.getElementById('json-preview-category')!.textContent = p.categoryName || p.categorySlug;
+    document.getElementById('json-preview-access')!.textContent = `${p.accessType} • ${p.estimatedMinutes} min`;
+    document.getElementById('json-preview-questions')!.textContent = String(p.questionCount);
+    document.getElementById('json-preview-dimensions')!.textContent = String(p.dimensionCount);
+    document.getElementById('json-preview-profiles')!.textContent = String(p.resultProfileCount);
+    document.getElementById('json-preview-faqs')!.textContent = String(p.faqCount);
+
+    const conflictSection = document.getElementById('json-conflict-section');
+    if (data.slugConflict?.exists) {
+      conflictSection?.classList.remove('hidden');
+      document.getElementById('json-conflict-name')!.textContent = data.slugConflict.existingAssessmentName || '';
+      document.getElementById('json-suggested-slug')!.textContent = `/${p.slug}-copy`;
+    } else {
+      conflictSection?.classList.add('hidden');
+    }
+  }
+
+  jsonCommitBtn?.addEventListener('click', async () => {
+    if (!activeValidatedJson) return;
+
+    let mode: 'create_new' | 'create_with_new_slug' | 'update_existing' = 'create_new';
+    const conflictSelected = document.querySelector('input[name="json-conflict-mode"]:checked') as HTMLInputElement;
+    if (conflictSelected) {
+      mode = conflictSelected.value as any;
+    }
+
+    if (mode === 'update_existing') {
+      const ok = confirm('⚠️ WARNING: Updating will replace all existing questions and scoring rules for this assessment. Are you sure?');
+      if (!ok) return;
+    }
+
+    try {
+      jsonCommitBtn.disabled = true;
+      jsonCommitBtn.textContent = 'Importing...';
+
+      const res = await fetch('/api/admin/assessments/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: activeValidatedJson,
+          options: {
+            mode,
+            fileName: 'json_import.json'
+          }
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(`Import failed: ${data.error || 'Unknown error'}`);
+        jsonCommitBtn.disabled = false;
+        jsonCommitBtn.textContent = 'Confirm & Import as Draft';
+        return;
+      }
+
+      alert(`🎉 Success! Assessment "${data.assessment?.name || 'Imported'}" created as Draft.`);
+      window.location.href = `/admin/assessments/${data.assessment?.id || ''}`;
+    } catch (err: any) {
+      alert(`Import error: ${err.message}`);
+      jsonCommitBtn.disabled = false;
+      jsonCommitBtn.textContent = 'Confirm & Import as Draft';
+    }
+  });
+
+  // =========================================================================
+  // CSV LOGIC
+  // =========================================================================
+  const csvDropZone = document.getElementById('csv-drop-zone') as HTMLDivElement;
+  const csvFileInput = document.getElementById('csv-file-input') as HTMLInputElement;
+  const csvTextInput = document.getElementById('csv-text-input') as HTMLTextAreaElement;
+  const csvValidateBtn = document.getElementById('csv-validate-btn') as HTMLButtonElement;
+  const csvClearBtn = document.getElementById('csv-clear-btn') as HTMLButtonElement;
+  const csvLoadSampleBtn = document.getElementById('csv-load-sample-btn') as HTMLButtonElement;
+  const csvResultContainer = document.getElementById('csv-validation-result-container') as HTMLDivElement;
+  const csvIssuesBox = document.getElementById('csv-issues-box') as HTMLDivElement;
+  const csvAssessmentsList = document.getElementById('csv-assessments-list') as HTMLDivElement;
+  const csvCommitBtn = document.getElementById('csv-commit-import-btn') as HTMLButtonElement;
+
+  csvDropZone?.addEventListener('click', () => csvFileInput?.click());
+  csvDropZone?.addEventListener('dragover', (e) => { e.preventDefault(); csvDropZone.classList.add('border-teal-500', 'bg-teal-50/50'); });
+  csvDropZone?.addEventListener('dragleave', () => { csvDropZone.classList.remove('border-teal-500', 'bg-teal-50/50'); });
+  csvDropZone?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    csvDropZone.classList.remove('border-teal-500', 'bg-teal-50/50');
+    if (e.dataTransfer?.files?.length) {
+      handleCsvFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  csvFileInput?.addEventListener('change', () => {
+    if (csvFileInput.files?.length) {
+      handleCsvFile(csvFileInput.files[0]);
+    }
+  });
+
+  function handleCsvFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (csvTextInput) {
+        csvTextInput.value = e.target?.result as string;
+        csvClearBtn?.classList.remove('hidden');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  csvClearBtn?.addEventListener('click', () => {
+    if (csvTextInput) csvTextInput.value = '';
+    csvResultContainer?.classList.add('hidden');
+    csvClearBtn.classList.add('hidden');
+  });
+
+  csvLoadSampleBtn?.addEventListener('click', async () => {
+    try {
+      csvLoadSampleBtn.textContent = 'Loading...';
+      const res = await fetch('/api/admin/assessments/import/csv-template?type=example');
+      const csvText = await res.text();
+      if (csvTextInput) {
+        csvTextInput.value = csvText;
+        csvClearBtn?.classList.remove('hidden');
+      }
+      csvLoadSampleBtn.innerHTML = '<span>⚡</span><span>Load Sample</span>';
+    } catch {
+      alert('Failed to load sample CSV');
+      csvLoadSampleBtn.innerHTML = '<span>⚡</span><span>Load Sample</span>';
+    }
+  });
+
+  csvValidateBtn?.addEventListener('click', async () => {
+    const raw = csvTextInput?.value?.trim();
+    if (!raw) {
+      alert('Please paste or upload CSV text first.');
+      return;
+    }
+
+    try {
+      csvValidateBtn.disabled = true;
+      csvValidateBtn.textContent = 'Validating CSV...';
+
+      const res = await fetch('/api/admin/assessments/import/csv-validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv: raw })
+      });
+      const data = await res.json();
+
+      if (!res.ok && !data.assessments) {
+        renderCsvErrors([{ field: 'server', message: data.error || 'Server error' }], []);
+        csvResultContainer.classList.remove('hidden');
+        csvAssessmentsList.innerHTML = '';
+        return;
+      }
+
+      activeCsvContent = raw;
+      activeValidatedCsvResult = data;
+      renderCsvValidationResult(data);
+    } catch (err: any) {
+      alert(`Validation error: ${err.message}`);
+    } finally {
+      csvValidateBtn.disabled = false;
+      csvValidateBtn.textContent = 'Validate CSV';
+    }
+  });
+
+  function renderCsvErrors(errors: any[], warnings: any[]) {
+    if (!csvIssuesBox) return;
+    csvIssuesBox.innerHTML = '';
+
+    if (errors.length > 0) {
+      const errEl = document.createElement('div');
+      errEl.className = 'p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1.5';
+      errEl.innerHTML = `
+        <div class="font-extrabold flex items-center gap-1.5 text-rose-800">
+          <span>✕</span><span>CSV Validation Blocked with ${errors.length} Error(s):</span>
+        </div>
+        <ul class="list-disc pl-5 space-y-1 font-mono text-[11px]">
+          ${errors.map((e) => `<li><strong class="text-rose-950">${e.field ? `[${e.field}] ` : ''}</strong>${e.message}</li>`).join('')}
+        </ul>
+      `;
+      csvIssuesBox.appendChild(errEl);
+    }
+
+    if (warnings.length > 0) {
+      const warnEl = document.createElement('div');
+      warnEl.className = 'p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5';
+      warnEl.innerHTML = `
+        <div class="font-extrabold flex items-center gap-1.5 text-amber-800">
+          <span>⚠️</span><span>${warnings.length} Warning(s):</span>
+        </div>
+        <ul class="list-disc pl-5 space-y-1 font-mono text-[11px]">
+          ${warnings.map((w) => `<li><strong class="text-amber-950">${w.field ? `[${w.field}] ` : ''}</strong>${w.message}</li>`).join('')}
+        </ul>
+      `;
+      csvIssuesBox.appendChild(warnEl);
+    }
+  }
+
+  function renderCsvValidationResult(data: any) {
+    csvResultContainer?.classList.remove('hidden');
+    renderCsvErrors(data.errors || [], data.warnings || []);
+
+    document.getElementById('csv-assessment-count')!.textContent = String(data.assessmentCount || 0);
+
+    const badge = document.getElementById('csv-batch-badge')!;
+    if (data.valid) {
+      badge.className = 'px-2.5 py-1 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-800';
+      badge.textContent = 'Valid CSV Schema';
+      csvCommitBtn.disabled = false;
+    } else {
+      badge.className = 'px-2.5 py-1 text-[11px] font-bold rounded-full bg-rose-100 text-rose-800';
+      badge.textContent = 'Validation Errors Found';
+      csvCommitBtn.disabled = true;
+    }
+
+    if (!csvAssessmentsList) return;
+    csvAssessmentsList.innerHTML = '';
+
+    (data.assessments || []).forEach((asm: any, idx: number) => {
+      const card = document.createElement('div');
+      card.className = 'p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3';
+
+      const conflictHtml = asm.slugConflict?.exists
+        ? `
+          <div class="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs space-y-2">
+            <div class="font-bold text-amber-900">⚠️ Slug "${asm.slug}" already exists ("${asm.slugConflict.existingAssessmentName}")</div>
+            <div class="flex flex-wrap gap-4 text-xs">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="csv-mode-${asm.slug}" value="create_with_new_slug" checked />
+                <span>Import as New (<code>${asm.slug}-copy</code>)</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer font-bold text-rose-800">
+                <input type="radio" name="csv-mode-${asm.slug}" value="update_existing" />
+                <span>Update Existing Assessment</span>
+              </label>
+            </div>
+          </div>
+        `
+        : `<input type="hidden" name="csv-mode-${asm.slug}" value="create_new" />`;
+
+      card.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-sm text-slate-900">${asm.title}</span>
+              <span class="px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 text-[10px] font-bold">${asm.categoryName || asm.categorySlug}</span>
+            </div>
+            <div class="font-mono text-xs text-slate-400">/${asm.slug}</div>
+          </div>
+          <div class="text-xs font-semibold text-slate-700">
+            <span>${asm.questionCount} Questions</span> • <span>${asm.dimensions?.length || 0} Dimensions</span>
+          </div>
+        </div>
+
+        <div class="text-xs text-slate-600">
+          <span class="font-bold text-slate-700">Dimensions:</span> ${asm.dimensions?.map((d: any) => d.name).join(', ') || 'General'}
+        </div>
+
+        ${conflictHtml}
+      `;
+
+      csvAssessmentsList.appendChild(card);
+    });
+  }
+
+  csvCommitBtn?.addEventListener('click', async () => {
+    if (!activeCsvContent || !activeValidatedCsvResult?.assessments) return;
+
+    const assessmentModes: Record<string, string> = {};
+    activeValidatedCsvResult.assessments.forEach((asm: any) => {
+      const selected = document.querySelector('input[name="csv-mode-' + asm.slug + '"]:checked, input[type="hidden"][name="csv-mode-' + asm.slug + '"]') as HTMLInputElement;
+      if (selected) {
+        assessmentModes[asm.slug] = selected.value;
+      } else {
+        assessmentModes[asm.slug] = 'create_new';
+      }
+    });
+
+    const hasUpdate = Object.values(assessmentModes).includes('update_existing');
+    if (hasUpdate) {
+      const ok = confirm('⚠️ WARNING: You selected "Update Existing" for one or more assessments. This will replace their question sets and scoring models. Proceed?');
+      if (!ok) return;
+    }
+
+    try {
+      csvCommitBtn.disabled = true;
+      csvCommitBtn.textContent = 'Importing CSV Drafts...';
+
+      const res = await fetch('/api/admin/assessments/import/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          csv: activeCsvContent,
+          assessmentModes,
+          fileName: 'bulk_spreadsheet.csv'
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(`CSV Import failed: ${data.error || 'Server error'}`);
+        csvCommitBtn.disabled = false;
+        csvCommitBtn.textContent = 'Confirm & Import All Drafts';
+        return;
+      }
+
+      alert(`🎉 Success! ${data.assessments?.length || 1} draft assessment(s) created.`);
+      window.location.href = '/admin/assessments';
+    } catch (err: any) {
+      alert(`Import error: ${err.message}`);
+      csvCommitBtn.disabled = false;
+      csvCommitBtn.textContent = 'Confirm & Import All Drafts';
+    }
+  });
+</script>

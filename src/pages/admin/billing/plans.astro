@@ -1,0 +1,110 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import Input from '@/components/ui/Input.astro';
+import { PlanService } from '@/services/billing/plan.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const planService = new PlanService(db);
+const plans = await planService.getAllPlans();
+---
+
+<AdminLayout title="Subscription Plans — Admin Control">
+  <div class="space-y-8 max-w-6xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Subscription Plan Catalog & Entitlements
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Configure dynamic plans, pricing tiers, Lemon Squeezy variant IDs, and feature permissions
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/billing"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+        >
+          ← Billing Overview
+        </a>
+      </div>
+    </div>
+
+    <!-- Plans List Table -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Configured Plans ({plans.length})</h2>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3">Plan Name</th>
+              <th class="px-4 py-3">Slug</th>
+              <th class="px-4 py-3">Price / Interval</th>
+              <th class="px-4 py-3">Variant ID</th>
+              <th class="px-4 py-3">Included Credits</th>
+              <th class="px-4 py-3">Entitlements</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3 text-right">Order</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {plans.map((plan) => (
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="px-4 py-3">
+                  <div class="font-bold text-slate-900">{plan.name}</div>
+                  <div class="text-[10px] text-slate-400 max-w-xs truncate">{plan.description}</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-[11px] text-indigo-600 font-semibold">
+                  {plan.slug}
+                </td>
+                <td class="px-4 py-3 font-semibold text-slate-800">
+                  ${plan.price} {plan.currency} <span class="text-[10px] text-slate-400">/{plan.billing_interval}</span>
+                </td>
+                <td class="px-4 py-3 font-mono text-[10px] text-slate-500">
+                  {plan.lemon_squeezy_variant_id ? (
+                    <span class="px-2 py-0.5 bg-slate-100 rounded text-slate-700">{plan.lemon_squeezy_variant_id}</span>
+                  ) : (
+                    <span class="text-slate-400 italic">None (Free Plan)</span>
+                  )}
+                </td>
+                <td class="px-4 py-3 font-mono text-emerald-700 font-bold">
+                  {plan.included_credits} credits
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex flex-wrap gap-1 max-w-xs">
+                    {Object.entries(plan.entitlements || {}).map(([k, v]) => (
+                      v.is_enabled && (
+                        <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold">
+                          {k}
+                        </span>
+                      )
+                    ))}
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <Badge variant={plan.status === 'active' ? 'success' : 'default'} size="sm">
+                    {plan.status}
+                  </Badge>
+                </td>
+                <td class="px-4 py-3 text-right font-mono font-bold text-slate-700">
+                  #{plan.display_order}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

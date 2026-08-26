@@ -1,0 +1,167 @@
+---
+import { SeoService } from '@/services/seo/seo.service';
+import {
+  type SupportedLocale,
+  SUPPORTED_LOCALES,
+  DEFAULT_LOCALE,
+  getLocaleFromPath,
+  stripLocaleFromPath,
+  getLocalizedPath
+} from '@/i18n';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+  locale?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+}
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const seoService = new SeoService(db);
+const seoSettings = await seoService.getSeoSettings();
+
+const canonicalDomain = 'https://www.psychologycalculator.com';
+
+const {
+  title,
+  description = seoSettings.defaultDescription,
+  ogImage = seoSettings.defaultOgImage,
+  ogType = 'website',
+  noindex = false,
+  locale: propLocale,
+  publishedTime,
+  modifiedTime
+} = Astro.props;
+
+// 1. Resolve current pathname and locale
+const pathname = Astro.url.pathname;
+const currentLocale = (propLocale || getLocaleFromPath(pathname)) as SupportedLocale;
+const cleanPath = stripLocaleFromPath(pathname);
+
+// 2. Canonical URL Resolution (Always https://www.psychologycalculator.com, no trailing slash except root, no query params)
+let finalCanonical = Astro.props.canonicalUrl;
+if (!finalCanonical) {
+  const normPath = pathname === '/' ? '/' : pathname.replace(/\/+$/, '');
+  finalCanonical = `${canonicalDomain}${normPath}`;
+} else {
+  try {
+    const parsed = new URL(finalCanonical);
+    const normPath = parsed.pathname === '/' ? '/' : parsed.pathname.replace(/\/+$/, '');
+    finalCanonical = `${canonicalDomain}${normPath}`;
+  } catch {
+    finalCanonical = `${canonicalDomain}${finalCanonical.startsWith('/') ? finalCanonical : `/${finalCanonical}`}`;
+  }
+}
+
+// 3. Title Normalization (Prevent duplicate branding or repeated site names)
+let cleanTitle = (title || '').trim();
+if (!cleanTitle) {
+  cleanTitle = 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+} else {
+  // Remove duplicate concatenated branding
+  cleanTitle = cleanTitle.replace(/(\s*\|\s*Psychology\s*Calculator(\.com)?)+/gi, '').trim();
+  cleanTitle = cleanTitle.replace(/(\s*\|\s*MindMetrics)+/gi, '').trim();
+  if (cleanTitle === 'Psychology Tests & Personality Assessments' || cleanTitle === 'Psychology Calculator') {
+    cleanTitle = 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+  } else {
+    cleanTitle = `${cleanTitle} | PsychologyCalculator.com`;
+  }
+}
+
+// 4. OpenGraph Image Normalization
+const fullOgImage = ogImage.startsWith('http')
+  ? ogImage
+  : `${canonicalDomain}${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
+
+// 5. Generate Hreflang Alternate Links
+const isPublicPage = !noindex && !pathname.startsWith('/admin') && !pathname.startsWith('/dashboard') && !pathname.startsWith('/api') && !pathname.startsWith('/account');
+
+const hreflangLinks = isPublicPage
+  ? SUPPORTED_LOCALES.map((lang) => {
+      const localizedPath = getLocalizedPath(cleanPath, lang);
+      const fullUrl = `${canonicalDomain}${localizedPath === '/' ? '/' : localizedPath.replace(/\/+$/, '')}`;
+      return { lang, url: fullUrl };
+    })
+  : [];
+
+const xDefaultUrl = `${canonicalDomain}${cleanPath === '/' ? '/' : cleanPath.replace(/\/+$/, '')}`;
+---
+
+<!-- Primary Meta Tags -->
+<title>{cleanTitle}</title>
+<meta name="title" content={cleanTitle} />
+<meta name="description" content={description} />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="utf-8" />
+<link rel="canonical" href={finalCanonical} />
+
+<!-- Multilingual Hreflang Alternates -->
+{hreflangLinks.map(({ lang, url }) => (
+  <link rel="alternate" hreflang={lang} href={url} />
+))}
+{isPublicPage && (
+  <link rel="alternate" hreflang="x-default" href={xDefaultUrl} />
+)}
+
+<!-- Robots Indexation Directives -->
+{noindex ? (
+  <meta name="robots" content="noindex, nofollow" />
+) : (
+  <meta name="robots" content="index, follow" />
+)}
+
+<!-- Search Engine Verifications -->
+{seoSettings.gscVerification && (
+  <meta name="google-site-verification" content={seoSettings.gscVerification} />
+)}
+{seoSettings.bingVerification && (
+  <meta name="msvalidate.01" content={seoSettings.bingVerification} />
+)}
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content={ogType} />
+<meta property="og:url" content={finalCanonical} />
+<meta property="og:title" content={cleanTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={fullOgImage} />
+<meta property="og:site_name" content="Psychology Calculator" />
+<meta property="og:locale" content={
+  currentLocale === 'es' ? 'es_ES' :
+  currentLocale === 'fr' ? 'fr_FR' :
+  currentLocale === 'de' ? 'de_DE' :
+  currentLocale === 'pt' ? 'pt_BR' :
+  currentLocale === 'hi' ? 'hi_IN' :
+  'en_US'
+} />
+
+<!-- Twitter / X Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content={finalCanonical} />
+<meta name="twitter:title" content={cleanTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={fullOgImage} />
+{seoSettings.twitterHandle && (
+  <meta name="twitter:site" content={seoSettings.twitterHandle} />
+)}
+
+<!-- Theme & Favicon -->
+<meta name="theme-color" content="#0d9488" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+<!-- Google Analytics 4 (Conditional) -->
+{seoSettings.ga4MeasurementId && (
+  <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${seoSettings.ga4MeasurementId}`}></script>
+  <script is:inline define:vars={{ gaId: seoSettings.ga4MeasurementId }}>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', gaId, { anonymize_ip: true });
+  </script>
+)}

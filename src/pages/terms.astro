@@ -1,0 +1,29 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { ContentService } from '@/services/content.service';
+import { getD1Database } from '@/lib/db/client';
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const contentService = new ContentService(db);
+const page = await contentService.getPageBySlug('terms');
+---
+
+<PublicLayout title={page?.seo_title || page?.title || "Terms of Service"}>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <Card title={page?.title || "Terms of Service"} subtitle="Last updated: Dynamic D1 Foundation">
+      <div class="prose prose-slate max-w-none space-y-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+        {page?.content || (
+          `By accessing and using the MindMetrics platform, you agree to these terms.
+
+1. Permitted Use
+MindMetrics provides self-reflection instruments. The service is intended for personal self-development only.
+
+2. Limitation of Liability
+The scores and interpretations provided are informational and should not be used as clinical psychiatric evaluations.`
+        )}
+      </div>
+    </Card>
+  </div>
+</PublicLayout>

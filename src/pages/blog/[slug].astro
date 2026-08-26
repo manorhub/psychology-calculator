@@ -1,0 +1,266 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+
+import StructuredData from '@/components/seo/StructuredData.astro';
+import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import { BlogService } from '@/services/content/blog.service';
+import { SeoService } from '@/services/seo/seo.service';
+import { InternalLinkService } from '@/services/seo/internal-link.service';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/blog');
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+const authContext = Astro.locals.auth;
+
+const url = new URL(Astro.request.url);
+const isPreview = url.searchParams.get('preview') === 'true' && authContext?.user?.role === 'admin';
+
+const blogService = new BlogService(db);
+const seoService = new SeoService(db);
+const linkService = new InternalLinkService(db);
+
+const post = await blogService.getPostBySlug(slug, isPreview);
+
+if (!post) {
+  return Astro.redirect('/404');
+}
+
+const [relatedPosts, pageMeta, settings] = await Promise.all([
+  blogService.getRelatedPosts(post.id, post.category_id, 3),
+  seoService.getPageMetadata({
+    pageType: 'page',
+    path: `/blog/${post.slug}`,
+    rawTitle: `${post.title} | Psychology Calculator`,
+    defaultDescription: post.excerpt || undefined,
+    defaultOgImage: post.featured_image_url || undefined,
+    noindex: isPreview || post.status !== 'published'
+  }),
+  seoService.getSeoSettings()
+]);
+
+const breadcrumbItems = linkService.getBreadcrumbs([
+  { name: 'Blog', path: '/blog' },
+  ...(post.category_name ? [{ name: post.category_name, path: `/blog?category=${post.category_slug}` }] : []),
+  { name: post.title, path: `/blog/${post.slug}` }
+]);
+
+// Article Schema.org JSON-LD
+const articleSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.title,
+  description: post.excerpt || '',
+  image: post.featured_image_url ? (post.featured_image_url.startsWith('http') ? post.featured_image_url : `${settings.canonicalDomain}${post.featured_image_url}`) : `${settings.canonicalDomain}/images/og-default.png`,
+  datePublished: post.published_at || post.created_at,
+  dateModified: post.updated_at || post.published_at || post.created_at,
+  author: {
+    '@type': 'Person',
+    name: post.author_name || 'Editorial Team',
+    jobTitle: post.author_role || 'Psychometric Researcher'
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: settings.siteTitle,
+    url: settings.canonicalDomain
+  },
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': `${settings.canonicalDomain}/blog/${post.slug}`
+  }
+};
+
+// Safe simple markdown-to-html converter for rich typography
+function renderMarkdownContent(content: string): string {
+  let html = content
+    // Headings
+    .replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold text-slate-900 mt-8 mb-4 tracking-tight">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-black text-slate-900 mt-10 mb-4 tracking-tight border-b border-slate-100 pb-2">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-black text-slate-900 mt-10 mb-6 tracking-tight">$1</h1>')
+    // Blockquotes
+    .replace(/^\> (.*$)/gim, '<blockquote class="border-l-4 border-indigo-500 bg-indigo-50/50 p-4 my-6 rounded-r-xl text-slate-700 italic text-sm leading-relaxed">$1</blockquote>')
+    // Bold & Italic
+    .replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-bold text-slate-900">$1</strong>')
+    .replace(/\*(.*?)\*/gim, '<em class="italic">$1</em>')
+    // Unordered lists
+    .replace(/^\- (.*$)/gim, '<li class="ml-4 list-disc text-slate-700 leading-relaxed">$1</li>')
+    .replace(/^\• (.*$)/gim, '<li class="ml-4 list-disc text-slate-700 leading-relaxed">$1</li>')
+    // Ordered lists
+    .replace(/^\d+\. (.*$)/gim, '<li class="ml-4 list-decimal text-slate-700 leading-relaxed">$1</li>')
+    // Paragraphs
+    .replace(/\n\n/gim, '</p><p class="text-base text-slate-700 leading-relaxed mb-6">');
+
+  return `<p class="text-base text-slate-700 leading-relaxed mb-6">${html}</p>`;
+}
+
+const renderedHtml = renderMarkdownContent(post.content);
+---
+
+<PublicLayout title={post.title} description={post.excerpt} ogImage={post.featured_image}>
+  
+
+  <StructuredData slot="head" schema={articleSchema} />
+
+  <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    {isPreview && (
+      <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-amber-800 text-xs font-semibold">
+        <span>⚠️ You are previewing an unpublished post draft.</span>
+        <a href={`/admin/content/posts/${post.id}`} class="underline hover:text-amber-950">Edit in Admin →</a>
+      </div>
+    )}
+
+    <div class="mb-8">
+      <Breadcrumbs items={breadcrumbItems} />
+    </div>
+
+    <!-- Article Header -->
+    <header class="space-y-4 mb-10">
+      <div class="flex items-center gap-3">
+        {post.category_name && (
+          <Badge variant="indigo" size="md">
+            {post.category_name}
+          </Badge>
+        )}
+        <span class="text-xs text-slate-400 font-medium">⏱️ {post.reading_time_minutes} min read</span>
+      </div>
+
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+        {post.title}
+      </h1>
+
+      {post.excerpt && (
+        <p class="text-lg sm:text-xl text-slate-600 leading-relaxed font-normal">
+          {post.excerpt}
+        </p>
+      )}
+
+      <!-- Author Byline Bar -->
+      <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-sm shadow-sm">
+            {post.author_name?.charAt(0) || 'P'}
+          </div>
+          <div>
+            <div class="text-sm font-bold text-slate-900">{post.author_name || 'Editorial Team'}</div>
+            <div class="text-xs text-slate-400">
+              {post.author_role || 'Scientific Research'} • Published {post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            onclick="navigator.clipboard.writeText(window.location.href); alert('Article URL copied to clipboard!');"
+            class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            🔗 Share
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Featured Image Banner -->
+    {post.featured_image_url && (
+      <div class="aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 mb-10 shadow-sm">
+        <img
+          src={post.featured_image_url}
+          alt={post.title}
+          class="w-full h-full object-cover"
+        />
+      </div>
+    )}
+
+    <!-- Main Rich Article Body -->
+    <div class="prose prose-slate max-w-none mb-12">
+      <div set:html={renderedHtml} />
+    </div>
+
+    <!-- Tags List -->
+    {post.tags && post.tags.length > 0 && (
+      <div class="pt-6 border-t border-slate-100 mb-10 flex items-center gap-2 flex-wrap">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Tags:</span>
+        {post.tags.map((tag) => (
+          <a
+            href={`/blog?tag=${tag.slug}`}
+            class="px-3 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 rounded-full text-xs font-medium transition-colors"
+          >
+            #{tag.name}
+          </a>
+        ))}
+      </div>
+    )}
+
+    <!-- Dynamic Assessment Recommendation Callout -->
+    {(post.cta_title || post.related_assessment_name) && (
+      <div class="mb-14">
+        <Card class="p-8 bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white rounded-2xl shadow-lg border border-indigo-800/50">
+          <div class="max-w-2xl space-y-4">
+            <Badge variant="indigo" size="sm">Recommended Assessment</Badge>
+            <h3 class="text-2xl font-black text-white tracking-tight">
+              {post.cta_title || `Evaluate Your ${post.related_assessment_name}`}
+            </h3>
+            <p class="text-sm text-indigo-200 leading-relaxed">
+              {post.cta_desc || 'Apply these insights to your own profile with our scientifically validated, continuous psychometric measurement tool.'}
+            </p>
+            <div class="pt-2">
+              <a
+                href={post.cta_btn_url || `/assessments/${post.related_assessment_slug || ''}`}
+                class="inline-block px-6 py-3 bg-white hover:bg-indigo-50 text-indigo-950 text-xs font-black rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              >
+                {post.cta_btn_text || 'Start Free Assessment →'}
+              </a>
+            </div>
+          </div>
+        </Card>
+      </div>
+    )}
+
+    <!-- Author Profile Box -->
+    {post.author_name && (
+      <div class="p-6 bg-slate-50 border border-slate-200 rounded-2xl mb-14 flex items-start gap-4">
+        <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-base shrink-0">
+          {post.author_name.charAt(0)}
+        </div>
+        <div class="space-y-1">
+          <div class="text-sm font-bold text-slate-900">{post.author_name}</div>
+          <div class="text-xs font-medium text-slate-500">{post.author_role || 'Psychometric Researcher'}</div>
+          {post.author_bio && (
+            <p class="text-xs text-slate-600 leading-relaxed pt-1">
+              {post.author_bio}
+            </p>
+          )}
+        </div>
+      </div>
+    )}
+
+    <!-- Related Articles -->
+    {relatedPosts.length > 0 && (
+      <div class="pt-10 border-t border-slate-200 space-y-6">
+        <h3 class="text-xl font-bold text-slate-900 tracking-tight">Related Articles & Research</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {relatedPosts.map((r) => (
+            <a
+              href={`/blog/${r.slug}`}
+              class="p-4 bg-white border border-slate-200 hover:border-indigo-200 rounded-xl hover:shadow-sm transition-all group flex flex-col justify-between"
+            >
+              <div class="space-y-2">
+                <span class="text-[11px] font-semibold text-indigo-600">{r.category_name || 'Guide'}</span>
+                <h4 class="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
+                  {r.title}
+                </h4>
+              </div>
+              <span class="text-[11px] text-slate-400 mt-4 block">⏱️ {r.reading_time_minutes} min read</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </article>
+</PublicLayout>

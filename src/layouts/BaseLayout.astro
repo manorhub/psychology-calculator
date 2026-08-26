@@ -1,0 +1,50 @@
+---
+import '@/styles/global.css';
+import SEOHead from '@/components/seo/SEOHead.astro';
+import { type SupportedLocale, DEFAULT_LOCALE } from '@/i18n';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+  locale?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalUrl,
+  ogImage,
+  ogType,
+  noindex,
+  locale = DEFAULT_LOCALE,
+  publishedTime,
+  modifiedTime
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang={locale || 'en'} class="h-full">
+  <head>
+    <SEOHead
+      title={title}
+      description={description}
+      canonicalUrl={canonicalUrl}
+      ogImage={ogImage}
+      ogType={ogType}
+      noindex={noindex}
+      locale={locale}
+      publishedTime={publishedTime}
+      modifiedTime={modifiedTime}
+    />
+    <slot name="head" />
+  </head>
+  <body class="min-h-full flex flex-col bg-slate-50 text-slate-900 selection:bg-teal-500 selection:text-white">
+    <slot />
+  </body>
+</html>

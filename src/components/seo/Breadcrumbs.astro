@@ -1,0 +1,41 @@
+---
+import type { BreadcrumbItem } from '@/types/database';
+import StructuredData from './StructuredData.astro';
+import { SeoService } from '@/services/seo/seo.service';
+
+interface Props {
+  items: BreadcrumbItem[];
+  class?: string;
+}
+
+const { items, class: className = '' } = Astro.props;
+const seoService = new SeoService(null);
+const schema = seoService.generateStructuredData('BreadcrumbList', { items });
+---
+
+<nav aria-label="Breadcrumb" class={`flex items-center text-xs text-slate-500 ${className}`}>
+  <ol class="flex items-center space-x-1.5 sm:space-x-2 flex-wrap">
+    {items.map((item, idx) => {
+      const isLast = idx === items.length - 1;
+      return (
+        <li class="flex items-center space-x-1.5 sm:space-x-2">
+          {idx > 0 && <span class="text-slate-300 select-none">/</span>}
+          {isLast ? (
+            <span class="font-bold text-slate-800" aria-current="page">
+              {item.name}
+            </span>
+          ) : (
+            <a
+              href={item.url}
+              class="hover:text-indigo-600 transition-colors font-medium text-slate-500 hover:underline"
+            >
+              {item.name}
+            </a>
+          )}
+        </li>
+      );
+    })}
+  </ol>
+</nav>
+
+<StructuredData schema={schema} />

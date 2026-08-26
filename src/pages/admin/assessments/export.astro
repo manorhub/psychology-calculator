@@ -1,0 +1,169 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { requireAdmin } from '@/lib/auth/guards';
+import { getD1Database } from '@/lib/db/client';
+import { executeQuery } from '@/lib/db/query';
+
+const user = requireAdmin(Astro.locals);
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+interface AssessmentRow {
+  id: string;
+  name: string;
+  slug: string;
+  category_name: string;
+  category_slug: string;
+  question_count: number;
+  access_type: string;
+  status: string;
+  updated_at: string;
+}
+
+const assessments = db
+  ? await executeQuery<AssessmentRow>(
+      db,
+      `SELECT a.id, a.name, a.slug, a.access_type, a.status, a.updated_at,
+              c.name as category_name, c.slug as category_slug,
+              (SELECT COUNT(*) FROM assessment_questions WHERE assessment_id = a.id) as question_count
+       FROM assessments a
+       JOIN assessment_categories c ON a.category_id = c.id
+       ORDER BY a.status ASC, a.name ASC`
+    )
+  : [];
+---
+
+<AdminLayout title="Export Assessments (JSON & CSV)" description="Download complete Schema v1.0 JSON definitions or 21-column tabular CSV spreadsheets for any assessment.">
+  <div class="max-w-6xl mx-auto space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/assessments" class="text-xs font-semibold text-slate-500 hover:text-teal-700">
+            ← Assessments
+          </a>
+          <span class="text-slate-300">/</span>
+          <span class="text-xs font-bold text-teal-700">Exporter Hub</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+          📤 Export Assessments Hub
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+          Export full psychometric definitions, scoring models, and questions as JSON or 21-column tabular CSV.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <a
+          href="/admin/assessments/import"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all"
+        >
+          <span>📥</span>
+          <span>Import Assessments</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-700">
+      <div class="flex items-center gap-2.5">
+        <span class="text-lg">💡</span>
+        <div>
+          <span class="font-bold">Format Selection Guide:</span>
+          <span class="text-slate-500 ml-1">Use <strong>JSON</strong> for 100% full-fidelity backups (including archetypes, FAQs, SEO). Use <strong>CSV</strong> for editing questions and point values in Excel or Google Sheets.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Table Card -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+        <div class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+          <span>📚</span>
+          <span>Available Instruments ({assessments.length})</span>
+        </div>
+        <span class="text-xs font-mono text-slate-500">JSON & CSV Ready</span>
+      </div>
+
+      {assessments.length === 0 ? (
+        <div class="p-12 text-center text-xs text-slate-500">
+          No assessments found to export.
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-100 uppercase tracking-wider text-[11px] font-bold">
+              <tr>
+                <th class="px-6 py-3.5">Assessment Name & Slug</th>
+                <th class="px-4 py-3.5">Category</th>
+                <th class="px-4 py-3.5">Questions</th>
+                <th class="px-4 py-3.5">Access</th>
+                <th class="px-4 py-3.5">Status</th>
+                <th class="px-6 py-3.5 text-right">Download Formats</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+              {assessments.map((asm) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="font-bold text-slate-900 text-sm">{asm.name}</div>
+                    <div class="text-[11px] font-mono text-slate-400">/{asm.slug}</div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="px-2.5 py-1 bg-slate-100 rounded-lg text-slate-700 font-semibold">
+                      {asm.category_name}
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="font-bold text-slate-900">{asm.question_count}</span> items
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      asm.access_type === 'premium' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'
+                    }`}>
+                      {asm.access_type}
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
+                      asm.status === 'published'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : asm.status === 'draft'
+                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {asm.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <div class="inline-flex items-center gap-2">
+                      <a
+                        href={`/api/admin/assessments/${asm.id}/export`}
+                        download={`assessment-${asm.slug}-v1.0.json`}
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-xl font-bold shadow-2xs transition-all cursor-pointer text-[11px]"
+                        title="Download complete JSON definition"
+                      >
+                        <span>📄</span>
+                        <span>JSON</span>
+                      </a>
+                      <a
+                        href={`/api/admin/assessments/${asm.id}/export-csv`}
+                        download={`${asm.slug}-questions.csv`}
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl font-bold shadow-2xs transition-all cursor-pointer text-[11px]"
+                        title="Download 21-column CSV spreadsheet"
+                      >
+                        <span>📊</span>
+                        <span>CSV</span>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+</AdminLayout>

@@ -1,0 +1,33 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'div'> {
+  title?: string;
+  subtitle?: string;
+  class?: string;
+  id?: string;
+  hoverEffect?: boolean;
+}
+
+const { title, subtitle, class: className = '', id, hoverEffect = false, ...rest } = Astro.props;
+const hoverClasses = hoverEffect ? 'hover:shadow-md hover:border-slate-300 transition-all' : '';
+---
+
+<div id={id} class={`bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden ${hoverClasses} ${className}`} {...rest}>
+  {(title || subtitle) && (
+    <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+      {title && <h3 class="font-bold text-lg text-slate-900 tracking-tight">{title}</h3>}
+      {subtitle && <p class="text-xs text-slate-500 mt-1">{subtitle}</p>}
+    </div>
+  )}
+  
+  <div class="p-6">
+    <slot />
+  </div>
+
+  {Astro.slots.has('footer') && (
+    <div class="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
+      <slot name="footer" />
+    </div>
+  )}
+</div>

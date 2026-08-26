@@ -1,0 +1,171 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AnalyticsService } from '@/services/analytics/analytics.service';
+import type { AnalyticsRange } from '@/types/database';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const analyticsService = new AnalyticsService(db);
+
+const url = new URL(Astro.request.url);
+const range = (url.searchParams.get('range') as AnalyticsRange) || '30d';
+
+const data = await analyticsService.getAiAnalytics(range);
+
+const ranges: { key: AnalyticsRange; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 Days' },
+  { key: '30d', label: 'Last 30 Days' },
+  { key: '90d', label: 'Last 90 Days' },
+  { key: 'this_year', label: 'This Year' },
+  { key: 'all', label: 'All Time' }
+];
+---
+
+<AdminLayout title="AI Usage & Cost Analytics">
+  <div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/analytics" class="text-xs font-semibold text-indigo-600 hover:underline">Analytics</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">AI Usage & Costs</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">AI Synthesis & Cost Intelligence</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Detailed provider breakdowns, token consumption, and cost calculations for psychological report generation.
+        </p>
+      </div>
+
+      <!-- Date Range Selector -->
+      <div class="flex items-center gap-2 flex-wrap">
+        {ranges.map((r) => (
+          <a
+            href={`/admin/analytics/ai?range=${r.key}`}
+            class={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              range === r.key
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {r.label}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Reports</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.totalRequests}</div>
+        <span class="text-xs text-slate-500 font-semibold">{data.successRate}% successful</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Prompt Tokens</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.promptTokens.toLocaleString()}</div>
+        <span class="text-xs text-slate-500 font-semibold">Input context volume</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Completion Tokens</span>
+        <div class="text-2xl font-black text-slate-900 font-mono">{data.completionTokens.toLocaleString()}</div>
+        <span class="text-xs text-slate-500 font-semibold">Synthesized text output</span>
+      </Card>
+
+      <Card class="p-5 border-slate-200 bg-white shadow-xs space-y-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Estimated Total Cost</span>
+        <div class="text-2xl font-black text-emerald-700 font-mono">
+          ${data.estimatedTotalCost.toFixed(4)}
+        </div>
+        <span class="text-xs text-slate-500 font-semibold">
+          Avg ${data.totalRequests > 0 ? (data.estimatedTotalCost / data.totalRequests).toFixed(4) : '0.0000'} / report
+        </span>
+      </Card>
+    </div>
+
+    <!-- Provider Breakdown & Assessment Cost Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Provider Breakdown Table -->
+      <Card class="lg:col-span-6 p-6 border-slate-200 bg-white shadow-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">LLM Provider Distribution</h3>
+            <p class="text-xs text-slate-500">Volume and costs across connected providers</p>
+          </div>
+          <a
+            href={`/api/v1/admin/analytics/export?type=ai&range=${range}`}
+            class="text-xs font-bold text-indigo-600 hover:underline"
+          >
+            Export CSV
+          </a>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+              <tr>
+                <th class="p-3">Provider</th>
+                <th class="p-3">Requests</th>
+                <th class="p-3">Tokens</th>
+                <th class="p-3 text-right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+              {data.providerBreakdown.map((p) => (
+                <tr>
+                  <td class="p-3 font-bold text-slate-900">{p.provider}</td>
+                  <td class="p-3 font-mono">{p.requests}</td>
+                  <td class="p-3 font-mono">{p.tokens.toLocaleString()}</td>
+                  <td class="p-3 text-right font-mono font-bold text-emerald-700">${p.cost.toFixed(4)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <!-- Cost by Assessment Table -->
+      <Card class="lg:col-span-6 p-6 border-slate-200 bg-white shadow-xs space-y-4">
+        <div class="border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-bold text-slate-900">AI Cost by Assessment</h3>
+          <p class="text-xs text-slate-500">Expense breakdown across psychometric instruments</p>
+        </div>
+
+        {data.assessmentCostBreakdown.length === 0 ? (
+          <div class="p-8 text-center text-slate-400 text-xs">
+            No AI generation records found for this time period.
+          </div>
+        ) : (
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+                <tr>
+                  <th class="p-3">Assessment</th>
+                  <th class="p-3">Reports</th>
+                  <th class="p-3 text-right">Est. Cost</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-700">
+                {data.assessmentCostBreakdown.map((a) => (
+                  <tr>
+                    <td class="p-3 font-medium text-slate-900">{a.assessmentName}</td>
+                    <td class="p-3 font-mono">{a.reportsCount}</td>
+                    <td class="p-3 text-right font-mono font-bold text-emerald-700">${a.estimatedCost.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  </div>
+</AdminLayout>

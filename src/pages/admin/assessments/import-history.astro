@@ -1,0 +1,139 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { requireAdmin } from '@/lib/auth/guards';
+import { getD1Database } from '@/lib/db/client';
+import { AssessmentImportExportService } from '@/services/assessment-import-export.service';
+
+const user = requireAdmin(Astro.locals);
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const service = new AssessmentImportExportService(db);
+const history = await service.getImportHistory(50, 0);
+---
+
+<AdminLayout title="Assessment Import History" description="Audit log of all assessment JSON imports, validation errors, and updates.">
+  <div class="max-w-6xl mx-auto space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/assessments" class="text-xs font-semibold text-slate-500 hover:text-teal-700">
+            ← Assessments
+          </a>
+          <span class="text-slate-300">/</span>
+          <a href="/admin/assessments/import" class="text-xs font-semibold text-slate-500 hover:text-teal-700">
+            Importer
+          </a>
+          <span class="text-slate-300">/</span>
+          <span class="text-xs font-bold text-teal-700">Audit History</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+          📋 Assessment Import History
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+          Complete ledger of all assessment import attempts, validation issues, and draft creations.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <a
+          href="/admin/assessments/import"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all"
+        >
+          <span>📥</span>
+          <span>Import New JSON</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- History Table Card -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+        <div class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+          <span>📜</span>
+          <span>Recent Import Operations ({history.length})</span>
+        </div>
+        <span class="text-xs font-mono text-slate-500">Atomic Rollback Protected</span>
+      </div>
+
+      {history.length === 0 ? (
+        <div class="p-12 text-center text-xs text-slate-500 space-y-2">
+          <div class="text-2xl">📥</div>
+          <p class="font-bold text-slate-700">No import operations recorded yet.</p>
+          <p class="text-slate-400">Import your first assessment JSON to see audit history logs here.</p>
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-100 uppercase tracking-wider text-[11px] font-bold">
+              <tr>
+                <th class="px-6 py-3.5">Date & Time</th>
+                <th class="px-4 py-3.5">File Name</th>
+                <th class="px-4 py-3.5">Assessment</th>
+                <th class="px-4 py-3.5">Status</th>
+                <th class="px-4 py-3.5">Imported By</th>
+                <th class="px-4 py-3.5">Errors / Warnings</th>
+                <th class="px-6 py-3.5 text-right">Details</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+              {history.map((item) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-6 py-4 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                    {new Date(item.created_at).toLocaleString()}
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="font-mono font-bold text-slate-800">{item.file_name}</span>
+                    <span class="text-[10px] text-slate-400 block font-mono">v{item.schema_version}</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="font-bold text-slate-900">{item.assessment_name}</div>
+                    <div class="text-[11px] font-mono text-slate-400">/{item.assessment_slug}</div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                      item.status === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : item.status === 'failed'
+                        ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                    }`}>
+                      <span>{item.status === 'success' ? '✓' : '✕'}</span>
+                      <span class="capitalize">{item.status}</span>
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="font-semibold text-slate-800">{item.importer_name || item.importer_email || 'System'}</span>
+                  </td>
+                  <td class="px-4 py-4 font-mono text-[11px]">
+                    <span class={item.error_count > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}>
+                      {item.error_count} error{item.error_count === 1 ? '' : 's'}
+                    </span>
+                    <span class="text-slate-300 mx-1">•</span>
+                    <span class={item.warning_count > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}>
+                      {item.warning_count} warning{item.warning_count === 1 ? '' : 's'}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    {item.assessment_id ? (
+                      <a
+                        href={`/admin/assessments/${item.assessment_id}`}
+                        class="text-xs font-bold text-teal-700 hover:text-teal-900 underline"
+                      >
+                        View Assessment →
+                      </a>
+                    ) : (
+                      <span class="text-slate-400 text-[11px]">None</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+</AdminLayout>

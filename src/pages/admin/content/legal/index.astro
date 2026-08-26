@@ -1,0 +1,72 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { SettingsService } from '@/services/settings/settings.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const settingsService = new SettingsService(db);
+
+const legalPages = await settingsService.getLegalPages();
+---
+
+<AdminLayout title="Legal & Policy Pages">
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/content" class="text-xs font-semibold text-indigo-600 hover:underline">Content CMS</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Legal Pages</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Legal & Compliance Pages</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Manage dynamic policy documents, psychometric disclaimers, and user terms.
+        </p>
+      </div>
+    </div>
+
+    <!-- Legal Pages Directory -->
+    <div class="grid grid-cols-1 gap-4">
+      {legalPages.map((page) => (
+        <Card class="p-5 border-slate-200 bg-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-bold text-slate-900">{page.title}</h3>
+              <code class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded font-mono">
+                /{page.slug}
+              </code>
+              {page.is_published === 1 ? (
+                <Badge variant="success" size="sm">PUBLISHED</Badge>
+              ) : (
+                <Badge variant="neutral" size="sm">DRAFT</Badge>
+              )}
+            </div>
+            <p class="text-xs text-slate-400">Last updated: {new Date(page.updated_at).toLocaleDateString()}</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <a
+              href={`/legal/${page.slug}`}
+              target="_blank"
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-slate-200"
+            >
+              Preview ↗
+            </a>
+            <a
+              href={`/admin/content/legal/${page.slug}`}
+              class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs"
+            >
+              Edit Policy →
+            </a>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </div>
+</AdminLayout>

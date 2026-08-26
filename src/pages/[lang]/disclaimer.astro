@@ -1,0 +1,51 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import {
+  type SupportedLocale,
+  isValidLocale,
+  useTranslations
+} from '@/i18n';
+
+export const prerender = false;
+
+const { lang } = Astro.params;
+if (!isValidLocale(lang)) {
+  return Astro.redirect('/404');
+}
+
+const currentLocale = lang as SupportedLocale;
+const { t } = useTranslations(currentLocale);
+---
+
+<PublicLayout
+  title={`${t.footer.disclaimer} | PsychologyCalculator.com`}
+  description="Mandatory psychological and medical disclaimer for PsychologyCalculator.com assessments."
+  locale={currentLocale}
+>
+  <div class="max-w-4xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-10">
+    <div class="space-y-3">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+        <span>⚠️</span> {t.footer.legalDisclaimerTitle}
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {t.footer.legalDisclaimerTitle}
+      </h1>
+    </div>
+
+    <div class="prose prose-slate max-w-none space-y-6 text-sm sm:text-base text-slate-700 leading-relaxed bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 shadow-2xs">
+      <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-xs text-amber-900 leading-relaxed">
+        {t.footer.legalDisclaimerText}
+      </div>
+
+      <h2 class="text-xl font-bold text-slate-900">Not a Substitute for Professional Clinical Care</h2>
+      <p>
+        The assessments, scoring calculators, personality archetypes, and AI psychometric reports available through this platform are computerized self-reflection instruments. They are not intended to diagnose, treat, cure, or prevent any mental health disorder, psychiatric illness, or clinical condition.
+      </p>
+
+      <h2 class="text-xl font-bold text-slate-900">Emergency & Crisis Support</h2>
+      <p>
+        If you are experiencing severe emotional distress, suicidal ideation, or a mental health crisis, please contact your local emergency services immediately or reach out to a certified crisis hotline in your country (such as 988 in the US/Canada, 111 in the UK, or international crisis lines).
+      </p>
+    </div>
+  </div>
+</PublicLayout>

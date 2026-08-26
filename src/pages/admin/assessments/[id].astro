@@ -1,0 +1,1006 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import Input from '@/components/ui/Input.astro';
+import Alert from '@/components/ui/Alert.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AssessmentBuilderService } from '@/services/assessment-builder.service';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/admin/assessments');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const service = new AssessmentBuilderService(db);
+
+const [fullAssessment, categories] = await Promise.all([
+  service.getAssessmentFull(id),
+  service.getCategories()
+]);
+
+if (!fullAssessment) return Astro.redirect('/admin/assessments');
+
+const { assessment, dimensions, questions, scoringRules, resultTypes } = fullAssessment;
+---
+
+<AdminLayout title={`Builder: ${assessment.name}`} description="Full psychometric instrument builder and configuration engine">
+  <div class="space-y-6">
+    <!-- Top Action Bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <a href="/admin/assessments" class="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1 mb-1">
+          ← Back to Assessments Catalog
+        </a>
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">{assessment.name}</h1>
+          <Badge
+            variant={
+              assessment.status === 'published'
+                ? 'success'
+                : assessment.status === 'draft'
+                ? 'warning'
+                : 'default'
+            }
+            size="sm"
+          >
+            {assessment.status.toUpperCase()}
+          </Badge>
+          <span class="text-xs text-slate-400 font-mono">v{assessment.version}</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap items-center gap-2">
+        <Button href={`/admin/assessments/${assessment.id}/preview`} variant="outline" size="sm">
+          👁️ Preview
+        </Button>
+        <button
+          type="button"
+          id="duplicate-btn"
+          class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl transition-colors"
+        >
+          📋 Duplicate
+        </button>
+
+        {assessment.status === 'published' ? (
+          <button
+            type="button"
+            id="unpublish-btn"
+            class="px-3 py-1.5 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-sm transition-colors"
+          >
+            Unpublish
+          </button>
+        ) : (
+          <button
+            type="button"
+            id="publish-btn"
+            class="px-4 py-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm transition-colors"
+          >
+            🚀 Publish Assessment
+          </button>
+        )}
+
+        {assessment.status !== 'archived' && (
+          <button
+            type="button"
+            id="archive-btn"
+            class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-xl transition-colors"
+          >
+            Archive
+          </button>
+        )}
+      </div>
+    </div>
+
+    <!-- Alert Messages Container -->
+    <div id="builder-alert" class="hidden">
+      <Alert variant="info" title="System Notice">
+        <span id="builder-alert-msg"></span>
+      </Alert>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-slate-200 gap-1 overflow-x-auto pb-px">
+      <button
+        type="button"
+        class="tab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-teal-600 text-teal-700 flex items-center gap-2 whitespace-nowrap"
+        data-target="tab-basic"
+      >
+        <span>1. Basic Info & Settings</span>
+      </button>
+      <button
+        type="button"
+        class="tab-btn px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap"
+        data-target="tab-dimensions"
+      >
+        <span>2. Dimensions</span>
+        <span class="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px]">{dimensions.length}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-btn px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap"
+        data-target="tab-questions"
+      >
+        <span>3. Questions & Items</span>
+        <span class="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px]">{questions.length}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-btn px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap"
+        data-target="tab-scoring"
+      >
+        <span>4. Scoring Matrix</span>
+        <span class="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px]">{scoringRules.length}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-btn px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap"
+        data-target="tab-results"
+      >
+        <span>5. Results & Content</span>
+        <span class="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px]">{resultTypes.length}</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: BASIC INFORMATION & CONTENT -->
+    <div id="tab-basic" class="tab-panel space-y-6">
+      <form id="basic-info-form" class="space-y-6">
+        <Card title="Assessment Identification" subtitle="Core metadata, routing slug, and categorized placement">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              id="basic_name"
+              name="name"
+              label="Assessment Name"
+              value={assessment.name}
+              required={true}
+            />
+
+            <Input
+              id="basic_slug"
+              name="slug"
+              label="URL Slug"
+              value={assessment.slug}
+              required={true}
+            />
+
+            <div>
+              <label for="basic_category_id" class="block text-xs font-semibold text-slate-700 mb-1">
+                Category
+              </label>
+              <select
+                id="basic_category_id"
+                name="category_id"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:ring-2 focus:ring-teal-600"
+              >
+                {categories.map((c) => (
+                  <option value={c.id} selected={assessment.category_id === c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <Input
+                  id="basic_estimated_minutes"
+                  name="estimated_minutes"
+                  type="number"
+                  label="Est. Minutes"
+                  value={assessment.estimated_minutes.toString()}
+                />
+              </div>
+              <div>
+                <label for="basic_access_type" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Access Level
+                </label>
+                <select
+                  id="basic_access_type"
+                  name="access_type"
+                  class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:ring-2 focus:ring-teal-600"
+                >
+                  <option value="free" selected={assessment.access_type === 'free'}>Free</option>
+                  <option value="premium" selected={assessment.access_type === 'premium'}>Premium</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <Input
+                id="basic_short_description"
+                name="short_description"
+                label="Short Description"
+                value={assessment.short_description}
+                required={true}
+              />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="basic_long_description" class="block text-xs font-semibold text-slate-700 mb-1">
+                Detailed Overview
+              </label>
+              <textarea
+                id="basic_long_description"
+                name="long_description"
+                rows="3"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:ring-2 focus:ring-teal-600"
+              >{assessment.long_description || ''}</textarea>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Instructions & Experience" subtitle="Participant instructions and completion messages">
+          <div class="space-y-4">
+            <div>
+              <label for="basic_instructions" class="block text-xs font-semibold text-slate-700 mb-1">
+                Taking Instructions
+              </label>
+              <textarea
+                id="basic_instructions"
+                name="instructions"
+                rows="3"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:ring-2 focus:ring-teal-600"
+              >{assessment.instructions || ''}</textarea>
+            </div>
+
+            <div>
+              <label for="basic_completion_message" class="block text-xs font-semibold text-slate-700 mb-1">
+                Completion Message
+              </label>
+              <textarea
+                id="basic_completion_message"
+                name="completion_message"
+                rows="2"
+                placeholder="Congratulations on completing the assessment! Here is your personalized breakdown..."
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:ring-2 focus:ring-teal-600"
+              >{assessment.completion_message || ''}</textarea>
+            </div>
+
+            <div>
+              <label for="basic_disclaimer" class="block text-xs font-semibold text-slate-700 mb-1">
+                Specific Disclaimer
+              </label>
+              <textarea
+                id="basic_disclaimer"
+                name="disclaimer"
+                rows="2"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:ring-2 focus:ring-teal-600"
+              >{assessment.disclaimer || ''}</textarea>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+              <input
+                type="checkbox"
+                id="basic_featured"
+                name="featured"
+                value="true"
+                checked={assessment.featured === 1}
+                class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
+              />
+              <label for="basic_featured" class="text-xs font-semibold text-slate-800">
+                Featured on Homepage and Catalog Carousel
+              </label>
+            </div>
+          </div>
+        </Card>
+
+        <div class="flex justify-end">
+          <Button type="submit" variant="primary" size="md" id="save-basic-btn">
+            Save Basic Information
+          </Button>
+        </div>
+      </form>
+    </div>
+
+    <!-- TAB 2: DIMENSIONS BUILDER -->
+    <div id="tab-dimensions" class="tab-panel hidden space-y-6">
+      <Card title="Assessment Dimensions" subtitle="Define the psychological constructs evaluated by this instrument">
+        <div class="space-y-4">
+          <div id="dimensions-container" class="space-y-3">
+            {dimensions.map((d, index) => (
+              <div class="dimension-row p-4 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                <input type="hidden" name="dim_id" value={d.id} />
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase">Dimension Name</label>
+                  <input
+                    type="text"
+                    name="dim_name"
+                    value={d.name}
+                    placeholder="e.g. Openness to Experience"
+                    class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase">Slug Token</label>
+                  <input
+                    type="text"
+                    name="dim_slug"
+                    value={d.slug}
+                    placeholder="e.g. openness"
+                    class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800"
+                    required
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Description</label>
+                    <input
+                      type="text"
+                      name="dim_desc"
+                      value={d.description || ''}
+                      placeholder="Brief construct definition"
+                      class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    class="remove-dim-btn p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors mt-4"
+                    title="Remove Dimension"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="flex justify-between items-center pt-2">
+            <button
+              type="button"
+              id="add-dimension-btn"
+              class="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1"
+            >
+              + Add Another Dimension
+            </button>
+
+            <Button type="button" variant="primary" size="md" id="save-dimensions-btn">
+              Save Dimensions
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+
+    <!-- TAB 3: QUESTIONS & OPTIONS BUILDER -->
+    <div id="tab-questions" class="tab-panel hidden space-y-6">
+      <!-- Add New Question Box -->
+      <Card title="Add Assessment Question" subtitle="Create items with custom Likert or choice response scales">
+        <form id="new-question-form" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">
+              Question Statement / Prompt <span class="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="new_q_text"
+              placeholder="e.g. I enjoy exploring unfamiliar ideas and abstract concepts."
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:ring-2 focus:ring-teal-600"
+              required
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Response Format</label>
+              <select
+                id="new_q_type"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-600"
+              >
+                <option value="likert">Standard 5-Point Likert Scale</option>
+                <option value="yes_no">Yes / No Binary</option>
+                <option value="multiple_choice">Multiple Choice</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2 pt-5">
+              <input
+                type="checkbox"
+                id="new_q_required"
+                checked
+                class="w-4 h-4 text-teal-600 rounded border-slate-300"
+              />
+              <label for="new_q_required" class="text-xs font-semibold text-slate-800">
+                Mandatory item
+              </label>
+            </div>
+
+            <div class="flex justify-end pt-4">
+              <Button type="submit" variant="primary" size="sm" id="create-q-btn">
+                + Add Item to Bank
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Card>
+
+      <!-- Existing Questions List -->
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold text-slate-900">Current Question Items ({questions.length})</h3>
+        {questions.length === 0 ? (
+          <Card class="p-8 text-center text-xs text-slate-500">
+            No questions added yet. Use the form above to add assessment items.
+          </Card>
+        ) : (
+          questions.map((q, idx) => (
+            <Card class="p-4 space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-start gap-3">
+                  <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-700 font-mono text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    {idx + 1}
+                  </span>
+                  <div>
+                    <p class="text-xs font-bold text-slate-900">{q.question_text}</p>
+                    <div class="flex items-center gap-2 text-[10px] text-slate-500 mt-1">
+                      <span class="uppercase font-semibold text-teal-700">{q.question_type}</span>
+                      <span>•</span>
+                      <span>{q.options.length} Response Options</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  data-q-id={q.id}
+                  class="delete-question-btn text-xs text-slate-400 hover:text-rose-600 p-1 rounded transition-colors"
+                  title="Delete Question"
+                >
+                  🗑️
+                </button>
+              </div>
+
+              <!-- Options Pill List -->
+              <div class="pt-2 border-t border-slate-100 flex flex-wrap gap-1.5">
+                {q.options.map((opt) => (
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200">
+                    {opt.option_text} <span class="ml-1 text-slate-400 font-mono">({opt.option_value})</span>
+                  </span>
+                ))}
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+
+    <!-- TAB 4: SCORING RULES MATRIX -->
+    <div id="tab-scoring" class="tab-panel hidden space-y-6">
+      <Card title="Scoring Rules Matrix" subtitle="Map each question response option to evaluated dimensions">
+        <div class="space-y-4">
+          <p class="text-xs text-slate-500">
+            For each item, specify which dimension receives score points when an option is selected.
+          </p>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                  <th class="py-2.5 px-3">Item #</th>
+                  <th class="py-2.5 px-3">Target Dimension</th>
+                  <th class="py-2.5 px-3">Option</th>
+                  <th class="py-2.5 px-3 text-center">Score Value</th>
+                  <th class="py-2.5 px-3 text-center">Weight</th>
+                  <th class="py-2.5 px-3 text-center">Reverse Scored</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100" id="scoring-rules-tbody">
+                {questions.flatMap((q, qIdx) =>
+                  q.options.map((opt) => {
+                    const existingRule = scoringRules.find(
+                      (r) => r.question_id === q.id && r.option_id === opt.id
+                    );
+                    return (
+                      <tr class="rule-row hover:bg-slate-50/50">
+                        <td class="py-2 px-3 font-mono font-bold text-slate-700">
+                          Q{qIdx + 1}
+                          <input type="hidden" name="rule_q_id" value={q.id} />
+                          <input type="hidden" name="rule_opt_id" value={opt.id} />
+                        </td>
+                        <td class="py-2 px-3">
+                          <select
+                            name="rule_dim_id"
+                            class="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800"
+                          >
+                            <option value="">Select Dimension...</option>
+                            {dimensions.map((d) => (
+                              <option
+                                value={d.id}
+                                selected={existingRule?.dimension_id === d.id}
+                              >
+                                {d.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td class="py-2 px-3 text-slate-800 font-medium">
+                          {opt.option_text}
+                        </td>
+                        <td class="py-2 px-3 text-center">
+                          <input
+                            type="number"
+                            name="rule_score"
+                            value={existingRule ? existingRule.score : parseFloat(opt.option_value) || 1}
+                            class="w-16 text-center text-xs font-mono bg-white border border-slate-200 rounded-lg p-1"
+                          />
+                        </td>
+                        <td class="py-2 px-3 text-center">
+                          <input
+                            type="number"
+                            step="0.1"
+                            name="rule_weight"
+                            value={existingRule?.weight ?? 1.0}
+                            class="w-16 text-center text-xs font-mono bg-white border border-slate-200 rounded-lg p-1"
+                          />
+                        </td>
+                        <td class="py-2 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            name="rule_reverse"
+                            checked={existingRule?.reverse_scoring === 1}
+                            class="w-4 h-4 text-teal-600 rounded border-slate-300"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex justify-end pt-3">
+            <Button type="button" variant="primary" size="md" id="save-scoring-btn">
+              Save Scoring Rules
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+
+    <!-- TAB 5: RESULTS & MODULAR CONTENT SECTIONS -->
+    <div id="tab-results" class="tab-panel hidden space-y-6">
+      <Card title="Result Archetypes & Outcomes" subtitle="Configure score ranges and rich dynamic interpretation content">
+        <div class="space-y-6">
+          <div id="result-types-container" class="space-y-4">
+            {resultTypes.map((rt) => (
+              <div class="result-type-card p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                <input type="hidden" name="rt_id" value={rt.id} />
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Outcome / Archetype Name</label>
+                    <input
+                      type="text"
+                      name="rt_name"
+                      value={rt.name}
+                      placeholder="e.g. High Openness (Explorer)"
+                      class="w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-900"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">URL Slug</label>
+                    <input
+                      type="text"
+                      name="rt_slug"
+                      value={rt.slug}
+                      placeholder="e.g. high-openness"
+                      class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Associated Dimension</label>
+                    <select
+                      name="rt_dim_id"
+                      class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800"
+                    >
+                      <option value="">Global Assessment Result</option>
+                      {dimensions.map((d) => (
+                        <option value={d.id} selected={rt.dimension_id === d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Min Score Threshold</label>
+                    <input
+                      type="number"
+                      name="rt_min"
+                      value={rt.minimum_score}
+                      class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Max Score Threshold</label>
+                    <input
+                      type="number"
+                      name="rt_max"
+                      value={rt.maximum_score}
+                      class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <!-- Interpretation Content Section -->
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Detailed Interpretation Text (Overview)</label>
+                  <textarea
+                    name="rt_overview_content"
+                    rows="3"
+                    placeholder="Rich markdown or psychological narrative explaining this specific score archetype..."
+                    class="w-full text-xs bg-white border border-slate-200 rounded-xl p-3 text-slate-800 focus:ring-2 focus:ring-teal-600"
+                  >{rt.contents.find((c) => c.section_type === 'overview')?.content || rt.description || ''}</textarea>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="flex justify-between items-center pt-2">
+            <button
+              type="button"
+              id="add-result-type-btn"
+              class="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1"
+            >
+              + Add Result Outcome Archetype
+            </button>
+
+            <Button type="button" variant="primary" size="md" id="save-results-btn">
+              Save Result Archetypes
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  </div>
+</AdminLayout>
+
+<script is:inline define:vars={{ assessmentId: assessment.id }}>
+  // Tab Switching Logic
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+
+      tabBtns.forEach((b) => {
+        b.classList.remove('border-teal-600', 'text-teal-700');
+        b.classList.add('border-transparent', 'text-slate-500');
+      });
+
+      btn.classList.add('border-teal-600', 'text-teal-700');
+      btn.classList.remove('border-transparent', 'text-slate-500');
+
+      tabPanels.forEach((p) => p.classList.add('hidden'));
+      document.getElementById(targetId)?.classList.remove('hidden');
+    });
+  });
+
+  const alertContainer = document.getElementById('builder-alert');
+  const alertMsg = document.getElementById('builder-alert-msg');
+
+  function showAlert(msg, isSuccess = true) {
+    if (alertMsg) alertMsg.innerText = msg;
+    alertContainer?.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // 1. Save Basic Information
+  document.getElementById('basic-info-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    const payload = {
+      name: formData.get('name'),
+      slug: formData.get('slug'),
+      category_id: formData.get('category_id'),
+      short_description: formData.get('short_description'),
+      long_description: formData.get('long_description'),
+      instructions: formData.get('instructions'),
+      completion_message: formData.get('completion_message'),
+      disclaimer: formData.get('disclaimer'),
+      estimated_minutes: parseInt(formData.get('estimated_minutes') || '10', 10),
+      access_type: formData.get('access_type'),
+      featured: formData.get('featured') === 'true'
+    };
+
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to update assessment.');
+        return;
+      }
+      showAlert('Basic Information updated successfully!');
+    } catch {
+      showAlert('Network error while updating.');
+    }
+  });
+
+  // 2. Save Dimensions
+  document.getElementById('add-dimension-btn')?.addEventListener('click', () => {
+    const container = document.getElementById('dimensions-container');
+    const div = document.createElement('div');
+    div.className = 'dimension-row p-4 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3 items-center';
+    div.innerHTML = `
+      <div>
+        <label class="block text-[10px] font-bold text-slate-500 uppercase">Dimension Name</label>
+        <input type="text" name="dim_name" placeholder="e.g. Agreeableness" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-900" required />
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-slate-500 uppercase">Slug Token</label>
+        <input type="text" name="dim_slug" placeholder="e.g. agreeableness" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800" required />
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex-1">
+          <label class="block text-[10px] font-bold text-slate-500 uppercase">Description</label>
+          <input type="text" name="dim_desc" placeholder="Brief construct definition" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 mt-1 text-slate-800" />
+        </div>
+        <button type="button" class="remove-dim-btn p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors mt-4" onclick="this.closest('.dimension-row').remove()">🗑️</button>
+      </div>
+    `;
+    container?.appendChild(div);
+  });
+
+  document.getElementById('save-dimensions-btn')?.addEventListener('click', async () => {
+    const rows = document.querySelectorAll('.dimension-row');
+    const dimensions = Array.from(rows).map((r, i) => {
+      const idInput = r.querySelector('input[name="dim_id"]');
+      const nameInput = r.querySelector('input[name="dim_name"]');
+      const slugInput = r.querySelector('input[name="dim_slug"]');
+      const descInput = r.querySelector('input[name="dim_desc"]');
+      return {
+        id: idInput ? idInput.value : undefined,
+        name: nameInput.value,
+        slug: slugInput.value,
+        description: descInput.value,
+        display_order: i
+      };
+    });
+
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/dimensions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dimensions })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to save dimensions.');
+        return;
+      }
+      showAlert('Dimensions saved successfully!');
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      showAlert('Network error while saving dimensions.');
+    }
+  });
+
+  // 3. Add Question Item
+  document.getElementById('new-question-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const qText = document.getElementById('new_q_text').value;
+    const qType = document.getElementById('new_q_type').value;
+    const isRequired = document.getElementById('new_q_required').checked;
+
+    let options = [];
+    if (qType === 'likert') {
+      options = [
+        { option_text: 'Strongly Disagree', option_value: '1', display_order: 0 },
+        { option_text: 'Disagree', option_value: '2', display_order: 1 },
+        { option_text: 'Neutral', option_value: '3', display_order: 2 },
+        { option_text: 'Agree', option_value: '4', display_order: 3 },
+        { option_text: 'Strongly Agree', option_value: '5', display_order: 4 }
+      ];
+    } else if (qType === 'yes_no') {
+      options = [
+        { option_text: 'Yes', option_value: '1', display_order: 0 },
+        { option_text: 'No', option_value: '0', display_order: 1 }
+      ];
+    } else {
+      options = [
+        { option_text: 'Option A', option_value: '1', display_order: 0 },
+        { option_text: 'Option B', option_value: '2', display_order: 1 }
+      ];
+    }
+
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_text: qText,
+          question_type: qType,
+          required: isRequired,
+          options
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to add question.');
+        return;
+      }
+      showAlert('Question added!');
+      window.location.reload();
+    } catch {
+      showAlert('Network error adding question.');
+    }
+  });
+
+  // Delete Question
+  document.querySelectorAll('.delete-question-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const qId = btn.getAttribute('data-q-id');
+      if (!confirm('Are you sure you want to delete this question item?')) return;
+
+      try {
+        const res = await fetch(`/api/admin/assessments/${assessmentId}/questions/${qId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          showAlert(data.error?.message || 'Failed to delete question.');
+          return;
+        }
+        window.location.reload();
+      } catch {
+        showAlert('Network error deleting question.');
+      }
+    });
+  });
+
+  // 4. Save Scoring Rules
+  document.getElementById('save-scoring-btn')?.addEventListener('click', async () => {
+    const rows = document.querySelectorAll('.rule-row');
+    const rules = [];
+
+    rows.forEach((r) => {
+      const qId = r.querySelector('input[name="rule_q_id"]').value;
+      const optId = r.querySelector('input[name="rule_opt_id"]').value;
+      const dimId = r.querySelector('select[name="rule_dim_id"]').value;
+      const score = parseFloat(r.querySelector('input[name="rule_score"]').value || '0');
+      const weight = parseFloat(r.querySelector('input[name="rule_weight"]').value || '1');
+      const reverse = r.querySelector('input[name="rule_reverse"]').checked;
+
+      if (dimId) {
+        rules.push({
+          question_id: qId,
+          dimension_id: dimId,
+          option_id: optId,
+          score,
+          weight,
+          reverse_scoring: reverse
+        });
+      }
+    });
+
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/scoring`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to save scoring rules.');
+        return;
+      }
+      showAlert('Scoring rules saved successfully!');
+    } catch {
+      showAlert('Network error saving scoring rules.');
+    }
+  });
+
+  // 5. Save Results
+  document.getElementById('save-results-btn')?.addEventListener('click', async () => {
+    const cards = document.querySelectorAll('.result-type-card');
+    const resultTypes = Array.from(cards).map((c, i) => {
+      const idInput = c.querySelector('input[name="rt_id"]');
+      const nameInput = c.querySelector('input[name="rt_name"]');
+      const slugInput = c.querySelector('input[name="rt_slug"]');
+      const dimSelect = c.querySelector('select[name="rt_dim_id"]');
+      const minInput = c.querySelector('input[name="rt_min"]');
+      const maxInput = c.querySelector('input[name="rt_max"]');
+      const overviewText = c.querySelector('textarea[name="rt_overview_content"]');
+
+      return {
+        id: idInput ? idInput.value : undefined,
+        name: nameInput.value,
+        slug: slugInput.value,
+        dimension_id: dimSelect.value || null,
+        minimum_score: parseFloat(minInput.value || '0'),
+        maximum_score: parseFloat(maxInput.value || '100'),
+        display_order: i,
+        contents: overviewText.value
+          ? [{ section_type: 'overview', title: 'Overview', content: overviewText.value, display_order: 0 }]
+          : []
+      };
+    });
+
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resultTypes })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to save result types.');
+        return;
+      }
+      showAlert('Result Archetypes saved successfully!');
+    } catch {
+      showAlert('Network error saving results.');
+    }
+  });
+
+  // Duplicate Action
+  document.getElementById('duplicate-btn')?.addEventListener('click', async () => {
+    if (!confirm('Duplicate this assessment with all its dimensions, questions, scoring rules, and results?')) return;
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/duplicate`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to duplicate assessment.');
+        return;
+      }
+      window.location.href = `/admin/assessments/${data.data.id}`;
+    } catch {
+      showAlert('Network error during duplication.');
+    }
+  });
+
+  // Publish Action
+  document.getElementById('publish-btn')?.addEventListener('click', async () => {
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/publish`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Validation failed. Unable to publish.');
+        return;
+      }
+      showAlert('🎉 Assessment published successfully!');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch {
+      showAlert('Network error during publication.');
+    }
+  });
+
+  // Unpublish Action
+  document.getElementById('unpublish-btn')?.addEventListener('click', async () => {
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/unpublish`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to unpublish assessment.');
+        return;
+      }
+      window.location.reload();
+    } catch {
+      showAlert('Network error during unpublish.');
+    }
+  });
+
+  // Archive Action
+  document.getElementById('archive-btn')?.addEventListener('click', async () => {
+    if (!confirm('Archive this assessment? It will no longer appear in public discovery.')) return;
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessmentId}/archive`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert(data.error?.message || 'Failed to archive assessment.');
+        return;
+      }
+      window.location.reload();
+    } catch {
+      showAlert('Network error during archive.');
+    }
+  });
+</script>

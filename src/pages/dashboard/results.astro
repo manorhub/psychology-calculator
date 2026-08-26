@@ -1,0 +1,92 @@
+---
+import DashboardLayout from '@/layouts/DashboardLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { getD1Database } from '@/lib/db/client';
+import { DashboardService } from '@/services/dashboard.service';
+
+const currentUser = Astro.locals.user;
+if (!currentUser) return Astro.redirect('/login?redirect=/dashboard/results');
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const dashboardService = new DashboardService(db);
+
+const results = await dashboardService.getUserResults(currentUser.id);
+---
+
+<DashboardLayout title="My Results Library" description="Completed psychological assessment scores and result types">
+  <div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">My Psychometric Results</h1>
+        <p class="text-xs text-slate-500 mt-1">
+          Historical scores, evaluated dimensions, and psychological classifications.
+        </p>
+      </div>
+
+      <a
+        href="/"
+        class="inline-flex items-center justify-center px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
+      >
+        + Retake or Explore
+      </a>
+    </div>
+
+    {results.length === 0 ? (
+      <Card class="p-10 text-center space-y-3">
+        <div class="text-3xl">🎯</div>
+        <h3 class="text-sm font-bold text-slate-800">No completed results yet.</h3>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto">
+          Complete an assessment to see your deterministic dimensional breakdown and outcome archetypes.
+        </p>
+        <div class="pt-2">
+          <a
+            href="/"
+            class="inline-flex px-4 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700"
+          >
+            Take Assessment
+          </a>
+        </div>
+      </Card>
+    ) : (
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {results.map((res) => (
+          <Card class="p-6 space-y-4 hover:border-teal-400 transition-colors flex flex-col justify-between">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+                  {res.categoryName}
+                </span>
+                <span class="text-[10px] text-slate-400 font-mono">
+                  {new Date(res.completedAt).toLocaleDateString()}
+                </span>
+              </div>
+
+              <h2 class="text-base font-bold text-slate-900">{res.assessmentName}</h2>
+
+              <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
+                <span class="text-[10px] text-slate-500 font-bold block uppercase">Primary Outcome</span>
+                <span class="text-xs font-black text-teal-900 block">{res.primaryArchetype}</span>
+                <div class="text-[11px] text-slate-600 font-mono pt-1">
+                  Overall Score: <span class="font-bold text-slate-900">{res.normalizedScore}%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[11px] text-slate-400">
+                Duration: {Math.max(1, Math.round(res.durationSeconds / 60))}m
+              </span>
+              <a
+                href={`/results/${res.attemptId}`}
+                class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow-2xs transition-all"
+              >
+                View Full Breakdown →
+              </a>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )}
+  </div>
+</DashboardLayout>

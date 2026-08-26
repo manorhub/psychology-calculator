@@ -1,0 +1,123 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AnalyticsService } from '@/services/analytics/analytics.service';
+import type { AnalyticsRange } from '@/types/database';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const analyticsService = new AnalyticsService(db);
+
+const url = new URL(Astro.request.url);
+const range = (url.searchParams.get('range') as AnalyticsRange) || '30d';
+
+const data = await analyticsService.getContentAnalytics(range);
+
+const ranges: { key: AnalyticsRange; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 Days' },
+  { key: '30d', label: 'Last 30 Days' },
+  { key: '90d', label: 'Last 90 Days' },
+  { key: 'this_year', label: 'This Year' },
+  { key: 'all', label: 'All Time' }
+];
+---
+
+<AdminLayout title="Content & CTA Analytics">
+  <div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/analytics" class="text-xs font-semibold text-indigo-600 hover:underline">Analytics</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">Content & CTAs</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Content & Call-to-Action Analytics</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Measure educational guide performance, reader engagement, and assessment conversion from editorial content.
+        </p>
+      </div>
+
+      <!-- Date Range Selector -->
+      <div class="flex items-center gap-2 flex-wrap">
+        {ranges.map((r) => (
+          <a
+            href={`/admin/analytics/content?range=${r.key}`}
+            class={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              range === r.key
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {r.label}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- Content Table -->
+    <Card class="border-slate-200 bg-white overflow-hidden shadow-xs">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Blog Posts & Educational Guides</h3>
+          <p class="text-xs text-slate-500">Reader traffic and conversion to psychometric assessments</p>
+        </div>
+        <a
+          href={`/api/v1/admin/analytics/export?type=content&range=${range}`}
+          class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
+        >
+          ⬇️ Export CSV
+        </a>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+            <tr>
+              <th class="p-3.5">Article Title</th>
+              <th class="p-3.5">Category</th>
+              <th class="p-3.5">Estimated Views</th>
+              <th class="p-3.5">CTA Clicks</th>
+              <th class="p-3.5">CTR</th>
+              <th class="p-3.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            {data.items.map((item) => (
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="p-3.5 font-bold text-slate-900">
+                  {item.title}
+                  <div class="font-mono text-[10px] text-slate-400">/blog/{item.slug}</div>
+                </td>
+                <td class="p-3.5">
+                  <Badge variant="default" size="sm">
+                    {item.categoryName}
+                  </Badge>
+                </td>
+                <td class="p-3.5 font-mono font-semibold">{item.views}</td>
+                <td class="p-3.5 font-mono font-bold text-indigo-600">{item.ctaClicks}</td>
+                <td class="p-3.5 font-mono">
+                  <span class="font-bold text-teal-600">{item.ctr}%</span>
+                </td>
+                <td class="p-3.5 text-right">
+                  <a
+                    href={`/blog/${item.slug}`}
+                    target="_blank"
+                    class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition-colors inline-block"
+                  >
+                    View Post ↗
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

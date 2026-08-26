@@ -1,0 +1,112 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import { CreditService } from '@/services/credit.service';
+import { getD1Database } from '@/lib/db/client';
+import {
+  type SupportedLocale,
+  isValidLocale,
+  useTranslations,
+  getLocalizedPath
+} from '@/i18n';
+
+export const prerender = false;
+
+const { lang } = Astro.params;
+if (!isValidLocale(lang)) {
+  return Astro.redirect('/404');
+}
+
+const currentLocale = lang as SupportedLocale;
+const { t } = useTranslations(currentLocale);
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+const creditService = new CreditService(db);
+const packages = await creditService.getActivePackages();
+---
+
+<PublicLayout
+  title={`${t.nav.pricing} & ${t.credits.packagesTitle}`}
+  description={t.credits.packagesSubtitle}
+  locale={currentLocale}
+>
+  <div class="max-w-7xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-16">
+    <div class="text-center max-w-3xl mx-auto space-y-4">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 text-teal-800 text-xs font-bold rounded-full border border-teal-200">
+        <span>💎</span> {t.credits.packagesTitle}
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {t.credits.packagesTitle}
+      </h1>
+      <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+        {t.credits.packagesSubtitle}
+      </p>
+    </div>
+
+    <!-- Package Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      {packages.map((pkg) => (
+        <div class={`bg-white rounded-3xl p-6 sm:p-8 border ${pkg.is_popular ? 'border-teal-500 shadow-lg ring-2 ring-teal-500/20' : 'border-slate-200 shadow-2xs'} flex flex-col justify-between space-y-6 relative`}>
+          {pkg.is_popular ? (
+            <span class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-teal-600 text-white text-[11px] font-bold rounded-full shadow-xs">
+              MOST POPULAR
+            </span>
+          ) : null}
+
+          <div class="space-y-4">
+            <div>
+              <h3 class="text-xl font-bold text-slate-900">{pkg.name}</h3>
+              <p class="text-xs text-slate-500 mt-1">{pkg.description}</p>
+            </div>
+
+            <div class="flex items-baseline gap-1">
+              <span class="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono">
+                ${pkg.price_cents / 100}
+              </span>
+              <span class="text-xs text-slate-400">USD one-time</span>
+            </div>
+
+            <div class="p-3 bg-teal-50/70 border border-teal-100 rounded-2xl flex items-center gap-3">
+              <span class="text-xl">💎</span>
+              <div>
+                <div class="text-sm font-bold text-teal-900">{pkg.credits} Credits</div>
+                <div class="text-[11px] text-teal-700">~{Math.floor(pkg.credits / 5)} Deep AI Reports</div>
+              </div>
+            </div>
+          </div>
+
+          <a
+            href={getLocalizedPath(`/dashboard/credits/checkout?package=${pkg.id}`, currentLocale)}
+            class={`w-full py-3 px-4 rounded-2xl text-xs font-bold text-center transition-all ${
+              pkg.is_popular
+                ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm hover:shadow-md'
+                : 'bg-slate-900 hover:bg-slate-800 text-white'
+            }`}
+          >
+            {t.credits.buyCreditsBtn} →
+          </a>
+        </div>
+      ))}
+    </div>
+
+    <!-- Guarantees & Features -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto pt-8 border-t border-slate-200/80 text-center">
+      <div class="space-y-1.5 p-4">
+        <div class="text-2xl">⚡</div>
+        <h4 class="text-sm font-bold text-slate-900">{t.credits.instantDelivery}</h4>
+        <p class="text-xs text-slate-500">Credits appear immediately in your wallet upon successful checkout.</p>
+      </div>
+      <div class="space-y-1.5 p-4">
+        <div class="text-2xl">🔒</div>
+        <h4 class="text-sm font-bold text-slate-900">{t.credits.secureCheckout}</h4>
+        <p class="text-xs text-slate-500">Processed securely via Lemon Squeezy with 256-bit SSL encryption.</p>
+      </div>
+      <div class="space-y-1.5 p-4">
+        <div class="text-2xl">⏳</div>
+        <h4 class="text-sm font-bold text-slate-900">Never Expire</h4>
+        <p class="text-xs text-slate-500">Your purchased credits stay in your account forever until used.</p>
+      </div>
+    </div>
+  </div>
+</PublicLayout>

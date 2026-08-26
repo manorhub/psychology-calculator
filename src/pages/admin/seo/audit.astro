@@ -1,0 +1,114 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { SeoService } from '@/services/seo/seo.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const seoService = new SeoService(db);
+const audit = await seoService.runSeoAudit();
+---
+
+<AdminLayout title="SEO Quality & Health Audit — Admin Control">
+  <div class="space-y-8 max-w-6xl">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          SEO Health & Indexation Audit
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Automated checks for missing titles, descriptions, canonical integrity, and search readiness
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/settings/seo"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all"
+        >
+          ⚙️ Global SEO Settings
+        </a>
+      </div>
+    </div>
+
+    <!-- Health Score Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">SEO Health Score</span>
+        <div class={`text-4xl font-black ${audit.score >= 85 ? 'text-emerald-600' : audit.score >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>
+          {audit.score} / 100
+        </div>
+        <span class="text-[10px] text-slate-400">
+          {audit.score >= 85 ? '✨ Excellent search optimization' : 'Requires attention'}
+        </span>
+      </Card>
+
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Audited Entities</span>
+        <div class="text-3xl font-black text-slate-800">{audit.totalPagesAudited}</div>
+        <span class="text-[10px] text-slate-400">Assessments, Categories & Pages</span>
+      </Card>
+
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Identified Issues</span>
+        <div class="text-3xl font-black text-slate-800">{audit.issues.length}</div>
+        <span class="text-[10px] text-slate-400">
+          {audit.issues.filter((i) => i.severity === 'error').length} Errors • {audit.issues.filter((i) => i.severity === 'warning').length} Warnings
+        </span>
+      </Card>
+    </div>
+
+    <!-- Audit Issues Table -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Audit Findings ({audit.issues.length})</h2>
+      </div>
+
+      {audit.issues.length === 0 ? (
+        <div class="p-12 text-center text-slate-500 text-xs space-y-2">
+          <div class="text-3xl">🎉</div>
+          <div class="font-bold text-slate-800">No SEO issues detected!</div>
+          <p class="text-slate-400">All psychometric assessments and categories have valid titles, descriptions, and canonical paths.</p>
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-3">Severity</th>
+                <th class="px-4 py-3">Category</th>
+                <th class="px-4 py-3">Issue Description</th>
+                <th class="px-4 py-3">Entity Ref</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {audit.issues.map((issue) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-4 py-3">
+                    <Badge variant={issue.severity === 'error' ? 'danger' : 'warning'} size="sm">
+                      {issue.severity.toUpperCase()}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-[10px] text-slate-500 uppercase">
+                    {issue.category}
+                  </td>
+                  <td class="px-4 py-3 font-medium text-slate-800">
+                    {issue.message}
+                  </td>
+                  <td class="px-4 py-3 font-mono text-[10px] text-indigo-600">
+                    {issue.entityId || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+</AdminLayout>

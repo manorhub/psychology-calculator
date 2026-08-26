@@ -1,0 +1,145 @@
+---
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  badge?: string;
+  children?: { label: string; href: string }[];
+}
+
+const navSections: { title?: string; items: NavItem[] }[] = [
+  {
+    items: [
+      { label: 'Dashboard', href: '/admin', icon: '📊' }
+    ]
+  },
+  {
+    title: 'Assessments',
+    items: [
+      { label: 'Assessments', href: '/admin/assessments', icon: '📝', badge: 'Phase 4' },
+      { label: 'Questions', href: '/admin/questions', icon: '❓', badge: 'Phase 4' },
+      { label: 'Results & Scoring', href: '/admin/results', icon: '🎯', badge: 'Phase 4' }
+    ]
+  },
+  {
+    title: 'Users & Activity',
+    items: [
+      { label: 'Users', href: '/admin/users', icon: '👥' },
+      { label: 'Reports', href: '/admin/reports', icon: '📈', badge: 'Phase 5' },
+      { label: 'Audit Logs', href: '/admin/audit-logs', icon: '🛡️' }
+    ]
+  },
+  {
+    title: 'Intelligence & Billing',
+    items: [
+      { label: 'AI Configurations', href: '/admin/ai', icon: '🤖', badge: 'Phase 5' },
+      { label: 'Billing & Plans', href: '/admin/billing', icon: '💳', badge: 'Phase 6' }
+    ]
+  },
+  {
+    title: 'Platform Management',
+    items: [
+      {
+        label: 'Settings',
+        href: '/admin/settings',
+        icon: '⚙️',
+        children: [
+          { label: 'General & Site', href: '/admin/settings' },
+          { label: 'Email / SMTP', href: '/admin/settings/email' },
+          { label: 'Feature Flags', href: '/admin/settings/features' }
+        ]
+      },
+      { label: 'CMS Content', href: '/admin/content', icon: '📄', badge: 'Phase 7' },
+      { label: 'SEO Metadata', href: '/admin/seo', icon: '🔍', badge: 'Phase 7' }
+    ]
+  }
+];
+
+function isActive(href: string): boolean {
+  if (href === '/admin') return currentPath === '/admin';
+  return currentPath.startsWith(href);
+}
+---
+
+<aside class="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 border-r border-slate-800">
+  <!-- Brand Header -->
+  <div class="h-16 flex items-center justify-between px-6 border-b border-slate-800">
+    <a href="/admin" class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-base shadow-sm shadow-teal-500/30">
+        Ψ
+      </div>
+      <div class="flex flex-col">
+        <span class="font-bold text-white text-base leading-tight">MindMetrics</span>
+        <span class="text-[10px] text-teal-400 font-semibold uppercase tracking-wider">Admin Console</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 px-4 py-5 space-y-6 overflow-y-auto" aria-label="Admin Navigation">
+    {navSections.map((section) => (
+      <div class="space-y-1.5">
+        {section.title && (
+          <h4 class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            {section.title}
+          </h4>
+        )}
+        {section.items.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <div>
+              <a
+                href={item.href}
+                class={`flex items-center justify-between px-3 py-2 text-sm font-medium rounded-xl transition-colors ${
+                  active
+                    ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <div class="flex items-center gap-3">
+                  <span class="text-base">{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span class="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-400 rounded-md border border-slate-700">
+                    {item.badge}
+                  </span>
+                )}
+              </a>
+
+              {/* Sub-navigation */}
+              {item.children && active && (
+                <div class="ml-7 mt-1.5 space-y-1 border-l border-slate-800 pl-3">
+                  {item.children.map((child) => (
+                    <a
+                      href={child.href}
+                      class={`block py-1.5 text-xs font-medium transition-colors ${
+                        currentPath === child.href
+                          ? 'text-teal-400 font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {child.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    ))}
+  </nav>
+
+  <!-- Quick Admin Footer -->
+  <div class="p-4 border-t border-slate-800 text-xs text-slate-500 flex items-center justify-between">
+    <span>MindMetrics Core</span>
+    <span class="text-teal-400 font-mono text-[10px]">v0.3.0</span>
+  </div>
+</aside>

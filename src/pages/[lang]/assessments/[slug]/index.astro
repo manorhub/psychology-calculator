@@ -1,0 +1,335 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AssessmentRuntimeService } from '@/services/assessment-runtime.service';
+import {
+  type SupportedLocale,
+  isValidLocale,
+  useTranslations,
+  getLocalizedPath
+} from '@/i18n';
+import { TranslationsService } from '@/i18n/translations.service';
+
+export const prerender = false;
+
+const { lang, slug } = Astro.params;
+if (!isValidLocale(lang) || !slug) {
+  return Astro.redirect('/404');
+}
+
+const currentLocale = lang as SupportedLocale;
+const { t } = useTranslations(currentLocale);
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const runtimeService = new AssessmentRuntimeService(db);
+const transService = new TranslationsService(db);
+
+const assessmentData = await runtimeService.getPublishedAssessmentBySlug(slug);
+if (!assessmentData) {
+  return new Response('Assessment Not Found or not published', { status: 404 });
+}
+
+const { assessment: rawAssessment, category: rawCategory, dimensions: rawDimensions, questions } = assessmentData;
+const user = Astro.locals.user;
+
+// Localize Assessment Content
+const locAsm = await transService.getLocalizedAssessment(rawAssessment.id, currentLocale);
+const assessment = {
+  ...rawAssessment,
+  name: locAsm?.name || rawAssessment.name,
+  short_description: locAsm?.shortDescription || rawAssessment.short_description,
+  long_description: locAsm?.longDescription || rawAssessment.long_description,
+  instructions: locAsm?.instructions || rawAssessment.instructions,
+  disclaimer: locAsm?.disclaimer || rawAssessment.disclaimer,
+  seo_title: locAsm?.seoTitle || rawAssessment.seo_title,
+  seo_description: locAsm?.seoDescription || rawAssessment.seo_description
+};
+
+// Localize Category
+const locCat = rawCategory ? await transService.getLocalizedCategory(rawCategory.id, currentLocale) : null;
+const category = rawCategory
+  ? {
+      ...rawCategory,
+      name: locCat?.name || rawCategory.name,
+      description: locCat?.description || rawCategory.description
+    }
+  : null;
+
+// Localize Dimensions
+const dimensions = await Promise.all(
+  rawDimensions.map(async (dim) => {
+    const locDim = await transService.getLocalizedDimension(dim.id, currentLocale);
+    return {
+      ...dim,
+      name: locDim?.name || dim.name,
+      description: locDim?.description || dim.description
+    };
+  })
+);
+
+const siteUrl = 'https://www.psychologycalculator.com';
+const currentUrl = `${siteUrl}/${currentLocale}/assessments/${assessment.slug}`;
+
+const assessmentFaqs = [
+  {
+    q: `How long does the ${assessment.name} take?`,
+    a: `This assessment contains approximately ${questions.length || assessment.question_count || 10} validated items and typically takes around ${assessment.estimated_minutes || 6} minutes to complete at a natural pace.`
+  },
+  {
+    q: `Is the ${assessment.name} free to take?`,
+    a: `Yes. You can take this assessment as a guest with no registration required. You will receive an immediate score breakdown across all ${dimensions.length} evaluated dimensions at no cost.`
+  },
+  {
+    q: `Are my responses and results confidential?`,
+    a: `Yes. Your privacy is protected. Guest sessions do not store identifying personal details, and responses are processed solely to compute your personal score breakdown.`
+  },
+  {
+    q: `Is this assessment a medical or clinical diagnosis?`,
+    a: `No. Assessments on PsychologyCalculator.com are provided strictly for educational, self-reflection, and personal exploration purposes. They do not substitute for professional medical or psychological diagnosis.`
+  }
+];
+
+const webPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: `${assessment.name} | PsychologyCalculator.com`,
+  description: assessment.short_description,
+  url: currentUrl,
+  inLanguage: currentLocale,
+  isPartOf: {
+    '@type': 'WebSite',
+    name: 'Psychology Calculator',
+    url: siteUrl
+  }
+};
+
+const breadcrumbsSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: t.nav.home, item: `${siteUrl}/${currentLocale}` },
+    { '@type': 'ListItem', position: 2, name: t.nav.assessments, item: `${siteUrl}/${currentLocale}/assessments` },
+    { '@type': 'ListItem', position: 3, name: assessment.name, item: currentUrl }
+  ]
+};
+
+const faqPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: assessmentFaqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.a
+    }
+  }))
+};
+---
+
+<PublicLayout
+  title={assessment.name}
+  description={assessment.short_description}
+  locale={currentLocale}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(webPageSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(breadcrumbsSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(faqPageSchema)} />
+  </Fragment>
+
+  <div class="max-w-4xl mx-auto py-10 sm:py-16 px-4 sm:px-6 space-y-10">
+    <!-- Breadcrumb & Back Actions -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <nav class="flex items-center gap-2 text-xs text-slate-500">
+        <a href={getLocalizedPath('/', currentLocale)} class="hover:text-teal-700 font-medium">{t.nav.home}</a>
+        <span>/</span>
+        <a href={getLocalizedPath('/assessments', currentLocale)} class="hover:text-teal-700 font-medium">{t.nav.assessments}</a>
+        <span>/</span>
+        <span class="text-slate-900 font-semibold truncate max-w-[180px] sm:max-w-xs">{assessment.name}</span>
+      </nav>
+
+      <a
+        href={getLocalizedPath('/assessments', currentLocale)}
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-all"
+      >
+        <span>←</span>
+        <span>{t.common.backToAssessments}</span>
+      </a>
+    </div>
+
+    <!-- Assessment Hero Card -->
+    <div class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-2xs space-y-6 sm:space-y-8">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="px-3 py-1 bg-teal-50 text-teal-800 text-xs font-bold rounded-full border border-teal-200/60">
+          {category ? category.name : t.common.freeAssessment}
+        </span>
+        <span class="text-xs font-semibold text-slate-500 flex items-center gap-1">
+          <span>✓</span> {t.common.freeAssessment}
+        </span>
+      </div>
+
+      <div class="space-y-3">
+        <h1 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          {assessment.name}
+        </h1>
+        <p class="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
+          {assessment.short_description}
+        </p>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div class="grid grid-cols-3 gap-3 p-4 bg-slate-50/80 rounded-2xl border border-slate-100 text-center">
+        <div>
+          <div class="text-base sm:text-lg font-bold text-slate-900 font-mono">
+            ~{assessment.estimated_minutes || 6} {t.common.minutes}
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">{t.common.estimatedTime}</div>
+        </div>
+        <div class="border-x border-slate-200/60">
+          <div class="text-base sm:text-lg font-bold text-slate-900 font-mono">
+            {questions.length || assessment.question_count || 10}
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">{t.common.validatedItems}</div>
+        </div>
+        <div>
+          <div class="text-base sm:text-lg font-bold text-slate-900 font-mono">
+            {dimensions.length}
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">{t.common.dimensions}</div>
+        </div>
+      </div>
+
+      <!-- Start Button & Session Info -->
+      <div class="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-slate-100">
+        <div class="text-xs text-slate-500">
+          {user ? (
+            <span>Logged in as <strong class="text-slate-900">{user.email}</strong>. Attempt will save to your account.</span>
+          ) : (
+            <span>Taking as <strong class="text-slate-900">Guest</strong>. No registration required.</span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          id="start-assessment-btn"
+          class="inline-flex items-center justify-center px-8 py-3.5 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer"
+        >
+          {t.common.continue} →
+        </button>
+      </div>
+    </div>
+
+    <!-- Evaluated Dimensions Section -->
+    {dimensions.length > 0 && (
+      <div class="space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-xl font-bold text-slate-900">{t.results.dimensionScores}</h2>
+          <p class="text-xs text-slate-500">Explore the underlying psychological dimensions and trait constructs evaluated in this instrument.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {dimensions.map((dim, idx) => (
+            <div class="p-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:border-teal-300 hover:shadow-xs transition-all space-y-2.5 group">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
+                  {t.common.dimensions} 0{idx + 1}
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono">{t.results.standardizedScale}</span>
+              </div>
+              <div class="space-y-1">
+                <h3 class="text-sm font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                  {dim.name}
+                </h3>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  {dim.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Frequently Asked Questions -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs space-y-6">
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
+        <p class="text-xs text-slate-500">Key information about the {assessment.name} methodology and score reporting.</p>
+      </div>
+
+      <div class="space-y-4 divide-y divide-slate-100">
+        {assessmentFaqs.map((faq, i) => (
+          <div class={i === 0 ? "space-y-2" : "pt-4 space-y-2"}>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600 font-mono text-xs">Q:</span>
+              <span>{faq.q}</span>
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed pl-5">
+              {faq.a}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Instructions & Overview -->
+    <div class="space-y-6">
+      {assessment.instructions && (
+        <Card title="Assessment Instructions" class="p-6 space-y-3">
+          <p class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+            {assessment.instructions}
+          </p>
+        </Card>
+      )}
+
+      {assessment.long_description && (
+        <Card title="About the Psychological Framework" class="p-6 space-y-3">
+          <p class="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+            {assessment.long_description}
+          </p>
+        </Card>
+      )}
+
+      {assessment.disclaimer && (
+        <div class="p-4 bg-slate-100 border border-slate-200 rounded-2xl text-[11px] text-slate-500 text-center leading-relaxed">
+          {assessment.disclaimer}
+        </div>
+      )}
+    </div>
+  </div>
+</PublicLayout>
+
+<script is:inline define:vars={{ assessmentId: assessment.id, slug: assessment.slug, locale: currentLocale }}>
+  const startBtn = document.getElementById('start-assessment-btn');
+
+  startBtn?.addEventListener('click', async () => {
+    startBtn.setAttribute('disabled', 'true');
+    startBtn.textContent = 'Preparing assessment...';
+
+    const guestSession = sessionStorage.getItem('guest_session_id') || '';
+
+    try {
+      const res = await fetch(`/api/v1/assessments/${assessmentId}/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-guest-session': guestSession,
+          'x-locale': locale
+        },
+        body: JSON.stringify({ locale })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success && data.data?.attemptId) {
+        sessionStorage.setItem('active_attempt_id', data.data.attemptId);
+        window.location.href = `/${locale}/assessments/${slug}/take?attemptId=${data.data.attemptId}`;
+      } else {
+        window.location.href = `/${locale}/assessments/${slug}/take`;
+      }
+    } catch {
+      window.location.href = `/${locale}/assessments/${slug}/take`;
+    }
+  });
+</script>

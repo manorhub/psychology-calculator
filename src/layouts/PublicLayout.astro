@@ -1,0 +1,56 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '@/components/layout/Header.astro';
+import Footer from '@/components/layout/Footer.astro';
+import { ConfigService } from '@/services/config.service';
+import { getD1Database } from '@/lib/db/client';
+import { type SupportedLocale, DEFAULT_LOCALE } from '@/i18n';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+  locale?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalUrl,
+  ogImage,
+  ogType,
+  noindex,
+  locale = DEFAULT_LOCALE,
+  publishedTime,
+  modifiedTime
+} = Astro.props;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const configService = new ConfigService(db);
+const siteConfig = await configService.getSiteConfig();
+---
+
+<BaseLayout
+  title={title}
+  description={description || siteConfig.siteDescription}
+  canonicalUrl={canonicalUrl}
+  ogImage={ogImage}
+  ogType={ogType}
+  noindex={noindex}
+  locale={locale}
+  publishedTime={publishedTime}
+  modifiedTime={modifiedTime}
+>
+  <slot name="head" slot="head" />
+  <Header config={siteConfig} />
+  <main class="flex-1">
+    <slot />
+  </main>
+  <Footer config={siteConfig} />
+</BaseLayout>

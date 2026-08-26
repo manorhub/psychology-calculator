@@ -1,0 +1,21 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  statusCode: number;
+}
+
+const { title, statusCode } = Astro.props;
+---
+
+<BaseLayout title={`${statusCode} - ${title}`} noindex={true}>
+  <div class="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+    <div class="max-w-md w-full text-center space-y-6">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-50 text-teal-700 font-bold text-2xl border border-teal-100 shadow-sm">
+        Ψ
+      </div>
+      <slot />
+    </div>
+  </div>
+</BaseLayout>

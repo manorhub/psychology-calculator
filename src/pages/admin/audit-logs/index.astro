@@ -1,0 +1,132 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Button from '@/components/ui/Button.astro';
+import Pagination from '@/components/admin/Pagination.astro';
+import { getD1Database } from '@/lib/db/client';
+import { AdminService } from '@/services/admin.service';
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+const adminService = new AdminService(db);
+
+const url = Astro.url;
+const page = parseInt(url.searchParams.get('page') || '1', 10);
+const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+const action = url.searchParams.get('action') || '';
+const search = url.searchParams.get('q') || '';
+
+const result = await adminService.getAuditLogs({ page, limit, action, search });
+---
+
+<AdminLayout title="Audit Logs" description="Immutable audit log of security events and administrative actions">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">System Audit Trail</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Immutable security log of administrative mutations and authentication events</p>
+      </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <Card class="p-4">
+      <form method="GET" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <input
+            type="text"
+            name="q"
+            value={search}
+            placeholder="Search by action or entity..."
+            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600"
+          />
+        </div>
+
+        <div>
+          <select
+            name="action"
+            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600"
+          >
+            <option value="">All Actions</option>
+            <option value="login" selected={action === 'login'}>Login</option>
+            <option value="registration" selected={action === 'registration'}>Registration</option>
+            <option value="email_verification" selected={action === 'email_verification'}>Email Verification</option>
+            <option value="password_reset_completed" selected={action === 'password_reset_completed'}>Password Reset</option>
+            <option value="admin_user_suspended" selected={action === 'admin_user_suspended'}>User Suspended</option>
+            <option value="admin_user_reactivated" selected={action === 'admin_user_reactivated'}>User Reactivated</option>
+            <option value="admin_setting_updated" selected={action === 'admin_setting_updated'}>Setting Updated</option>
+            <option value="admin_feature_flag_toggled" selected={action === 'admin_feature_flag_toggled'}>Feature Flag Toggled</option>
+          </select>
+        </div>
+
+        <div>
+          <Button type="submit" variant="primary" size="sm">
+            Filter Logs
+          </Button>
+        </div>
+      </form>
+    </Card>
+
+    <!-- Logs Table -->
+    <Card class="p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+              <th class="py-3.5 px-4 sm:px-6">Timestamp</th>
+              <th class="py-3.5 px-4">Actor</th>
+              <th class="py-3.5 px-4">Action</th>
+              <th class="py-3.5 px-4">Target Entity</th>
+              <th class="py-3.5 px-4">Details</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
+            {result.items.length === 0 ? (
+              <tr>
+                <td colspan="5" class="p-8 text-center text-slate-500 font-sans">
+                  No audit log entries recorded matching criteria.
+                </td>
+              </tr>
+            ) : (
+              result.items.map((log) => (
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                  <td class="py-3 px-4 sm:px-6 text-slate-500 whitespace-nowrap">
+                    {new Date(log.created_at).toLocaleString()}
+                  </td>
+                  <td class="py-3 px-4 font-sans font-medium text-slate-900">
+                    {log.actor_name || log.actor_id || 'System'}
+                    {log.actor_role && (
+                      <span class="ml-1 text-[10px] text-slate-400 font-mono">({log.actor_role})</span>
+                    )}
+                  </td>
+                  <td class="py-3 px-4">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">
+                      {log.action}
+                    </span>
+                  </td>
+                  <td class="py-3 px-4 text-slate-600">
+                    <span class="font-bold">{log.entity_type}</span>
+                    {log.entity_id && (
+                      <span class="text-slate-400">: {log.entity_id.substring(0, 8)}...</span>
+                    )}
+                  </td>
+                  <td class="py-3 px-4 text-slate-500 max-w-xs truncate font-sans text-[11px]">
+                    {log.details ? log.details : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Pagination
+        currentPage={result.page}
+        totalPages={result.totalPages}
+        totalItems={result.total}
+        limit={result.limit}
+        baseUrl={url.toString()}
+      />
+    </Card>
+  </div>
+</AdminLayout>

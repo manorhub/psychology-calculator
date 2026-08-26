@@ -1,0 +1,97 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { getD1Database } from '@/lib/db/client';
+import { executeQuery } from '@/lib/db/query';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = getD1Database(env);
+
+interface AuditRow {
+  id: string;
+  actor_id: string | null;
+  actor_role: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  details: string | null;
+  created_at: string;
+}
+
+const logs = db
+  ? await executeQuery<AuditRow>(
+      db,
+      'SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 50'
+    )
+  : [];
+---
+
+<AdminLayout title="System Activity & Audit Log">
+  <div class="space-y-8 max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <a href="/admin" class="text-xs font-semibold text-indigo-600 hover:underline">Control Center</a>
+          <span class="text-xs text-slate-400">/</span>
+          <span class="text-xs font-semibold text-slate-600">System Activity</span>
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Admin Activity & Audit Ledger</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Immutable audit record of administrative mutations, configuration updates, and security events.
+        </p>
+      </div>
+    </div>
+
+    <!-- Activity Table -->
+    <Card class="border-slate-200 bg-white shadow-xs overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+              <th class="py-3 px-4">Timestamp (UTC)</th>
+              <th class="py-3 px-4">Actor</th>
+              <th class="py-3 px-4">Action</th>
+              <th class="py-3 px-4">Target Entity</th>
+              <th class="py-3 px-4">Details</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {logs.length === 0 ? (
+              <tr>
+                <td colspan="5" class="py-8 text-center text-slate-400">
+                  No administrative events recorded yet.
+                </td>
+              </tr>
+            ) : (
+              logs.map((log) => (
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="py-3 px-4 text-slate-500 whitespace-nowrap font-mono text-[11px]">
+                    {new Date(log.created_at).toLocaleString()}
+                  </td>
+                  <td class="py-3 px-4">
+                    <Badge variant={log.actor_role === 'admin' ? 'info' : 'neutral'} size="sm">
+                      {log.actor_id ? log.actor_id.substring(0, 12) : 'System'}
+                    </Badge>
+                  </td>
+                  <td class="py-3 px-4 font-semibold text-slate-900">
+                    {log.action}
+                  </td>
+                  <td class="py-3 px-4 text-slate-600 font-mono text-[11px]">
+                    {log.entity_type}{log.entity_id ? `:${log.entity_id}` : ''}
+                  </td>
+                  <td class="py-3 px-4 text-slate-500 max-w-xs truncate font-mono text-[11px]">
+                    {log.details || '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

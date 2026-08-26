@@ -1,0 +1,141 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Badge from '@/components/ui/Badge.astro';
+import { PdfService } from '@/services/pdf/pdf.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+const storage = env?.STORAGE || null;
+
+const pdfService = new PdfService(db, storage);
+const files = await pdfService.listGeneratedFiles(100);
+---
+
+<AdminLayout title="Generated PDF Files — Admin Control">
+  <div class="space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Generated PDF Storage Ledger
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Cloudflare R2 storage files and psychometric report artifacts
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/settings/pdf"
+          class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition-all"
+        >
+          ⚙️ PDF Settings
+        </a>
+      </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Total Files</span>
+        <div class="text-2xl font-black text-slate-900">{files.length}</div>
+      </Card>
+
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Total Storage Used</span>
+        <div class="text-2xl font-black text-indigo-600">
+          {(files.reduce((acc, f) => acc + (f.file_size || 0), 0) / 1024).toFixed(1)} KB
+        </div>
+      </Card>
+
+      <Card class="p-6 space-y-1">
+        <span class="text-xs font-bold text-slate-400 uppercase">Storage Provider</span>
+        <div class="text-lg font-black text-slate-700 flex items-center gap-2">
+          <span>⚡ Cloudflare R2</span>
+        </div>
+      </Card>
+    </div>
+
+    <!-- Files Table -->
+    <Card class="overflow-hidden border-slate-200">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">R2 Object Ledger</h2>
+        <span class="text-xs text-slate-500">{files.length} records</span>
+      </div>
+
+      {files.length === 0 ? (
+        <div class="p-12 text-center text-slate-400 text-sm">
+          No generated PDF files found in R2 storage yet.
+        </div>
+      ) : (
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-3">File / Assessment</th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3">User</th>
+                <th class="px-4 py-3">Size</th>
+                <th class="px-4 py-3">R2 Key</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Created</th>
+                <th class="px-4 py-3 text-right">Download</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {files.map((file) => (
+                <tr class="hover:bg-slate-50/60 transition-colors">
+                  <td class="px-4 py-3 font-semibold text-slate-900">
+                    <div>{file.file_name}</div>
+                    <div class="text-[10px] text-slate-400 font-normal">{file.assessment_name || 'Psychological Assessment'}</div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge variant={file.file_type === 'ai_report' ? 'info' : 'default'} size="sm">
+                      {file.file_type === 'ai_report' ? 'AI Report' : 'Basic Result'}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3">
+                    {file.user_email ? (
+                      <div>
+                        <div class="font-medium text-slate-900">{file.user_name || 'User'}</div>
+                        <div class="text-[10px] text-slate-400">{file.user_email}</div>
+                      </div>
+                    ) : (
+                      <span class="text-slate-400 italic">Guest User</span>
+                    )}
+                  </td>
+                  <td class="px-4 py-3 font-mono">
+                    {(file.file_size / 1024).toFixed(1)} KB
+                  </td>
+                  <td class="px-4 py-3 font-mono text-[10px] text-slate-500 truncate max-w-xs">
+                    {file.r2_key}
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge variant={file.status === 'completed' ? 'success' : 'danger'} size="sm">
+                      {file.status}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3 text-[10px] text-slate-400">
+                    {new Date(file.created_at).toLocaleString()}
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <a
+                      href={file.file_type === 'ai_report' ? `/api/v1/reports/${file.report_id}/pdf` : `/api/v1/results/${file.attempt_id}/pdf`}
+                      download
+                      class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-md transition-colors"
+                    >
+                      Download
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  </div>
+</AdminLayout>

@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "psychology-saas",
+  "main": "./dist/_worker.js/index.js",
+  "compatibility_date": "2025-02-14",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  // Cloudflare D1 Database Binding
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "psychology_db",
+      "database_id": "local-d1-placeholder",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Cloudflare R2 Bucket Binding
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "psychology-assets"
+    }
+  ],
+  // Cloudflare KV Namespace for Sessions (Prepared)
+  "kv_namespaces": [
+    {
+      "binding": "SESSION",
+      "id": "local-kv-placeholder"
+    }
+  ],
+  // Public/Runtime Environment Variables (non-secret defaults)
+  "vars": {
+    "APP_ENV": "development",
+    "APP_URL": "http://localhost:4321",
+    "SITE_NAME": "MindMetrics"
+  }
+}

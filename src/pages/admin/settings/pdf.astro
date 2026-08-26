@@ -1,0 +1,226 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Card from '@/components/ui/Card.astro';
+import Button from '@/components/ui/Button.astro';
+import Input from '@/components/ui/Input.astro';
+import { ConfigService } from '@/services/config.service';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime?.env;
+const db = env?.DB || null;
+
+const configService = new ConfigService(db);
+const config = await configService.getSiteConfig();
+const settings = config.settings;
+---
+
+<AdminLayout title="PDF Generation Settings — Admin Control">
+  <div class="space-y-8 max-w-4xl">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          PDF Generation & Branding Settings
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Control document styling, dynamic brand colors, and export permissions
+        </p>
+      </div>
+
+      <a
+        href="/admin/reports/files"
+        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+      >
+        📁 View File Ledger
+      </a>
+    </div>
+
+    <!-- Feedback Message Container -->
+    <div id="status-msg" class="hidden p-4 rounded-xl text-xs font-semibold"></div>
+
+    <form id="pdf-settings-form" class="space-y-6">
+      <!-- Branding & Identification -->
+      <Card class="p-6 sm:p-8 space-y-6">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+          Document Branding & Header
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            id="pdf_brand_name"
+            name="pdf_brand_name"
+            label="Brand Name"
+            value={settings.pdf_brand_name || 'Psychology Calculator'}
+            placeholder="Psychology Calculator"
+            required
+          />
+
+          <Input
+            id="pdf_brand_domain"
+            name="pdf_brand_domain"
+            label="Website Domain"
+            value={settings.pdf_brand_domain || 'psychologycalculator.com'}
+            placeholder="psychologycalculator.com"
+            required
+          />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            id="pdf_primary_color"
+            name="pdf_primary_color"
+            label="Primary Brand Color (Hex)"
+            value={settings.pdf_primary_color || '#4f46e5'}
+            placeholder="#4f46e5"
+            required
+          />
+
+          <Input
+            id="pdf_secondary_color"
+            name="pdf_secondary_color"
+            label="Secondary Accent Color (Hex)"
+            value={settings.pdf_secondary_color || '#0ea5e9'}
+            placeholder="#0ea5e9"
+            required
+          />
+        </div>
+      </Card>
+
+      <!-- Footer & Legal Disclaimers -->
+      <Card class="p-6 sm:p-8 space-y-6">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+          Footer & Disclaimers
+        </h2>
+
+        <div class="space-y-1.5">
+          <label for="pdf_footer_text" class="text-xs font-semibold text-slate-700">
+            Footer Text (Applies to all pages)
+          </label>
+          <input
+            type="text"
+            id="pdf_footer_text"
+            name="pdf_footer_text"
+            value={settings.pdf_footer_text || 'Psychology Calculator — Official Psychometric Evaluation Report'}
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="pdf_disclaimer" class="text-xs font-semibold text-slate-700">
+            Default Psychometric Disclaimer
+          </label>
+          <textarea
+            id="pdf_disclaimer"
+            name="pdf_disclaimer"
+            rows="3"
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >{settings.pdf_disclaimer || 'This assessment report is designed solely for self-reflection and educational purposes. It does not constitute a clinical psychological diagnosis or medical advice.'}</textarea>
+        </div>
+      </Card>
+
+      <!-- Generation Toggles -->
+      <Card class="p-6 sm:p-8 space-y-6">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+          Export Feature Switches
+        </h2>
+
+        <div class="space-y-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="pdf_enabled"
+              name="pdf_enabled"
+              checked={settings.pdf_enabled !== 'false'}
+              class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+            />
+            <div>
+              <div class="text-xs font-bold text-slate-900">Enable PDF Generation System</div>
+              <div class="text-[11px] text-slate-500">Master switch allowing PDF generation across the application</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="pdf_basic_enabled"
+              name="pdf_basic_enabled"
+              checked={settings.pdf_basic_enabled !== 'false'}
+              class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+            />
+            <div>
+              <div class="text-xs font-bold text-slate-900">Enable Basic Result PDFs</div>
+              <div class="text-[11px] text-slate-500">Allow free/guest users to download deterministic assessment result documents</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="pdf_ai_enabled"
+              name="pdf_ai_enabled"
+              checked={settings.pdf_ai_enabled !== 'false'}
+              class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+            />
+            <div>
+              <div class="text-xs font-bold text-slate-900">Enable Detailed AI Report PDFs</div>
+              <div class="text-[11px] text-slate-500">Allow authenticated users to export detailed AI psychological interpretation documents</div>
+            </div>
+          </label>
+        </div>
+      </Card>
+
+      <div class="flex justify-end gap-3">
+        <Button type="submit" variant="primary" id="save-btn">
+          Save PDF Settings
+        </Button>
+      </div>
+    </form>
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('pdf-settings-form') as HTMLFormElement;
+    const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+    const statusMsg = document.getElementById('status-msg') as HTMLDivElement;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      statusMsg.className = 'hidden';
+
+      const formData = new FormData(form);
+      const settingsPayload = {
+        pdf_brand_name: formData.get('pdf_brand_name') as string,
+        pdf_brand_domain: formData.get('pdf_brand_domain') as string,
+        pdf_primary_color: formData.get('pdf_primary_color') as string,
+        pdf_secondary_color: formData.get('pdf_secondary_color') as string,
+        pdf_footer_text: formData.get('pdf_footer_text') as string,
+        pdf_disclaimer: formData.get('pdf_disclaimer') as string,
+        pdf_enabled: formData.get('pdf_enabled') ? 'true' : 'false',
+        pdf_basic_enabled: formData.get('pdf_basic_enabled') ? 'true' : 'false',
+        pdf_ai_enabled: formData.get('pdf_ai_enabled') ? 'true' : 'false'
+      };
+
+      try {
+        const res = await fetch('/api/v1/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings: settingsPayload })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Failed to save settings');
+
+        statusMsg.textContent = '✓ PDF configuration saved successfully!';
+        statusMsg.className = 'p-4 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+      } catch (err: any) {
+        statusMsg.textContent = `❌ ${err.message || 'Error updating settings'}`;
+        statusMsg.className = 'p-4 rounded-xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 block';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save PDF Settings';
+      }
+    });
+  </script>
+</AdminLayout>

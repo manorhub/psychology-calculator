@@ -1,0 +1,80 @@
+---
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  baseUrl: string;
+  totalItems?: number;
+  limit?: number;
+}
+
+const { currentPage, totalPages, baseUrl, totalItems, limit = 10 } = Astro.props;
+
+function getPageUrl(page: number): string {
+  const url = new URL(baseUrl, 'http://localhost');
+  url.searchParams.set('page', page.toString());
+  if (limit) url.searchParams.set('limit', limit.toString());
+  return `${url.pathname}?${url.searchParams.toString()}`;
+}
+
+const hasPrev = currentPage > 1;
+const hasNext = currentPage < totalPages;
+---
+
+{totalPages > 1 && (
+  <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-white border-t border-slate-200">
+    <div class="text-xs text-slate-500">
+      Showing page <span class="font-semibold text-slate-900">{currentPage}</span> of{' '}
+      <span class="font-semibold text-slate-900">{totalPages}</span>
+      {totalItems !== undefined && (
+        <span> ({totalItems} total items)</span>
+      )}
+    </div>
+
+    <div class="flex items-center gap-2">
+      {hasPrev ? (
+        <a
+          href={getPageUrl(currentPage - 1)}
+          class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Previous
+        </a>
+      ) : (
+        <span class="px-3 py-1.5 text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 rounded-lg cursor-not-allowed">
+          Previous
+        </span>
+      )}
+
+      <div class="flex items-center gap-1">
+        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+          const pageNum = i + 1;
+          const isCurrent = pageNum === currentPage;
+          return (
+            <a
+              href={getPageUrl(pageNum)}
+              class={`w-8 h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-colors ${
+                isCurrent
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-700 hover:bg-slate-100 border border-transparent'
+              }`}
+            >
+              {pageNum}
+            </a>
+          );
+        })}
+      </div>
+
+      {hasNext ? (
+        <a
+          href={getPageUrl(currentPage + 1)}
+          class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Next
+        </a>
+      ) : (
+        <span class="px-3 py-1.5 text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 rounded-lg cursor-not-allowed">
+          Next
+        </span>
+      )}
+    </div>
+  </div>
+)}
