@@ -23,7 +23,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
     !url.pathname.startsWith('/api/health')
   ) {
     const canonicalTarget = `https://${targetHost}${url.pathname}${url.search}`;
-    return context.redirect(canonicalTarget, 301);
+    return new Response(null, {
+      status: 301,
+      headers: {
+        Location: canonicalTarget,
+        'Cache-Control': 'public, max-age=31536000, immutable'
+      }
+    });
   }
 
   // 1. Resolve User Session from Cookie
