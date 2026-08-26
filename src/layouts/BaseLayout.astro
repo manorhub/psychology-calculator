@@ -30,7 +30,7 @@ const langInfo = SUPPORTED_LANGUAGES[currentLocale] || SUPPORTED_LANGUAGES[DEFAU
     />
     <slot name="head" />
   </head>
-  <body class="min-h-full flex flex-col bg-slate-50 text-slate-900 selection:bg-teal-500 selection:text-white">
+  <body class="min-h-full flex flex-col bg-slate-50 text-slate-900 selection:bg-teal-500 selection:text-white overflow-x-hidden w-full">
     <slot />
   </body>
 </html>
