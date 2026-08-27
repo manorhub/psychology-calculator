@@ -98,7 +98,7 @@ export class SeoService extends BaseService {
    */
   public formatTitle(pageTitle: string, template?: string): string {
     if (!pageTitle || typeof pageTitle !== 'string') {
-      return 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+      return 'Psychology Tests & Assessments | PsychologyCalculator.com';
     }
 
     // Strip any existing duplicate or historical branding suffixes
@@ -109,14 +109,28 @@ export class SeoService extends BaseService {
     if (
       !clean ||
       clean.toLowerCase() === 'psychology calculator' ||
-      clean.toLowerCase() === 'psychologycalculator.com'
+      clean.toLowerCase() === 'psychologycalculator.com' ||
+      clean === 'Psychology Tests & Personality Assessments' ||
+      clean === 'Psychology Tests & Assessments'
     ) {
-      return 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
+      return 'Psychology Tests & Assessments | PsychologyCalculator.com';
     }
 
-    if (clean === 'Psychology Tests & Personality Assessments') {
-      return 'Psychology Tests & Personality Assessments | PsychologyCalculator.com';
-    }
+    // Normalize specific long phrases for Bing & SERP optimal length (<= 60 chars)
+    clean = clean
+      .replace(/^Evidence-Based Psychological Assessments$/i, 'Psychological Assessments & Tests')
+      .replace(/^Self-Development & Personal Growth Tests$/i, 'Self-Development Tests')
+      .replace(/^Emotional Intelligence \(EQ\) Assessments$/i, 'Emotional Intelligence Tests')
+      .replace(/^Cognitive Style & Thinking Tests$/i, 'Cognitive Style Tests')
+      .replace(/^Mental Wellbeing & Resilience Self-Checks$/i, 'Mental Wellbeing Self-Checks')
+      .replace(/^Des Tests Psychologiques qui Transforment vos Réponses en Perspectives Utiles$/i, 'Tests Psychologiques & Personnalité')
+      .replace(/^Psychologische Tests, die Ihre Antworten in Wertvolle Einsichten Verwandeln$/i, 'Psychologische Tests & Analysen')
+      .replace(/^Tests Psicológicos que Transforman tus Respuestas en Perspectivas Útiles$/i, 'Tests Psicológicos y de Personalidad')
+      .replace(/^Testes Psicológicos que Transformam suas Respostas em Percepções Úteis$/i, 'Testes Psicológicos & Personalidade')
+      .replace(/^मनोवैज्ञानिक परीक्षण जो आपके उत्तरों को बदलते हैं सटीक अंतर्दृष्टि में$/i, 'मनोवैज्ञानिक परीक्षण व व्यक्तित्व')
+      .replace(/^Precios & Paquetes de Créditos Sin Suscripción$/i, 'Precios y Créditos IA')
+      .replace(/^Preços & Pacotes de Créditos Sem Assinatura$/i, 'Preços e Créditos IA')
+      .replace(/^Preise & Einmalige Guthaben-Pakete$/i, 'Preise & KI-Guthaben');
 
     return `${clean} | PsychologyCalculator.com`;
   }

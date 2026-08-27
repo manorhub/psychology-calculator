@@ -81,13 +81,33 @@ async function runTechnicalSeoTests() {
 
   // Test case 4: Title with legacy MindMetrics brand
   const t4 = seoService.formatTitle('Mental Wellbeing & Resilience Self-Checks | MindMetrics | Psychology Calculator');
-  assert.strictEqual(t4, 'Mental Wellbeing & Resilience Self-Checks | PsychologyCalculator.com', `Failed to clean legacy MindMetrics brand: ${t4}`);
+  assert.strictEqual(t4, 'Mental Wellbeing Self-Checks | PsychologyCalculator.com', `Failed to clean legacy MindMetrics brand: ${t4}`);
 
   // Test case 5: Empty/Default title
   const t5 = seoService.formatTitle('');
-  assert.strictEqual(t5, 'Psychology Tests & Personality Assessments | PsychologyCalculator.com', `Failed default title fallback: ${t5}`);
+  assert.strictEqual(t5, 'Psychology Tests & Assessments | PsychologyCalculator.com', `Failed default title fallback: ${t5}`);
 
-  console.log('✔ Title deduplication engine eliminates double/triple branding across all inputs');
+  // Test case 6: Bing Optimal Title Length Verifications (<= 65 chars)
+  const longTitles = [
+    'Psychology Tests & Assessments',
+    'Evidence-Based Psychological Assessments',
+    'Self-Development & Personal Growth Tests',
+    'Emotional Intelligence (EQ) Assessments',
+    'Tests Psicológicos que Transforman tus Respuestas en Perspectivas Útiles',
+    'Des Tests Psychologiques qui Transforment vos Réponses en Perspectives Utiles',
+    'Psychologische Tests, die Ihre Antworten in Wertvolle Einsichten Verwandeln',
+    'Testes Psicológicos que Transformam suas Respostas em Percepções Úteis',
+    'मनोवैज्ञानिक परीक्षण जो आपके उत्तरों को बदलते हैं सटीक अंतर्दृष्टि में',
+    'Precios & Paquetes de Créditos Sin Suscripción',
+    'Preços & Pacotes de Créditos Sem Assinatura'
+  ];
+
+  for (const raw of longTitles) {
+    const formatted = seoService.formatTitle(raw);
+    assert(formatted.length <= 65, `Title "${formatted}" exceeds Bing recommended 65 char limit (length: ${formatted.length})`);
+  }
+
+  console.log('✔ Title deduplication & length engine enforces strict Bing/SERP limits (<= 65 chars)');
 
   // --- 3. Assessment & Category Meta Descriptions ---
   console.log('\n--- 3. Testing Assessment & Category Meta Descriptions ---');

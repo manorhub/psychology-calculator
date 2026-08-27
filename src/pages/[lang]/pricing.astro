@@ -24,10 +24,18 @@ const db = getD1Database(env);
 
 const creditService = new CreditService(db);
 const packages = await creditService.getActivePackages();
+const localizedPricingTitles: Record<SupportedLocale, string> = {
+  en: 'AI Report Credits & Pricing',
+  es: 'Precios y Créditos IA',
+  fr: 'Tarifs & Crédits IA',
+  de: 'Preise & KI-Guthaben',
+  pt: 'Preços e Créditos IA',
+  hi: 'मूल्य निर्धारण व क्रेडिट्स'
+};
 ---
 
 <PublicLayout
-  title={`${t.nav.pricing} & ${t.credits.packagesTitle}`}
+  title={localizedPricingTitles[currentLocale] || `${t.nav.pricing} & Credits`}
   description={t.credits.packagesSubtitle}
   locale={currentLocale}
 >

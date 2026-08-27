@@ -230,10 +230,19 @@ const faqPageSchema = {
     }
   }))
 };
+
+const localizedHomeTitles: Record<SupportedLocale, string> = {
+  en: 'Psychology Tests & Assessments',
+  es: 'Tests Psicológicos y de Personalidad',
+  fr: 'Tests Psychologiques & Personnalité',
+  de: 'Psychologische Tests & Analysen',
+  pt: 'Testes Psicológicos & Personalidade',
+  hi: 'मनोवैज्ञानिक परीक्षण व व्यक्तित्व'
+};
 ---
 
 <PublicLayout
-  title={`${lt.hero.title} ${lt.hero.titleHighlight} | PsychologyCalculator.com`}
+  title={localizedHomeTitles[currentLocale] || 'Psychology Tests & Assessments'}
   description={lt.hero.subtitle}
   locale={currentLocale}
 >
