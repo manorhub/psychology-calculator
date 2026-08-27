@@ -1,6 +1,5 @@
 ---
-import BaseLayout from '@/layouts/BaseLayout.astro';
-import SEOHead from '@/components/seo/SEOHead.astro';
+import PublicLayout from '@/layouts/PublicLayout.astro';
 import StructuredData from '@/components/seo/StructuredData.astro';
 import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
 import Card from '@/components/ui/Card.astro';
@@ -105,17 +104,14 @@ function renderMarkdownContent(content: string): string {
 const renderedHtml = renderMarkdownContent(post.content);
 ---
 
-<BaseLayout>
-  <SEOHead
-    slot="head"
-    title={pageMeta.title}
-    description={pageMeta.description}
-    canonicalUrl={pageMeta.canonicalUrl}
-    noindex={pageMeta.noindex}
-    ogImage={post.featured_image_url || pageMeta.ogImage}
-    ogType="article"
-  />
-
+<PublicLayout
+  title={pageMeta.title}
+  description={pageMeta.description}
+  canonicalUrl={pageMeta.canonicalUrl}
+  noindex={pageMeta.noindex}
+  ogImage={post.featured_image_url || pageMeta.ogImage}
+  ogType="article"
+>
   <StructuredData slot="head" schema={articleSchema} />
 
   <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -273,4 +269,4 @@ const renderedHtml = renderMarkdownContent(post.content);
       </div>
     )}
   </article>
-</BaseLayout>
+</PublicLayout>

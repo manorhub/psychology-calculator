@@ -100,6 +100,13 @@ assert(getLocalizedPath('/assessments/big-five', 'es') === '/es/assessments/big-
 assert(getLocalizedPath('/pricing', 'de') === '/de/pricing', 'German pricing route must be /de/pricing');
 assert(getLocalizedPath('/es/pricing', 'fr') === '/fr/pricing', 'Switching from /es/pricing to fr must yield /fr/pricing');
 
+// Non-localized routes & External/mailto safety
+assert(getLocalizedPath('mailto:support@psychologycalculator.com', 'fr') === 'mailto:support@psychologycalculator.com', 'Mailto links must remain un-prefixed');
+assert(getLocalizedPath('/login', 'es') === '/login', 'Login route must not be prefixed with locale');
+assert(getLocalizedPath('/register', 'de') === '/register', 'Register route must not be prefixed with locale');
+assert(getLocalizedPath('/forgot-password', 'hi') === '/forgot-password', 'Forgot password route must not be prefixed with locale');
+assert(getLocalizedPath('/dashboard/credits/checkout?package=pkg_pro', 'pt') === '/dashboard/credits/checkout?package=pkg_pro', 'Dashboard checkout route must not be prefixed with locale');
+
 // 5. Date Formatting Localization
 console.log('\n5. Testing Localized Date Formatting...');
 const sampleDate = new Date('2026-08-25T12:00:00Z');

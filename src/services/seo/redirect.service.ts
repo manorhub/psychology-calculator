@@ -4,6 +4,8 @@ import { executeQuery, fetchFirst, executeMutation } from '@/lib/db/query';
 import type { RedirectRow } from '@/types/database';
 import { ValidationError } from '@/lib/errors';
 
+import { isValidLocale, stripLocaleFromPath, getLocalizedPath, type SupportedLocale } from '@/i18n';
+
 export interface RedirectResult {
   found: boolean;
   targetPath?: string;
@@ -29,7 +31,7 @@ export class RedirectService extends BaseService {
   }
 
   /**
-   * Resolves URL redirect with loop detection and multi-hop safety
+   * Resolves URL redirect with loop detection, multi-hop safety, and locale-prefix awareness
    */
   public async resolveRedirect(requestPath: string): Promise<RedirectResult> {
     if (!this.db) return { found: false };
@@ -72,6 +74,26 @@ export class RedirectService extends BaseService {
         targetPath: finalTarget,
         statusCode: finalStatus
       };
+    }
+
+    // Locale-aware fallback: if request is e.g. /fr/old-path, check if /old-path redirects
+    const segments = normalized.split('/').filter(Boolean);
+    if (segments.length > 0 && isValidLocale(segments[0])) {
+      const locale = segments[0] as SupportedLocale;
+      const strippedPath = stripLocaleFromPath(normalized);
+      if (strippedPath !== normalized) {
+        const strippedResult = await this.resolveRedirect(strippedPath);
+        if (strippedResult.found && strippedResult.targetPath) {
+          const localizedTarget = getLocalizedPath(strippedResult.targetPath, locale);
+          if (localizedTarget !== normalized) {
+            return {
+              found: true,
+              targetPath: localizedTarget,
+              statusCode: strippedResult.statusCode || 301
+            };
+          }
+        }
+      }
     }
 
     return { found: false };

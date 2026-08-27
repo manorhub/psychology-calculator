@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://www.psychologycalculator.com',
+  trailingSlash: 'never',
   output: 'server',
   adapter: cloudflare({
     imageService: 'cloudflare',

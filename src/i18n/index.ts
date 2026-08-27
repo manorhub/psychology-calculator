@@ -14,7 +14,9 @@ import {
   getLocaleFromPath,
   stripLocaleFromPath,
   getLocalizedPath,
-  formatLocalizedDate
+  formatLocalizedDate,
+  isNonLocalizedPath,
+  NON_LOCALIZED_PATH_PREFIXES
 } from './config';
 
 export {
@@ -27,7 +29,9 @@ export {
   getLocaleFromPath,
   stripLocaleFromPath,
   getLocalizedPath,
-  formatLocalizedDate
+  formatLocalizedDate,
+  isNonLocalizedPath,
+  NON_LOCALIZED_PATH_PREFIXES
 };
 
 export const dictionaries: Record<SupportedLocale, typeof en> = {

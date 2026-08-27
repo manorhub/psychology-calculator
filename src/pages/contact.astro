@@ -1,6 +1,5 @@
 ---
-import BaseLayout from '@/layouts/BaseLayout.astro';
-import SEOHead from '@/components/seo/SEOHead.astro';
+import PublicLayout from '@/layouts/PublicLayout.astro';
 import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
 import Card from '@/components/ui/Card.astro';
 import Button from '@/components/ui/Button.astro';
@@ -30,15 +29,12 @@ const breadcrumbItems = linkService.getBreadcrumbs([
 ]);
 ---
 
-<BaseLayout>
-  <SEOHead
-    slot="head"
-    title={pageMeta.title}
-    description={pageMeta.description}
-    canonicalUrl={pageMeta.canonicalUrl}
-    noindex={pageMeta.noindex}
-    ogType="website"
-  />
+<PublicLayout
+  title={pageMeta.title}
+  description={pageMeta.description}
+  canonicalUrl={pageMeta.canonicalUrl}
+  noindex={pageMeta.noindex}
+>
 
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <div class="mb-8">
@@ -71,7 +67,7 @@ const breadcrumbItems = linkService.getBreadcrumbs([
             <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">🔒</span>
             <div>
               <div class="text-xs font-bold text-slate-900">Privacy & Data Requests</div>
-              <a href="/p/privacy-policy" class="text-xs text-indigo-600 hover:underline">
+              <a href="/privacy-policy" class="text-xs text-indigo-600 hover:underline">
                 View Privacy Guidelines
               </a>
             </div>
@@ -185,4 +181,4 @@ const breadcrumbItems = linkService.getBreadcrumbs([
       });
     }
   </script>
-</BaseLayout>
+</PublicLayout>

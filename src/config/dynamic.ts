@@ -34,7 +34,7 @@ export const DEFAULT_DYNAMIC_CONFIG: DynamicSiteConfig = {
       links: [
         { label: 'About Us', href: '/about' },
         { label: 'How It Works', href: '/#how-it-works' },
-        { label: 'Contact', href: 'mailto:support@psychologycalculator.com' }
+        { label: 'Contact', href: 'mailto:support@psychologycalculator.com', isExternal: true }
       ]
     },
     {

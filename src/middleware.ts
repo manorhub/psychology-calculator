@@ -7,6 +7,7 @@ import { getSessionCookie, clearSessionCookie } from '@/lib/auth/cookies';
 import { AuthService } from '@/services/auth.service';
 import { RedirectService } from '@/services/seo/redirect.service';
 import { fetchFirst } from '@/lib/db/query';
+import { isValidLocale, stripLocaleFromPath, isNonLocalizedPath } from '@/i18n';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const requestId = crypto.randomUUID();
@@ -93,16 +94,45 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // 3. Dynamic URL Redirect Resolution
-  if (db && !url.pathname.startsWith('/api/') && !url.pathname.startsWith('/_astro/')) {
-    try {
-      const redirectService = new RedirectService(db);
-      const redirectMatch = await redirectService.resolveRedirect(url.pathname);
-      if (redirectMatch.found && redirectMatch.targetPath) {
-        return context.redirect(redirectMatch.targetPath, (redirectMatch.statusCode as 301 | 302) || 301);
+  // 3. Canonical Path Normalization & Legacy Route Corrections
+  if (!url.pathname.startsWith('/api/') && !url.pathname.startsWith('/_astro/')) {
+    // A. Trailing slash normalization: e.g. /pt/ -> /pt, /about/ -> /about
+    if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
+      const cleanPath = url.pathname.replace(/\/+$/, '');
+      const search = url.search || '';
+      return context.redirect(`${cleanPath}${search}`, 301);
+    }
+
+    // B. Legacy / Malformed mailto relative URL normalization
+    if (url.pathname.includes('/mailto:') || url.pathname.startsWith('mailto:')) {
+      const email = 'support@psychologycalculator.com';
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `mailto:${email}` }
+      });
+    }
+
+    // C. Non-localized routes requested with language prefixes (e.g. /es/login -> /login, /de/dashboard/... -> /dashboard/...)
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+    if (pathSegments.length > 0 && isValidLocale(pathSegments[0])) {
+      const strippedPath = stripLocaleFromPath(url.pathname);
+      if (isNonLocalizedPath(strippedPath)) {
+        const search = url.search || '';
+        return context.redirect(`${strippedPath}${search}`, 301);
       }
-    } catch {
-      // Ignore redirect check error to avoid blocking request
+    }
+
+    // D. Dynamic Database URL Redirect Resolution (with multi-language support)
+    if (db) {
+      try {
+        const redirectService = new RedirectService(db);
+        const redirectMatch = await redirectService.resolveRedirect(url.pathname);
+        if (redirectMatch.found && redirectMatch.targetPath) {
+          return context.redirect(redirectMatch.targetPath, (redirectMatch.statusCode as 301 | 302) || 301);
+        }
+      } catch {
+        // Ignore redirect check error to avoid blocking request
+      }
     }
   }
 

@@ -105,13 +105,54 @@ export function stripLocaleFromPath(pathname: string): string {
   return pathname.startsWith('/') ? pathname : `/${pathname}`;
 }
 
+export const NON_LOCALIZED_PATH_PREFIXES = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+  '/dashboard',
+  '/account',
+  '/admin',
+  '/api',
+  '/auth',
+  '/_astro'
+];
+
+/**
+ * Checks if a pathname is non-localized (auth, dashboard, admin, API, etc.)
+ */
+export function isNonLocalizedPath(pathname: string): boolean {
+  if (!pathname) return false;
+  const clean = stripLocaleFromPath(pathname);
+  const pathOnly = clean.split('?')[0].split('#')[0];
+  return NON_LOCALIZED_PATH_PREFIXES.some(
+    (prefix) => pathOnly === prefix || pathOnly.startsWith(`${prefix}/`)
+  );
+}
+
 /**
  * Generates a localized URL for a given route and target locale
  * Root English routes do NOT have an /en prefix to maintain canonical stability
  * Other locales get prefixed: /[locale]/path
+ * External links, mailto, tel, anchors, and non-localized paths are left un-prefixed
  */
 export function getLocalizedPath(pathname: string, targetLocale: SupportedLocale): string {
+  if (!pathname) return '/';
+  if (
+    pathname.startsWith('mailto:') ||
+    pathname.startsWith('tel:') ||
+    pathname.startsWith('http://') ||
+    pathname.startsWith('https://') ||
+    pathname.startsWith('#') ||
+    pathname.startsWith('javascript:')
+  ) {
+    return pathname;
+  }
   const cleanPath = stripLocaleFromPath(pathname);
+  if (isNonLocalizedPath(cleanPath)) {
+    return cleanPath;
+  }
   if (targetLocale === DEFAULT_LOCALE) {
     return cleanPath;
   }

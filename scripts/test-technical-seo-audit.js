@@ -127,10 +127,25 @@ async function runTechnicalSeoTests() {
   const rRelCat = await redirectService.resolveRedirect('/assessments/category/relationships-attachment');
   assert(rRelCat.found && rRelCat.targetPath === '/assessments/category/relationships' && rRelCat.statusCode === 301, 'Redirect old category slug failed');
 
+  const rRelCatFr = await redirectService.resolveRedirect('/fr/assessments/category/relationships-attachment');
+  assert(rRelCatFr.found && rRelCatFr.targetPath === '/fr/assessments/category/relationships' && rRelCatFr.statusCode === 301, 'Localized category redirect failed');
+
   const rCopyAsm = await redirectService.resolveRedirect('/assessments/emotional-intelligence-test-copy');
   assert(rCopyAsm.found && rCopyAsm.targetPath === '/assessments/emotional-intelligence-test' && rCopyAsm.statusCode === 301, 'Redirect duplicate copy assessment failed');
 
-  console.log('✔ 301 Redirect engine cleanly handles legacy aliases and duplicate assessment paths');
+  const rCopyAsmEs = await redirectService.resolveRedirect('/es/assessments/emotional-intelligence-test-copy');
+  assert(rCopyAsmEs.found && rCopyAsmEs.targetPath === '/es/assessments/emotional-intelligence-test' && rCopyAsmEs.statusCode === 301, 'Localized duplicate copy assessment redirect failed');
+
+  const rBigFiveOcean = await redirectService.resolveRedirect('/assessments/big-five-ocean-personality-test');
+  assert(rBigFiveOcean.found && rBigFiveOcean.targetPath === '/assessments/big-five-personality-test' && rBigFiveOcean.statusCode === 301, 'Redirect /assessments/big-five-ocean-personality-test -> /assessments/big-five-personality-test failed');
+
+  const rBigFiveOceanDe = await redirectService.resolveRedirect('/de/assessments/big-five-ocean-personality-test');
+  assert(rBigFiveOceanDe.found && rBigFiveOceanDe.targetPath === '/de/assessments/big-five-personality-test' && rBigFiveOceanDe.statusCode === 301, 'Localized /de/assessments/big-five-ocean-personality-test redirect failed');
+
+  const rLegacyP = await redirectService.resolveRedirect('/p/privacy-policy');
+  assert(rLegacyP.found && rLegacyP.targetPath === '/privacy-policy' && rLegacyP.statusCode === 301, 'Redirect /p/privacy-policy -> /privacy-policy failed');
+
+  console.log('✔ 301 Redirect engine cleanly handles legacy aliases, localized aliases, and duplicate assessment paths');
 
   // --- 6. XML Sitemap Generation ---
   console.log('\n--- 6. Testing Dynamic XML Sitemap Generation ---');

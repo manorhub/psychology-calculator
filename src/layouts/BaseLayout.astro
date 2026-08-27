@@ -8,11 +8,12 @@ interface Props {
   description?: string;
   canonicalUrl?: string;
   ogImage?: string;
+  ogType?: 'website' | 'article';
   noindex?: boolean;
   locale?: string;
 }
 
-const { title, description, canonicalUrl, ogImage, noindex, locale: propLocale } = Astro.props;
+const { title, description, canonicalUrl, ogImage, ogType, noindex, locale: propLocale } = Astro.props;
 const currentLocale = normalizeLocale(propLocale || Astro.currentLocale || Astro.url.pathname.split('/')[1]);
 const langInfo = SUPPORTED_LANGUAGES[currentLocale] || SUPPORTED_LANGUAGES[DEFAULT_LOCALE];
 ---
@@ -25,6 +26,7 @@ const langInfo = SUPPORTED_LANGUAGES[currentLocale] || SUPPORTED_LANGUAGES[DEFAU
       description={description}
       canonicalUrl={canonicalUrl}
       ogImage={ogImage}
+      ogType={ogType}
       noindex={noindex}
       locale={currentLocale}
     />

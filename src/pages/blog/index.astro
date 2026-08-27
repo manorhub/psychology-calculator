@@ -1,6 +1,5 @@
 ---
-import BaseLayout from '@/layouts/BaseLayout.astro';
-import SEOHead from '@/components/seo/SEOHead.astro';
+import PublicLayout from '@/layouts/PublicLayout.astro';
 import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
 import Card from '@/components/ui/Card.astro';
 import Badge from '@/components/ui/Badge.astro';
@@ -50,15 +49,13 @@ const breadcrumbItems = linkService.getBreadcrumbs([
 ]);
 ---
 
-<BaseLayout>
-  <SEOHead
-    slot="head"
-    title={pageMeta.title}
-    description={pageMeta.description}
-    canonicalUrl={pageMeta.canonicalUrl}
-    noindex={pageMeta.noindex}
-    ogType="website"
-  />
+<PublicLayout
+  title={pageMeta.title}
+  description={pageMeta.description}
+  canonicalUrl={pageMeta.canonicalUrl}
+  noindex={pageMeta.noindex}
+  ogType="website"
+>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <div class="mb-8">
@@ -276,4 +273,4 @@ const breadcrumbItems = linkService.getBreadcrumbs([
       </div>
     )}
   </div>
-</BaseLayout>
+</PublicLayout>
