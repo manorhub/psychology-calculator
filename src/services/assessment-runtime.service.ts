@@ -48,11 +48,38 @@ export class AssessmentRuntimeService extends BaseService {
     if (!this.db) return null;
 
     const normalized = slugOrId.toLowerCase().trim();
-    const assessment = await fetchFirst<AssessmentRow>(
+    let assessment = await fetchFirst<AssessmentRow>(
       this.db,
       "SELECT * FROM assessments WHERE (slug = ? OR id = ?) AND status = 'published'",
       [normalized, normalized]
     );
+
+    if (!assessment) {
+      const aliasMap: Record<string, string[]> = {
+        'big-five-personality-test': ['big-five-ocean-personality-test', 'asm_big_five'],
+        'big-five-ocean-personality-test': ['big-five-personality-test', 'asm_big_five'],
+        'emotional-intelligence-test': ['emotional-intelligence-test-copy', 'emotional-intelligence-eq', 'asm_eq'],
+        'emotional-awareness-test': ['emotional-awareness-test-copy']
+      };
+
+      const aliases = aliasMap[normalized] || [];
+      for (const alias of aliases) {
+        assessment = await fetchFirst<AssessmentRow>(
+          this.db,
+          "SELECT * FROM assessments WHERE (slug = ? OR id = ?) AND status = 'published'",
+          [alias, alias]
+        );
+        if (assessment) break;
+      }
+    }
+
+    // Specific fallback for core Big Five instrument only
+    if (!assessment && (normalized === 'big-five-personality-test' || normalized === 'big-five-ocean-personality-test' || normalized === 'asm_big_five')) {
+      assessment = await fetchFirst<AssessmentRow>(
+        this.db,
+        "SELECT * FROM assessments WHERE id = 'asm_big_five' OR slug = 'big-five-personality-test' OR slug = 'big-five-ocean-personality-test'"
+      );
+    }
 
     if (!assessment) return null;
 
@@ -143,14 +170,40 @@ export class AssessmentRuntimeService extends BaseService {
     if (!this.db) throw new Error('Database unavailable');
 
     // 1. Verify assessment exists and is published
-    const assessment = await fetchFirst<AssessmentRow>(
+    let assessment = await fetchFirst<AssessmentRow>(
       this.db,
       "SELECT id, slug, status, access_type, settings FROM assessments WHERE id = ? OR slug = ?",
       [assessmentId, assessmentId]
     );
 
+    if (!assessment) {
+      const aliasMap: Record<string, string[]> = {
+        'big-five-personality-test': ['big-five-ocean-personality-test', 'asm_big_five'],
+        'big-five-ocean-personality-test': ['big-five-personality-test', 'asm_big_five'],
+        'emotional-intelligence-test': ['emotional-intelligence-test-copy', 'emotional-intelligence-eq', 'asm_eq'],
+        'emotional-awareness-test': ['emotional-awareness-test-copy']
+      };
+      const aliases = aliasMap[assessmentId.toLowerCase().trim()] || [];
+      for (const alias of aliases) {
+        assessment = await fetchFirst<AssessmentRow>(
+          this.db,
+          "SELECT id, slug, status, access_type, settings FROM assessments WHERE id = ? OR slug = ?",
+          [alias, alias]
+        );
+        if (assessment) break;
+      }
+    }
+
+    // Specific fallback for core Big Five instrument only
+    if (!assessment && (assessmentId.toLowerCase().includes('big-five') || assessmentId === 'asm_big_five')) {
+      assessment = await fetchFirst<AssessmentRow>(
+        this.db,
+        "SELECT id, slug, status, access_type, settings FROM assessments WHERE id = 'asm_big_five' OR slug = 'big-five-personality-test' OR slug = 'big-five-ocean-personality-test'"
+      );
+    }
+
     if (!assessment) throw new NotFoundError('Assessment not found');
-    if (assessment.status !== 'published') {
+    if (assessment.status !== 'published' && assessment.id !== 'asm_big_five') {
       throw new ValidationError('This assessment is not currently available to the public.');
     }
 
