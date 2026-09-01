@@ -35,5 +35,6 @@ VALUES
     ('red_p_disc', '/p/disclaimer', '/disclaimer', 301, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('red_p_about', '/p/about', '/about', 301, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('red_p_contact', '/p/contact', '/contact', 301, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('red_contact_us', '/contact-us', '/contact', 301, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('red_terms_short', '/terms', '/terms-of-service', 301, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('red_privacy_short', '/privacy', '/privacy-policy', 301, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

@@ -1,4 +1,4 @@
----
+﻿---
 import PublicLayout from '@/layouts/PublicLayout.astro';
 import Breadcrumbs from '@/components/seo/Breadcrumbs.astro';
 import Card from '@/components/ui/Card.astro';
@@ -20,13 +20,33 @@ const [pageMeta] = await Promise.all([
     pageType: 'page',
     path: '/contact',
     rawTitle: 'Contact Us | Psychology Calculator',
-    defaultDescription: 'Get in touch with the Psychology Calculator team regarding assessments, research inquiries, billing, or technical feedback.'
+    defaultDescription: 'Get in touch with the Psychology Calculator support & psychometrics research team regarding assessments, AI reports, billing, or collaborations.'
   })
 ]);
 
 const breadcrumbItems = linkService.getBreadcrumbs([
-  { name: 'Contact', path: '/contact' }
+  { name: 'Contact Us', path: '/contact' }
 ]);
+
+const contactPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  name: 'Contact Us - Psychology Calculator',
+  url: 'https://www.psychologycalculator.com/contact',
+  description: pageMeta.description,
+  mainEntity: {
+    '@type': 'Organization',
+    name: 'Psychology Calculator',
+    url: 'https://www.psychologycalculator.com',
+    email: 'support@psychologycalculator.com',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: 'support@psychologycalculator.com',
+      availableLanguage: ['English', 'Spanish', 'French', 'German', 'Portuguese', 'Hindi']
+    }
+  }
+};
 ---
 
 <PublicLayout
@@ -35,107 +55,210 @@ const breadcrumbItems = linkService.getBreadcrumbs([
   canonicalUrl={pageMeta.canonicalUrl}
   noindex={pageMeta.noindex}
 >
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(contactPageSchema)} />
+  </Fragment>
 
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
     <div class="mb-8">
       <Breadcrumbs items={breadcrumbItems} />
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-      <!-- Left Column: Business Info -->
+    <!-- Hero Header -->
+    <div class="max-w-3xl mb-12 sm:mb-16 space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 border border-teal-200/80 rounded-full text-teal-800 text-xs font-bold uppercase tracking-wider">
+        <span>✉️</span>
+        <span>Support & Research Inquiries</span>
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+        How Can We Help You?
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        Have questions regarding our psychometric assessments, AI interpretation reports, institutional research, or billing? Our team is dedicated to providing prompt, evidence-backed assistance.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <!-- Left Column: Quick Contact Channels & Details -->
       <div class="lg:col-span-5 space-y-6">
-        <Badge variant="info" size="md">Direct Inquiries</Badge>
-        <h1 class="text-3xl font-black text-slate-900 tracking-tight leading-tight">
-          How Can We Help?
-        </h1>
-        <p class="text-sm text-slate-600 leading-relaxed">
-          Whether you have questions regarding psychometric assessments, AI interpretation reports, institutional research, or billing inquiries, our team is here to assist.
-        </p>
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">Direct Channels</h2>
 
-        <div class="space-y-4 pt-4">
-          <div class="flex items-center gap-3">
-            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">✉️</span>
-            <div>
-              <div class="text-xs font-bold text-slate-900">Email Support</div>
-              <a href="mailto:support@psychologycalculator.com" class="text-xs text-indigo-600 hover:underline">
-                support@psychologycalculator.com
-              </a>
+          <div class="space-y-4">
+            <!-- Email Channel -->
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-teal-200 transition-colors">
+              <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
+                ✉️
+              </div>
+              <div class="space-y-1 min-w-0">
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Support</div>
+                <a href="mailto:support@psychologycalculator.com" class="text-sm font-semibold text-teal-700 hover:text-teal-800 hover:underline break-all">
+                  support@psychologycalculator.com
+                </a>
+                <p class="text-xs text-slate-500">General help, account inquiries & technical support</p>
+              </div>
             </div>
-          </div>
 
-          <div class="flex items-center gap-3">
-            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">🔒</span>
-            <div>
-              <div class="text-xs font-bold text-slate-900">Privacy & Data Requests</div>
-              <a href="/privacy-policy" class="text-xs text-indigo-600 hover:underline">
-                View Privacy Guidelines
-              </a>
+            <!-- Response Time -->
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
+                ⏱️
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Response Window</div>
+                <div class="text-sm font-semibold text-slate-900">&lt; 24 Business Hours</div>
+                <p class="text-xs text-slate-500">Monday through Friday (Global support)</p>
+              </div>
+            </div>
+
+            <!-- Privacy & Data Protection -->
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-teal-200 transition-colors">
+              <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
+                🔒
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Privacy & Data Requests</div>
+                <a href="/privacy-policy" class="text-sm font-semibold text-teal-700 hover:text-teal-800 hover:underline block">
+                  Privacy Policy & Data Guidelines →
+                </a>
+                <p class="text-xs text-slate-500">Data deletion, export, and compliance requests</p>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Academic & Psychometric Notice -->
+        <div class="p-5 rounded-2xl bg-teal-50/70 border border-teal-200/80 space-y-2">
+          <div class="flex items-center gap-2 text-teal-900 font-bold text-sm">
+            <span>🔬</span>
+            <span>Academic & Clinical Disclaimer</span>
+          </div>
+          <p class="text-xs text-teal-800 leading-relaxed">
+            PsychologyCalculator.com tests are psychometric self-assessments designed for educational, self-reflection, and personal growth purposes. For psychological crisis or clinical diagnosis, please consult a licensed healthcare professional.
+          </p>
+        </div>
       </div>
 
-      <!-- Right Column: Contact Form -->
+      <!-- Right Column: Interactive Contact Form -->
       <div class="lg:col-span-7">
-        <Card class="p-8 border-slate-200 bg-white shadow-sm">
-          <form id="contact-form" class="space-y-4">
-            <div>
-              <label for="name" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Your Name</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                required
-                placeholder="Jane Doe"
-                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors"
-              />
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-2xs space-y-6">
+          <div class="space-y-1 border-b border-slate-100 pb-4">
+            <h2 class="text-xl font-black text-slate-900 tracking-tight">Send Us a Message</h2>
+            <p class="text-xs text-slate-500">Fill out the form below and our team will get back to you directly.</p>
+          </div>
+
+          <form id="contact-form" class="space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="name" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Your Name <span class="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  placeholder="Jane Doe"
+                  class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <label for="email" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Email Address <span class="text-rose-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  placeholder="jane@example.com"
+                  class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors placeholder:text-slate-400"
+                />
+              </div>
             </div>
 
             <div>
-              <label for="email" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email Address</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                required
-                placeholder="jane@example.com"
-                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors"
-              />
-            </div>
-
-            <div>
-              <label for="subject" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Topic</label>
+              <label for="subject" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Topic / Subject <span class="text-rose-500">*</span>
+              </label>
               <select
                 id="subject"
                 name="subject"
-                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors"
+                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors"
               >
                 <option value="general">General Inquiries</option>
-                <option value="billing">Billing & Subscriptions</option>
+                <option value="billing">Billing & AI Report Credits</option>
                 <option value="research">Assessment & Psychometrics Research</option>
-                <option value="technical">Technical Support</option>
+                <option value="technical">Technical Support & Bug Report</option>
+                <option value="feedback">Feedback & Suggestions</option>
               </select>
             </div>
 
             <div>
-              <label for="message" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Message</label>
+              <label for="message" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Your Message <span class="text-rose-500">*</span>
+              </label>
               <textarea
                 id="message"
                 name="message"
-                rows="4"
+                rows="5"
                 required
-                placeholder="Please describe how we can assist you..."
-                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors"
+                placeholder="Please describe your question or inquiry in detail..."
+                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors placeholder:text-slate-400 leading-relaxed"
               ></textarea>
             </div>
 
-            <div id="contact-feedback" class="hidden text-xs font-semibold p-3 rounded-xl"></div>
+            <div id="contact-feedback" class="hidden text-xs font-semibold p-4 rounded-xl"></div>
 
-            <Button type="submit" id="submit-btn" variant="primary" size="lg" class="w-full">
-              Send Message
-            </Button>
+            <button
+              type="submit"
+              id="submit-btn"
+              class="w-full py-3.5 px-6 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Send Message</span>
+              <span>→</span>
+            </button>
           </form>
-        </Card>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick FAQ Section -->
+    <div class="mt-16 sm:mt-24 border-t border-slate-200/80 pt-12">
+      <div class="text-center max-w-2xl mx-auto mb-10 space-y-2">
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Frequently Asked Questions</h2>
+        <p class="text-sm text-slate-600">Quick answers to common questions about our platform.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+        <div class="p-6 bg-white rounded-2xl border border-slate-200/80 space-y-2">
+          <h3 class="font-bold text-slate-900 text-sm">Are assessment results free to view?</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Yes! All core psychological self-assessments provide immediate, comprehensive dimension breakdowns and normative percentiles 100% free with no account required.
+          </p>
+        </div>
+
+        <div class="p-6 bg-white rounded-2xl border border-slate-200/80 space-y-2">
+          <h3 class="font-bold text-slate-900 text-sm">How do AI Report Credits work?</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            AI Report Credits are pay-as-you-go packages for generating multi-dimensional synthetic dossiers and downloadable PDF reports. Credits never expire and require no recurring subscriptions.
+          </p>
+        </div>
+
+        <div class="p-6 bg-white rounded-2xl border border-slate-200/80 space-y-2">
+          <h3 class="font-bold text-slate-900 text-sm">How is my personal data handled?</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            We adhere strictly to privacy-first principles. Guest assessment data is session-isolated and never sold to third parties. Registered users can export or permanently delete their history at any time.
+          </p>
+        </div>
+
+        <div class="p-6 bg-white rounded-2xl border border-slate-200/80 space-y-2">
+          <h3 class="font-bold text-slate-900 text-sm">How can researchers or educators collaborate?</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            We welcome academic inquiries, psychometric validation studies, and research citations. Select "Assessment & Psychometrics Research" in the contact form above to get in touch.
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -149,7 +272,7 @@ const breadcrumbItems = linkService.getBreadcrumbs([
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         btn.disabled = true;
-        btn.textContent = 'Sending...';
+        btn.innerHTML = '<span>Sending Message...</span>';
         feedback.className = 'hidden';
 
         const formData = new FormData(form);
@@ -164,19 +287,19 @@ const breadcrumbItems = linkService.getBreadcrumbs([
           const data = await res.json();
 
           if (res.ok && data.success) {
-            feedback.className = 'text-xs font-semibold p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 block';
-            feedback.textContent = 'Thank you! Your message has been received and our team will get back to you promptly.';
+            feedback.className = 'text-xs font-semibold p-4 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 block space-y-1';
+            feedback.innerHTML = '<strong>Thank you!</strong> Your message has been received. Our team will review your inquiry and get back to you shortly.';
             form.reset();
           } else {
-            feedback.className = 'text-xs font-semibold p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 block';
+            feedback.className = 'text-xs font-semibold p-4 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 block';
             feedback.textContent = data.message || 'Unable to send message. Please try again.';
           }
         } catch {
-          feedback.className = 'text-xs font-semibold p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 block';
-          feedback.textContent = 'Network error. Please try again later.';
+          feedback.className = 'text-xs font-semibold p-4 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 block';
+          feedback.textContent = 'Network error. Please check your connection and try again.';
         } finally {
           btn.disabled = false;
-          btn.textContent = 'Send Message';
+          btn.innerHTML = '<span>Send Message</span> <span>→</span>';
         }
       });
     }

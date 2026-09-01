@@ -16,7 +16,8 @@ export const DEFAULT_DYNAMIC_CONFIG: DynamicSiteConfig = {
     { label: 'Assessments', href: '/assessments' },
     { label: 'How It Works', href: '/#how-it-works' },
     { label: 'Credits & Pricing', href: '/pricing' },
-    { label: 'About', href: '/about' }
+    { label: 'About', href: '/about' },
+    { label: 'Contact', href: '/contact' }
   ],
   footerSections: [
     {
@@ -34,7 +35,7 @@ export const DEFAULT_DYNAMIC_CONFIG: DynamicSiteConfig = {
       links: [
         { label: 'About Us', href: '/about' },
         { label: 'How It Works', href: '/#how-it-works' },
-        { label: 'Contact', href: 'mailto:support@psychologycalculator.com', isExternal: true }
+        { label: 'Contact Us', href: '/contact' }
       ]
     },
     {

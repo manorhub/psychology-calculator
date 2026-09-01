@@ -1,4 +1,4 @@
----
+﻿---
 import PublicLayout from '@/layouts/PublicLayout.astro';
 import {
   type SupportedLocale,
@@ -23,48 +23,172 @@ const { t } = useTranslations(currentLocale);
   description="Contact the PsychologyCalculator.com research and support team."
   locale={currentLocale}
 >
-  <div class="max-w-3xl mx-auto py-12 sm:py-20 px-4 sm:px-6 lg:px-8 space-y-10">
-    <div class="space-y-3">
-      <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 text-teal-800 text-xs font-bold rounded-full border border-teal-200">
-        <span>✉️</span> {t.nav.contact}
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+    <div class="max-w-3xl mb-12 space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 border border-teal-200/80 rounded-full text-teal-800 text-xs font-bold uppercase tracking-wider">
+        <span>✉️</span>
+        <span>{t.nav.contact}</span>
       </div>
-      <h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-        Get in Touch
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+        {t.nav.contact}
       </h1>
-      <p class="text-sm sm:text-base text-slate-600">
-        Have questions regarding an assessment, credit purchases, or research methodology? We're here to help.
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed">
+        {t.hero.subtitle}
       </p>
     </div>
 
-    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs space-y-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-          <div class="text-xs font-bold text-slate-400 uppercase">Support Email</div>
-          <div class="text-sm font-semibold text-slate-900">support@psychologycalculator.com</div>
-        </div>
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-          <div class="text-xs font-bold text-slate-400 uppercase">Average Response Time</div>
-          <div class="text-sm font-semibold text-slate-900">&lt; 24 Business Hours</div>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <!-- Direct Channels Column -->
+      <div class="lg:col-span-5 space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">Direct Channels</h2>
+
+          <div class="space-y-4">
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
+                ✉️
+              </div>
+              <div class="space-y-1 min-w-0">
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Support</div>
+                <a href="mailto:support@psychologycalculator.com" class="text-sm font-semibold text-teal-700 hover:text-teal-800 hover:underline break-all">
+                  support@psychologycalculator.com
+                </a>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
+                ⏱️
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Response Time</div>
+                <div class="text-sm font-semibold text-slate-900">&lt; 24 Business Hours</div>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg shrink-0">
+                🔒
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Privacy & Ethics</div>
+                <a href={getLocalizedPath('/privacy-policy', currentLocale)} class="text-sm font-semibold text-teal-700 hover:text-teal-800 hover:underline">
+                  Privacy Policy →
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <form class="space-y-4" onsubmit="event.preventDefault(); alert('Message received. Our support team will reach out shortly.');">
-        <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700">{t.auth.nameLabel}</label>
-          <input type="text" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600" />
+      <!-- Form Column -->
+      <div class="lg:col-span-7">
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-2xs space-y-6">
+          <form id="contact-form" class="space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="name" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">{t.auth.nameLabel}</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  placeholder="Jane Doe"
+                  class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors"
+                />
+              </div>
+
+              <div>
+                <label for="email" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">{t.auth.emailLabel}</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  placeholder="jane@example.com"
+                  class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label for="subject" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Subject</label>
+              <select
+                id="subject"
+                name="subject"
+                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors"
+              >
+                <option value="general">General Inquiries</option>
+                <option value="billing">Billing & AI Credits</option>
+                <option value="research">Assessment Research</option>
+                <option value="technical">Technical Support</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="message" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Message</label>
+              <textarea
+                id="message"
+                name="message"
+                rows="5"
+                required
+                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-colors"
+              ></textarea>
+            </div>
+
+            <div id="contact-feedback" class="hidden text-xs font-semibold p-4 rounded-xl"></div>
+
+            <button
+              type="submit"
+              id="submit-btn"
+              class="w-full py-3.5 px-6 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm rounded-xl transition-all shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>{t.common.submit}</span>
+              <span>→</span>
+            </button>
+          </form>
         </div>
-        <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700">{t.auth.emailLabel}</label>
-          <input type="email" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600" />
-        </div>
-        <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700">Message</label>
-          <textarea rows="4" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"></textarea>
-        </div>
-        <button type="submit" class="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs">
-          {t.common.submit} Message →
-        </button>
-      </form>
+      </div>
     </div>
   </div>
+
+  <script is:inline>
+    const form = document.getElementById('contact-form');
+    const feedback = document.getElementById('contact-feedback');
+    const btn = document.getElementById('submit-btn');
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        feedback.className = 'hidden';
+
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+
+        try {
+          const res = await fetch('/api/v1/content/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            feedback.className = 'text-xs font-semibold p-4 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+            feedback.textContent = 'Message sent successfully!';
+            form.reset();
+          } else {
+            feedback.className = 'text-xs font-semibold p-4 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 block';
+            feedback.textContent = data.message || 'Unable to send message.';
+          }
+        } catch {
+          feedback.className = 'text-xs font-semibold p-4 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 block';
+          feedback.textContent = 'Network error. Please try again.';
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+  </script>
 </PublicLayout>
