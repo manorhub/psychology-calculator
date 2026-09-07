@@ -12,8 +12,6 @@ import {
 } from '@/i18n';
 import { fetchFirst } from '@/lib/db/query';
 
-
-
 export const onRequest = defineMiddleware(async (context, next) => {
   const start = performance.now();
   const requestId = crypto.randomUUID();
@@ -148,13 +146,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect(`/${targetSlug}${search}`, 301);
     }
 
-    // E. Legacy /categories/{slug} and /{lang}/categories/{slug} normalization
+    // E. Short Category normalization (/categories/{slug} and /{lang}/categories/{slug})
     const catMatch = url.pathname.match(/^(?:\/([a-z]{2}))?\/categories\/([^/?#]+)$/i);
     if (catMatch) {
       const locale = catMatch[1];
       let catSlug = catMatch[2].toLowerCase();
-      if (catSlug === 'relationships-attachment') catSlug = 'relationships';
-      if (catSlug === 'social-communication') catSlug = 'communication';
+      if (catSlug === 'relationships-attachment' || catSlug === 'cat_relationships') catSlug = 'relationships';
+      if (catSlug === 'social-communication' || catSlug === 'cat_communication') catSlug = 'communication';
+      if (catSlug === 'cat_personality') catSlug = 'personality';
+      if (catSlug === 'cat_self_dev' || catSlug === 'cat_self_development') catSlug = 'self-development';
+      if (catSlug === 'cat_eq' || catSlug === 'cat_emotional_intelligence') catSlug = 'emotional-intelligence';
+      if (catSlug === 'cat_cognitive_style') catSlug = 'cognitive-style';
+      if (catSlug === 'cat_mental_wellbeing') catSlug = 'mental-wellbeing';
+      if (catSlug === 'cat_career' || catSlug === 'cat_career_work') catSlug = 'career-work';
 
       const target = (locale && isValidLocale(locale))
         ? `/${locale}/assessments/category/${catSlug}${search}`
@@ -162,19 +166,44 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect(target, 301);
     }
 
-    // F. Specific assessment slug aliases
+    // F. Assessment Category ID / Alias normalization (e.g. /assessments/category/cat_relationships -> /assessments/category/relationships)
+    const asmCatIdMatch = url.pathname.match(/^(?:\/([a-z]{2}))?\/assessments\/category\/(cat_[^/?#]+)$/i);
+    if (asmCatIdMatch) {
+      const locale = asmCatIdMatch[1];
+      const rawId = asmCatIdMatch[2].toLowerCase();
+      const idToSlugMap: Record<string, string> = {
+        'cat_relationships': 'relationships',
+        'cat_personality': 'personality',
+        'cat_communication': 'communication',
+        'cat_self_dev': 'self-development',
+        'cat_self_development': 'self-development',
+        'cat_eq': 'emotional-intelligence',
+        'cat_emotional_intelligence': 'emotional-intelligence',
+        'cat_cognitive_style': 'cognitive-style',
+        'cat_mental_wellbeing': 'mental-wellbeing',
+        'cat_career': 'career-work',
+        'cat_career_work': 'career-work'
+      };
+      const resolvedSlug = idToSlugMap[rawId] || rawId.replace(/^cat_/, '').replace(/_/g, '-');
+      const target = (locale && isValidLocale(locale))
+        ? `/${locale}/assessments/category/${resolvedSlug}${search}`
+        : `/assessments/category/${resolvedSlug}${search}`;
+      return context.redirect(target, 301);
+    }
+
+    // G. Specific assessment slug aliases
     if (url.pathname.includes('attachment-style-relationship-quiz')) {
       const clean = url.pathname.replace('attachment-style-relationship-quiz', 'attachment-style-test');
       return context.redirect(`${clean}${search}`, 301);
     }
 
-    // G. Contact Us alias
+    // H. Contact Us alias
     if (url.pathname === '/contact-us' || url.pathname.endsWith('/contact-us')) {
       const clean = url.pathname.replace(/\/contact-us$/, '/contact');
       return context.redirect(`${clean}${search}`, 301);
     }
 
-    // H. Dynamic Database URL Redirect Resolution (with multi-language support)
+    // I. Dynamic Database URL Redirect Resolution (with multi-language support)
     if (db) {
       try {
         const redirectService = new RedirectService(db);

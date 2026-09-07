@@ -1,4 +1,4 @@
----
+﻿---
 import PublicLayout from '@/layouts/PublicLayout.astro';
 import Card from '@/components/ui/Card.astro';
 import Badge from '@/components/ui/Badge.astro';
@@ -92,12 +92,12 @@ const collectionSchema = {
     <div class="space-y-4 max-w-3xl">
       <div class="inline-flex items-center gap-2">
         <span class="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-lg">
-          {category.icon || '🧬'}
+          {category.icon || 'ðŸ§¬'}
         </span>
         <Badge variant="info" size="md">Psychometric Category</Badge>
         {category.featured ? (
           <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-            ⭐ Featured Domain
+            â­ Featured Domain
           </span>
         ) : null}
       </div>
@@ -128,7 +128,7 @@ const collectionSchema = {
       {assessments.length === 0 ? (
         <div class="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-4">
           <div class="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 text-3xl flex items-center justify-center mx-auto">
-            📋
+            ðŸ“‹
           </div>
           <div class="space-y-1">
             <h3 class="text-lg font-black text-slate-900">No assessments are available in this category yet.</h3>
@@ -141,7 +141,7 @@ const collectionSchema = {
               href="/assessments"
               class="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
             >
-              ← Browse All Assessments
+              â† Browse All Assessments
             </a>
           </div>
         </div>
@@ -159,7 +159,7 @@ const collectionSchema = {
                       ? 'bg-amber-50 text-amber-800 border border-amber-200'
                       : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                   }`}>
-                    {asm.access_type === 'premium' ? '✨ Premium' : '✓ Free Guest Access'}
+                    {asm.access_type === 'premium' ? 'âœ¨ Premium' : 'âœ“ Free Guest Access'}
                   </span>
                 </div>
 
@@ -175,8 +175,8 @@ const collectionSchema = {
 
               <div class="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between gap-2">
                 <div class="flex items-center gap-3 text-xs text-slate-400 font-medium">
-                  <span>⏱ ~{asm.estimated_minutes} min</span>
-                  <span>•</span>
+                  <span>â± ~{asm.estimated_minutes} min</span>
+                  <span>â€¢</span>
                   <span>{asm.question_count} questions</span>
                 </div>
 
@@ -185,7 +185,7 @@ const collectionSchema = {
                   class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-all shadow-2xs group-hover:shadow-sm inline-flex items-center gap-1"
                 >
                   <span>Start</span>
-                  <span>→</span>
+                  <span>â†’</span>
                 </a>
               </div>
             </Card>
@@ -208,7 +208,7 @@ const collectionSchema = {
             >
               <div class="space-y-2">
                 <div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-lg">
-                  {rc.icon || '🧠'}
+                  {rc.icon || 'ðŸ§ '}
                 </div>
                 <div>
                   <h4 class="font-bold text-slate-900 group-hover:text-teal-700 text-sm">
@@ -223,7 +223,7 @@ const collectionSchema = {
               </div>
               <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-teal-700 font-bold">
                 <span>View Tests</span>
-                <span class="group-hover:translate-x-1 transition-transform">→</span>
+                <span class="group-hover:translate-x-1 transition-transform">â†’</span>
               </div>
             </a>
           ))}
@@ -242,7 +242,7 @@ const collectionSchema = {
             <details class="group bg-white rounded-2xl border border-slate-200 p-4 transition-all">
               <summary class="flex items-center justify-between font-bold text-slate-900 text-sm cursor-pointer list-none">
                 <span>{faq.question}</span>
-                <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                <span class="text-slate-400 group-open:rotate-180 transition-transform">â–¼</span>
               </summary>
               <div class="text-xs text-slate-600 leading-relaxed mt-3 pt-3 border-t border-slate-100">
                 {faq.answer}
