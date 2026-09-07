@@ -97,42 +97,57 @@ export class SeoService extends BaseService {
    * Formats page title cleanly with exactly one PsychologyCalculator.com brand suffix
    */
   public formatTitle(pageTitle: string, template?: string): string {
-    if (!pageTitle || typeof pageTitle !== 'string') {
-      return 'Psychology Tests & Assessments | PsychologyCalculator.com';
+    if (!pageTitle || typeof pageTitle !== "string") {
+      return "Psychology Tests & Assessments | PsychologyCalculator.com";
     }
 
     // Strip any existing duplicate or historical branding suffixes
     let clean = pageTitle
-      .replace(/\s*(\||—|-)\s*(Psychology\s*Calculator|PsychologyCalculator\.com|MindMetrics)(\.com)?/gi, '')
+      .replace(/\s*(\||—|-)\s*(Psychology\s*Calculator|PsychologyCalculator\.com|MindMetrics)(\.com)?/gi, "")
       .trim();
 
     if (
       !clean ||
-      clean.toLowerCase() === 'psychology calculator' ||
-      clean.toLowerCase() === 'psychologycalculator.com' ||
-      clean === 'Psychology Tests & Personality Assessments' ||
-      clean === 'Psychology Tests & Assessments'
+      clean.toLowerCase() === "psychology calculator" ||
+      clean.toLowerCase() === "psychologycalculator.com" ||
+      clean === "Psychology Tests & Personality Assessments" ||
+      clean === "Psychology Tests & Assessments"
     ) {
-      return 'Psychology Tests & Assessments | PsychologyCalculator.com';
+      return "Psychology Tests & Assessments | PsychologyCalculator.com";
     }
 
     // Normalize specific long phrases for Bing & SERP optimal length (<= 60 chars)
-    clean = clean
-      .replace(/^Evidence-Based Psychological Assessments$/i, 'Psychological Assessments & Tests')
-      .replace(/^Self-Development & Personal Growth Tests$/i, 'Self-Development Tests')
-      .replace(/^Emotional Intelligence \(EQ\) Assessments$/i, 'Emotional Intelligence Tests')
-      .replace(/^Cognitive Style & Thinking Tests$/i, 'Cognitive Style Tests')
-      .replace(/^Mental Wellbeing & Resilience Self-Checks$/i, 'Mental Wellbeing Self-Checks')
-      .replace(/^Des Tests Psychologiques qui Transforment vos Réponses en Perspectives Utiles$/i, 'Tests Psychologiques & Personnalité')
-      .replace(/^Psychologische Tests, die Ihre Antworten in Wertvolle Einsichten Verwandeln$/i, 'Psychologische Tests & Analysen')
-      .replace(/^Tests Psicológicos que Transforman tus Respuestas en Perspectivas Útiles$/i, 'Tests Psicológicos y de Personalidad')
-      .replace(/^Testes Psicológicos que Transformam suas Respostas em Percepções Úteis$/i, 'Testes Psicológicos & Personalidade')
-      .replace(/^मनोवैज्ञानिक परीक्षण जो आपके उत्तरों को बदलते हैं सटीक अंतर्दृष्टि में$/i, 'मनोवैज्ञानिक परीक्षण व व्यक्तित्व')
-      .replace(/^Precios & Paquetes de Créditos Sin Suscripción$/i, 'Precios y Créditos IA')
-      .replace(/^Preços & Pacotes de Créditos Sem Assinatura$/i, 'Preços e Créditos IA')
-      .replace(/^Preise & Einmalige Guthaben-Pakete$/i, 'Preise & KI-Guthaben');
+    if (/^Evidence-Based Psychological Assessments/i.test(clean)) {
+      clean = "Psychological Assessments & Tests";
+    } else if (/^Self-Development & Personal Growth/i.test(clean)) {
+      clean = "Self-Development Tests";
+    } else if (/^Emotional Intelligence \(EQ\)/i.test(clean)) {
+      clean = "Emotional Intelligence Tests";
+    } else if (/^Cognitive Style & Thinking/i.test(clean)) {
+      clean = "Cognitive Style Tests";
+    } else if (/^Mental Wellbeing & Resilience/i.test(clean)) {
+      clean = "Mental Wellbeing Self-Checks";
+    } else if (/^Des Tests Psychologiques/i.test(clean)) {
+      clean = "Tests Psychologiques & Personnalité";
+    } else if (/^Psychologische Tests/i.test(clean)) {
+      clean = "Psychologische Tests & Analysen";
+    } else if (/^Tests Psicol/i.test(clean)) {
+      clean = "Tests Psicológicos y de Personalidad";
+    } else if (/^Testes Psicol/i.test(clean)) {
+      clean = "Testes Psicológicos & Personalidade";
+    } else if (/^Precios/i.test(clean)) {
+      clean = "Precios y Créditos IA";
+    } else if (/^Pre[çc]os/i.test(clean)) {
+      clean = "Preços e Créditos IA";
+    } else if (/^Preise/i.test(clean)) {
+      clean = "Preise & KI-Guthaben";
+    } else if (clean.length > 35) {
+      const truncated = clean.slice(0, 35);
+      const lastSpace = truncated.lastIndexOf(" ");
+      clean = (lastSpace > 18 ? truncated.slice(0, lastSpace) : truncated).trim();
+    }
 
-    return `${clean} | PsychologyCalculator.com`;
+    return clean + " | PsychologyCalculator.com";
   }
 
   /**

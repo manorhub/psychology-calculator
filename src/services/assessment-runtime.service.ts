@@ -1,4 +1,4 @@
-import type { D1Database } from '@cloudflare/workers-types';
+﻿import type { D1Database } from '@cloudflare/workers-types';
 import { BaseService } from './base.service';
 import { executeQuery, fetchFirst } from '@/lib/db/query';
 import { NotFoundError, ValidationError, ForbiddenError } from '@/lib/errors';

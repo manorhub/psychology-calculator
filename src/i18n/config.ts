@@ -1,4 +1,4 @@
-export type SupportedLocale = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'hi';
+﻿export type SupportedLocale = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'hi';
 
 export interface LanguageInfo {
   code: SupportedLocale;
@@ -16,7 +16,7 @@ export const SUPPORTED_LANGUAGES: Record<SupportedLocale, LanguageInfo> = {
     code: 'en',
     name: 'English',
     nativeName: 'English',
-    flagEmoji: '🇺🇸',
+    flagEmoji: '🇬🇧',
     isDefault: true,
     dir: 'ltr'
   },
@@ -116,11 +116,12 @@ export const NON_LOCALIZED_PATH_PREFIXES = [
   '/admin',
   '/api',
   '/auth',
-  '/_astro'
+  '/_astro',
+  '/blog'
 ];
 
 /**
- * Checks if a pathname is non-localized (auth, dashboard, admin, API, etc.)
+ * Checks if a pathname is non-localized (auth, dashboard, admin, API, blog, etc.)
  */
 export function isNonLocalizedPath(pathname: string): boolean {
   if (!pathname) return false;

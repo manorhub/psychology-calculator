@@ -1,45 +1,54 @@
-import { defineMiddleware } from 'astro:middleware';
-import { getSecurityHeaders } from '@/lib/security';
-import { logger } from '@/lib/logger';
-import { getD1Database } from '@/lib/db/client';
-import { validateSessionToken } from '@/lib/auth/session';
-import { getSessionCookie, clearSessionCookie } from '@/lib/auth/cookies';
+﻿import { defineMiddleware } from 'astro:middleware';
 import { AuthService } from '@/services/auth.service';
 import { RedirectService } from '@/services/seo/redirect.service';
+import { getD1Database } from '@/lib/db/client';
+import { getSecurityHeaders } from '@/lib/security';
+import { logger } from '@/lib/logger';
+import {
+  isValidLocale,
+  stripLocaleFromPath,
+  isNonLocalizedPath,
+  type SupportedLocale
+} from '@/i18n';
 import { fetchFirst } from '@/lib/db/query';
-import { isValidLocale, stripLocaleFromPath, isNonLocalizedPath } from '@/i18n';
+
+
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const requestId = crypto.randomUUID();
-  context.locals.requestId = requestId;
-
-  const url = new URL(context.request.url);
   const start = performance.now();
+  const requestId = crypto.randomUUID();
+  const url = new URL(context.request.url);
 
-  // 1. Resolve User Session from Cookie
+  // 1. Session and Authentication Context
   const env = context.locals.runtime?.env;
   const db = getD1Database(env);
-  const sessionToken = getSessionCookie(context.cookies);
+  const sessionKv = env?.SESSION;
+
+  const authService = new AuthService(db, sessionKv);
+  const sessionToken = context.cookies.get('session_token')?.value;
 
   let currentUser = null;
-  if (db && sessionToken) {
-    try {
-      const validated = await validateSessionToken(db, sessionToken);
-      if (validated) {
-        currentUser = validated.user;
-      } else {
-        // Invalid or expired session cookie, clear it
-        clearSessionCookie(context.cookies);
-      }
-    } catch (err) {
-      logger.error('Session validation error in middleware', undefined, err instanceof Error ? err : new Error(String(err)));
+  let authContext = {
+    isAuthenticated: false,
+    isAdmin: false,
+    user: null as any
+  };
+
+  if (sessionToken) {
+    currentUser = await authService.validateSession(sessionToken);
+    if (currentUser) {
+      authContext = {
+        isAuthenticated: true,
+        isAdmin: currentUser.role === 'admin',
+        user: currentUser
+      };
     }
   }
 
+  // Inject into Astro locals for downstream SSR access
   context.locals.user = currentUser;
-
-  const authService = new AuthService(db);
-  const authContext = authService.resolveAuthContext(currentUser);
+  context.locals.auth = authContext;
+  context.locals.requestId = requestId;
 
   // 2. Global Maintenance Mode Check
   if (db) {
@@ -96,10 +105,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // 3. Canonical Path Normalization & Legacy Route Corrections
   if (!url.pathname.startsWith('/api/') && !url.pathname.startsWith('/_astro/')) {
+    const search = url.search || '';
+
     // A. Trailing slash normalization: e.g. /pt/ -> /pt, /about/ -> /about
     if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
       const cleanPath = url.pathname.replace(/\/+$/, '');
-      const search = url.search || '';
       return context.redirect(`${cleanPath}${search}`, 301);
     }
 
@@ -112,17 +122,59 @@ export const onRequest = defineMiddleware(async (context, next) => {
       });
     }
 
-    // C. Non-localized routes requested with language prefixes (e.g. /es/login -> /login, /de/dashboard/... -> /dashboard/...)
+    // C. Non-localized routes requested with language prefixes (e.g. /es/login -> /login, /pt/blog -> /blog, /de/dashboard/... -> /dashboard/...)
     const pathSegments = url.pathname.split('/').filter(Boolean);
     if (pathSegments.length > 0 && isValidLocale(pathSegments[0])) {
       const strippedPath = stripLocaleFromPath(url.pathname);
       if (isNonLocalizedPath(strippedPath)) {
-        const search = url.search || '';
         return context.redirect(`${strippedPath}${search}`, 301);
       }
     }
 
-    // D. Dynamic Database URL Redirect Resolution (with multi-language support)
+    // D. Legacy /p/{slug} and /{lang}/p/{slug} normalization (e.g. /es/p/about -> /es/about, /fr/p/disclaimer -> /disclaimer)
+    const pMatch = url.pathname.match(/^(?:\/([a-z]{2}))?\/p\/([^/?#]+)$/i);
+    if (pMatch) {
+      const locale = pMatch[1];
+      const pageSlug = pMatch[2].toLowerCase();
+      const nonPrefixedPages = ['privacy-policy', 'terms-of-service', 'disclaimer', 'terms', 'privacy'];
+
+      let targetSlug = pageSlug;
+      if (pageSlug === 'terms') targetSlug = 'terms-of-service';
+      if (pageSlug === 'privacy') targetSlug = 'privacy-policy';
+
+      if (locale && isValidLocale(locale) && !nonPrefixedPages.includes(pageSlug)) {
+        return context.redirect(`/${locale}/${targetSlug}${search}`, 301);
+      }
+      return context.redirect(`/${targetSlug}${search}`, 301);
+    }
+
+    // E. Legacy /categories/{slug} and /{lang}/categories/{slug} normalization
+    const catMatch = url.pathname.match(/^(?:\/([a-z]{2}))?\/categories\/([^/?#]+)$/i);
+    if (catMatch) {
+      const locale = catMatch[1];
+      let catSlug = catMatch[2].toLowerCase();
+      if (catSlug === 'relationships-attachment') catSlug = 'relationships';
+      if (catSlug === 'social-communication') catSlug = 'communication';
+
+      const target = (locale && isValidLocale(locale))
+        ? `/${locale}/assessments/category/${catSlug}${search}`
+        : `/assessments/category/${catSlug}${search}`;
+      return context.redirect(target, 301);
+    }
+
+    // F. Specific assessment slug aliases
+    if (url.pathname.includes('attachment-style-relationship-quiz')) {
+      const clean = url.pathname.replace('attachment-style-relationship-quiz', 'attachment-style-test');
+      return context.redirect(`${clean}${search}`, 301);
+    }
+
+    // G. Contact Us alias
+    if (url.pathname === '/contact-us' || url.pathname.endsWith('/contact-us')) {
+      const clean = url.pathname.replace(/\/contact-us$/, '/contact');
+      return context.redirect(`${clean}${search}`, 301);
+    }
+
+    // H. Dynamic Database URL Redirect Resolution (with multi-language support)
     if (db) {
       try {
         const redirectService = new RedirectService(db);

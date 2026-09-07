@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+﻿import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert';
@@ -43,7 +43,7 @@ async function runTechnicalSeoTests() {
     rawDb.exec(sql);
   }
 
-  console.log(`✔ In-memory SQLite initialized with ${migrationFiles.length} sequential migrations (including 0037)`);
+  console.log(`âœ” In-memory SQLite initialized with ${migrationFiles.length} sequential migrations (including 0037)`);
 
   const seoService = new SeoService(mockD1);
   const redirectService = new RedirectService(mockD1);
@@ -62,7 +62,7 @@ async function runTechnicalSeoTests() {
   const catMeta = await seoService.getPageMetadata({ path: '/assessments/category/personality' });
   assert.strictEqual(catMeta.canonicalUrl, 'https://www.psychologycalculator.com/assessments/category/personality', 'Category canonical mismatch');
 
-  console.log('✔ Canonical URLs strictly resolved with https://www.psychologycalculator.com and normalized paths');
+  console.log('âœ” Canonical URLs strictly resolved with https://www.psychologycalculator.com and normalized paths');
 
   // --- 2. Title Formatting & Deduplication Architecture ---
   console.log('\n--- 2. Testing Title Formatting & Deduplication Architecture ---');
@@ -77,7 +77,7 @@ async function runTechnicalSeoTests() {
 
   // Test case 3: Title with quadruple repeated brand from crawl report bug
   const t3 = seoService.formatTitle('Career & Workplace Psychology Assessments | Psychology Calculator | Psychology Calculator | Psychology Calculator');
-  assert.strictEqual(t3, 'Career & Workplace Psychology Assessments | PsychologyCalculator.com', `Failed to deduplicate multi-brand suffix: ${t3}`);
+  assert.strictEqual(t3, 'Career & Workplace Psychology | PsychologyCalculator.com', `Failed to deduplicate multi-brand suffix: ${t3}`);
 
   // Test case 4: Title with legacy MindMetrics brand
   const t4 = seoService.formatTitle('Mental Wellbeing & Resilience Self-Checks | MindMetrics | Psychology Calculator');
@@ -93,13 +93,13 @@ async function runTechnicalSeoTests() {
     'Evidence-Based Psychological Assessments',
     'Self-Development & Personal Growth Tests',
     'Emotional Intelligence (EQ) Assessments',
-    'Tests Psicológicos que Transforman tus Respuestas en Perspectivas Útiles',
-    'Des Tests Psychologiques qui Transforment vos Réponses en Perspectives Utiles',
+    'Tests PsicolÃ³gicos que Transforman tus Respuestas en Perspectivas Ãštiles',
+    'Des Tests Psychologiques qui Transforment vos RÃ©ponses en Perspectives Utiles',
     'Psychologische Tests, die Ihre Antworten in Wertvolle Einsichten Verwandeln',
-    'Testes Psicológicos que Transformam suas Respostas em Percepções Úteis',
-    'मनोवैज्ञानिक परीक्षण जो आपके उत्तरों को बदलते हैं सटीक अंतर्दृष्टि में',
-    'Precios & Paquetes de Créditos Sin Suscripción',
-    'Preços & Pacotes de Créditos Sem Assinatura'
+    'Testes PsicolÃ³gicos que Transformam suas Respostas em PercepÃ§Ãµes Ãšteis',
+    'à¤®à¤¨à¥‹à¤µà¥ˆà¤œà¥à¤žà¤¾à¤¨à¤¿à¤• à¤ªà¤°à¥€à¤•à¥à¤·à¤£ à¤œà¥‹ à¤†à¤ªà¤•à¥‡ à¤‰à¤¤à¥à¤¤à¤°à¥‹à¤‚ à¤•à¥‹ à¤¬à¤¦à¤²à¤¤à¥‡ à¤¹à¥ˆà¤‚ à¤¸à¤Ÿà¥€à¤• à¤…à¤‚à¤¤à¤°à¥à¤¦à¥ƒà¤·à¥à¤Ÿà¤¿ à¤®à¥‡à¤‚',
+    'Precios & Paquetes de CrÃ©ditos Sin SuscripciÃ³n',
+    'PreÃ§os & Pacotes de CrÃ©ditos Sem Assinatura'
   ];
 
   for (const raw of longTitles) {
@@ -107,7 +107,7 @@ async function runTechnicalSeoTests() {
     assert(formatted.length <= 65, `Title "${formatted}" exceeds Bing recommended 65 char limit (length: ${formatted.length})`);
   }
 
-  console.log('✔ Title deduplication & length engine enforces strict Bing/SERP limits (<= 65 chars)');
+  console.log('âœ” Title deduplication & length engine enforces strict Bing/SERP limits (<= 65 chars)');
 
   // --- 3. Assessment & Category Meta Descriptions ---
   console.log('\n--- 3. Testing Assessment & Category Meta Descriptions ---');
@@ -122,7 +122,7 @@ async function runTechnicalSeoTests() {
     );
     assert(asm.short_description.length >= 50, `Assessment ${asm.slug} description is too short (${asm.short_description.length} chars)`);
   }
-  console.log(`✔ All ${assessments.length} published assessments have unique, rich, high-intent meta descriptions`);
+  console.log(`âœ” All ${assessments.length} published assessments have unique, rich, high-intent meta descriptions`);
 
   // --- 4. Robots Directives & Private Route Indexation Safety ---
   console.log('\n--- 4. Testing Robots Directives & Private Route Safety ---');
@@ -134,7 +134,7 @@ async function runTechnicalSeoTests() {
   assert(privateMeta.robots.includes('noindex'), 'Auth route must have noindex directive');
   assert.strictEqual(privateMeta.noindex, true);
 
-  console.log('✔ Robots directives strictly enforce indexable public catalog and noindexed private routes');
+  console.log('âœ” Robots directives strictly enforce indexable public catalog and noindexed private routes');
 
   // --- 5. Redirects & Alias Traversal ---
   console.log('\n--- 5. Testing 301 Redirects & Alias Traversal ---');
@@ -165,7 +165,7 @@ async function runTechnicalSeoTests() {
   const rLegacyP = await redirectService.resolveRedirect('/p/privacy-policy');
   assert(rLegacyP.found && rLegacyP.targetPath === '/privacy-policy' && rLegacyP.statusCode === 301, 'Redirect /p/privacy-policy -> /privacy-policy failed');
 
-  console.log('✔ 301 Redirect engine cleanly handles legacy aliases, localized aliases, and duplicate assessment paths');
+  console.log('âœ” 301 Redirect engine cleanly handles legacy aliases, localized aliases, and duplicate assessment paths');
 
   // --- 6. XML Sitemap Generation ---
   console.log('\n--- 6. Testing Dynamic XML Sitemap Generation ---');
@@ -180,7 +180,7 @@ async function runTechnicalSeoTests() {
   assert(!sitemapXml.includes('/login'), 'Login routes must NOT appear in sitemap');
   assert(!sitemapXml.includes('emotional-intelligence-test-copy'), 'Archived duplicate assessments must NOT appear in sitemap');
 
-  console.log('✔ Dynamic XML Sitemap strictly outputs canonical, public, indexable URLs');
+  console.log('âœ” Dynamic XML Sitemap strictly outputs canonical, public, indexable URLs');
 
   // --- 7. Dynamic Robots.txt Generation ---
   console.log('\n--- 7. Testing Dynamic Robots.txt Generation ---');
@@ -191,14 +191,14 @@ async function runTechnicalSeoTests() {
   assert(robotsTxt.includes('Disallow: /api/'), 'Missing Disallow /api/ in robots.txt');
   assert(robotsTxt.includes('Sitemap: https://www.psychologycalculator.com/sitemap.xml'), 'Sitemap directive in robots.txt must use canonical domain');
 
-  console.log('✔ Dynamic Robots.txt contains valid directives and canonical sitemap link');
+  console.log('âœ” Dynamic Robots.txt contains valid directives and canonical sitemap link');
 
   console.log('\n============================================================');
-  console.log('🎉 ALL TECHNICAL SEO & CRAWL VERIFICATION TESTS PASSED!');
+  console.log('ðŸŽ‰ ALL TECHNICAL SEO & CRAWL VERIFICATION TESTS PASSED!');
   console.log('============================================================\n');
 }
 
 runTechnicalSeoTests().catch((err) => {
-  console.error('❌ SEO Test suite failed:', err);
+  console.error('âŒ SEO Test suite failed:', err);
   process.exit(1);
 });
