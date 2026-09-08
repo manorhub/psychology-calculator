@@ -89,6 +89,8 @@ const ogLocaleMap: Record<SupportedLocale, string> = {
   pt: 'pt_BR',
   hi: 'hi_IN'
 };
+
+const ga4Id = seoSettings.ga4MeasurementId || 'G-D70LGC3MQB';
 ---
 
 <!-- Primary Meta Tags -->
@@ -151,12 +153,17 @@ const ogLocaleMap: Record<SupportedLocale, string> = {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
 <!-- Google tag (gtag.js) -->
-{seoSettings.ga4MeasurementId && (
-  <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${seoSettings.ga4MeasurementId}`}></script>
-  <script is:inline define:vars={{ gaId: seoSettings.ga4MeasurementId }}>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', gaId);
-  </script>
+{ga4Id && (
+  <>
+    <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${ga4Id}`}></script>
+    <script is:inline set:html={`
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', '${ga4Id}', {
+        send_page_view: true
+      });
+    `} />
+  </>
 )}
