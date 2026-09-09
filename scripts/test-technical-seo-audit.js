@@ -1,4 +1,4 @@
-﻿import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert';
@@ -120,9 +120,13 @@ async function runTechnicalSeoTests() {
       !asm.short_description.startsWith('Comprehensive ') || !asm.short_description.endsWith('evaluation.'),
       `Assessment ${asm.slug} still contains generic placeholder: "${asm.short_description}"`
     );
-    assert(asm.short_description.length >= 50, `Assessment ${asm.slug} description is too short (${asm.short_description.length} chars)`);
+    assert(asm.short_description.length >= 50 && asm.short_description.length <= 155, `Assessment ${asm.slug} description length invalid (${asm.short_description.length} chars)`);
   }
-  console.log(`âœ” All ${assessments.length} published assessments have unique, rich, high-intent meta descriptions`);
+
+  const homeSeoMeta = await seoService.getPageMetadata({ path: '/' });
+  assert(homeSeoMeta.description.length >= 120 && homeSeoMeta.description.length <= 155, `Homepage description length (${homeSeoMeta.description.length}) outside optimal 120-155 character range`);
+
+  console.log(`✔ All ${assessments.length} published assessments and homepage have optimal (120-155 chars) meta descriptions`);
 
   // --- 4. Robots Directives & Private Route Indexation Safety ---
   console.log('\n--- 4. Testing Robots Directives & Private Route Safety ---');

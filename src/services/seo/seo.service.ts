@@ -50,7 +50,7 @@ export class SeoService extends BaseService {
     const defaults: SeoSettings = {
       siteTitle: 'Psychology Calculator',
       titleTemplate: '{{page_title}} | PsychologyCalculator.com',
-      defaultDescription: 'Explore evidence-based psychology tests and personality assessments online. Free to start with instant scoring and detailed psychometric insights.',
+      defaultDescription: 'Take scientifically validated psychology tests and personality assessments online. Free instant scoring, dimensional insights, and evidence-based analysis.',
       canonicalDomain: 'https://www.psychologycalculator.com',
       defaultRobots: 'index, follow',
       defaultOgImage: '/images/og-default.png',
@@ -189,6 +189,13 @@ export class SeoService extends BaseService {
         if (explicitMeta.og_image) ogImage = explicitMeta.og_image;
         if (explicitMeta.robots) robots = explicitMeta.robots;
       }
+    }
+
+    // Ensure description strictly adheres to SERP character length (<= 155 chars)
+    if (description && description.length > 155) {
+      const truncated = description.slice(0, 152);
+      const lastSpace = truncated.lastIndexOf(' ');
+      description = (lastSpace > 100 ? truncated.slice(0, lastSpace) : truncated).trim() + '...';
     }
 
     const formattedTitle = this.formatTitle(title, settings.titleTemplate);

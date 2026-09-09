@@ -1,4 +1,4 @@
-﻿-- Migration 0042: Fix SEO Crawler Errors, Assessment Slugs, and Canonical 301 Redirects
+-- Migration 0042: Fix SEO Crawler Errors, Assessment Slugs, and Canonical 301 Redirects
 -- Cloudflare D1 (SQLite)
 
 -- 1. Canonicalize Big Five Personality Test Assessment Slug
@@ -6,7 +6,7 @@ UPDATE assessments
 SET slug = 'big-five-personality-test', 
     status = 'published',
     name = 'Big Five (OCEAN) Personality Test',
-    short_description = 'Discover your unique profile across the 5 scientifically validated core personality dimensions: Openness, Conscientiousness, Extraversion, Agreeableness, and Emotional Stability.'
+    short_description = 'Discover your profile across 5 core personality dimensions: Openness, Conscientiousness, Extraversion, Agreeableness, and Emotional Stability.'
 WHERE id = 'asm_big_five' OR slug = 'big-five-ocean-personality-test' OR slug = 'big-five-personality-test';
 
 -- 2. Archive all duplicate / -copy assessment records

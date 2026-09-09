@@ -104,7 +104,7 @@ SET
 WHERE slug = 'mental-wellbeing' OR id = 'cat_wellbeing';
 
 -- 3. Enrich All Assessment Short Descriptions & Descriptions
-UPDATE assessments SET short_description = 'Discover your unique profile across the 5 scientifically validated core personality dimensions: Openness, Conscientiousness, Extraversion, Agreeableness, and Emotional Stability.' WHERE slug = 'big-five-personality-test';
+UPDATE assessments SET short_description = 'Discover your profile across 5 core personality dimensions: Openness, Conscientiousness, Extraversion, Agreeableness, and Emotional Stability.' WHERE slug = 'big-five-personality-test';
 UPDATE assessments SET short_description = 'Identify your relational bonding style: Secure, Anxious-Preoccupied, Dismissive-Avoidant, or Fearful-Avoidant to understand romantic intimacy patterns.' WHERE slug = 'attachment-style-test';
 UPDATE assessments SET short_description = 'Discover your primary pathways for giving and receiving love: Words of Affirmation, Quality Time, Receiving Gifts, Acts of Service, or Physical Touch.' WHERE slug = 'love-language-quiz';
 UPDATE assessments SET short_description = 'Assess your emotional self-awareness, impulse regulation, empathy, and social agility to improve personal and professional relationships.' WHERE slug = 'emotional-intelligence-test';

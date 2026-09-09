@@ -239,11 +239,20 @@ const localizedHomeTitles: Record<SupportedLocale, string> = {
   pt: 'Testes Psicológicos & Personalidade',
   hi: 'मनोवैज्ञानिक परीक्षण व व्यक्तित्व'
 };
+
+const localizedHomeDescriptions: Record<SupportedLocale, string> = {
+  en: 'Take scientifically validated psychology tests and personality assessments online. Free instant scoring, dimensional insights, and evidence-based analysis.',
+  es: 'Realiza tests psicológicos y evaluaciones de personalidad científicamente validados. Puntuación gratuita e informes dimensionales instantáneos.',
+  fr: 'Passez des tests psychologiques et bilans de personnalité validés scientifiquement. Évaluation gratuite et analyses dimensionnelles instantanées.',
+  de: 'Wissenschaftlich fundierte Psychologietests & Persönlichkeitsanalysen online durchführen. Kostenlose Sofortauswertung und evidenzbasierte Einblicke.',
+  pt: 'Faça testes psicológicos e avaliações de personalidade validados cientificamente. Pontuação instantânea gratuita e análises dimensionais.',
+  hi: 'ऑनलाइन प्रमाणित मनोवैज्ञानिक और व्यक्तित्व परीक्षण दें। निःशुल्क त्वरित स्कोरिंग, आयामी विश्लेषण और साक्ष्य-आधारित अंतर्दृष्टि प्राप्त करें।'
+};
 ---
 
 <PublicLayout
   title={localizedHomeTitles[currentLocale] || 'Psychology Tests & Assessments'}
-  description={lt.hero.subtitle}
+  description={localizedHomeDescriptions[currentLocale] || lt.hero.subtitle}
   locale={currentLocale}
 >
   <Fragment slot="head">
