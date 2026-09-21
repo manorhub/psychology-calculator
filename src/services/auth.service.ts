@@ -91,9 +91,19 @@ export class AuthService extends BaseService {
     const passwordHash = await hashPassword(params.password);
     const bonusCredits = await this.getSignupBonusCredits();
 
+    // Check if strict email verification is required (default: false for frictionless SaaS onboarding)
+    const verificationSetting = await fetchFirst<{ value: string }>(
+      this.db,
+      "SELECT value FROM site_settings WHERE key = 'require_email_verification'"
+    );
+    const requireEmailVerification = verificationSetting?.value === 'true';
+    const initialStatus = requireEmailVerification ? 'pending_verification' : 'active';
+
     await this.db
       .prepare(
-        "INSERT INTO users (id, email, password_hash, auth_provider, role, status, created_at, updated_at) VALUES (?, ?, ?, 'email', 'user', 'pending_verification', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+        requireEmailVerification
+          ? "INSERT INTO users (id, email, password_hash, auth_provider, role, status, created_at, updated_at) VALUES (?, ?, ?, 'email', 'user', 'pending_verification', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+          : "INSERT INTO users (id, email, password_hash, auth_provider, role, status, email_verified_at, created_at, updated_at) VALUES (?, ?, ?, 'email', 'user', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
       )
       .bind(userId, email, passwordHash)
       .run();
@@ -146,8 +156,16 @@ export class AuthService extends BaseService {
       await this.linkGuestAttempt(userId, params.guestSessionId);
     }
 
-    // 7. Dispatch verification email & log audit
-    await this.emailService.sendVerificationEmail(email, params.name.trim(), rawVerificationToken);
+    // 7. Dispatch verification / welcome email & log audit
+    try {
+      if (requireEmailVerification) {
+        await this.emailService.sendVerificationEmail(email, params.name.trim(), rawVerificationToken);
+      } else {
+        await this.emailService.sendWelcomeEmail(email, params.name.trim());
+      }
+    } catch (emailErr) {
+      this.logger.warn('Failed to dispatch transactional onboarding email', { error: String(emailErr) });
+    }
 
     await this.auditService.record({
       actorId: userId,
@@ -158,6 +176,34 @@ export class AuthService extends BaseService {
       ipAddress: params.ipAddress,
       userAgent: params.userAgent
     });
+
+    if (!requireEmailVerification) {
+      const { rawToken } = await createSession(this.db, userId, params.ipAddress, params.userAgent);
+      const user: User = {
+        id: userId,
+        email,
+        role: 'user',
+        status: 'active',
+        emailVerified: true,
+        profile: {
+          displayName: params.name.trim(),
+          avatarUrl: null,
+          timezone: 'UTC',
+          locale: 'en',
+          preferences: {}
+        },
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString()
+      };
+
+      return {
+        success: true,
+        requiresEmailVerification: false,
+        sessionToken: rawToken,
+        user,
+        message: 'Account created successfully!'
+      };
+    }
 
     return {
       success: true,
@@ -214,11 +260,27 @@ export class AuthService extends BaseService {
       throw new UnauthorizedError('Invalid email or password.');
     }
     if (userRow.status === 'pending_verification' && !userRow.email_verified_at) {
-      return {
-        success: false,
-        requiresEmailVerification: true,
-        message: 'Your email address is not verified yet. Please check your inbox or request a new verification link.'
-      };
+      const verificationSetting = await fetchFirst<{ value: string }>(
+        this.db,
+        "SELECT value FROM site_settings WHERE key = 'require_email_verification'"
+      );
+      const requireEmailVerification = verificationSetting?.value === 'true';
+
+      if (requireEmailVerification) {
+        return {
+          success: false,
+          requiresEmailVerification: true,
+          message: 'Your email address is not verified yet. Please check your inbox or request a new verification link.'
+        };
+      }
+
+      // Auto-activate account on successful password authentication
+      await this.db
+        .prepare("UPDATE users SET status = 'active', email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(userRow.id)
+        .run();
+      userRow.status = 'active';
+      userRow.email_verified_at = new Date().toISOString();
     }
 
     // 5. Reset rate limiter on successful login

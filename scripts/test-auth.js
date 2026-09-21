@@ -127,11 +127,11 @@ async function runAuthTests() {
     'Should reject short passwords'
   );
 
-  // Successful registration with guest attempt linking
-  // First, insert an anonymous guest attempt
+  // Successful registration with guest attempt linking (under require_email_verification = 'true')
   sqlite.exec(`
+    INSERT OR REPLACE INTO site_settings (key, value) VALUES ('require_email_verification', 'true');
     INSERT INTO assessment_attempts (id, user_id, assessment_id, session_id, status, started_at, created_at, updated_at)
-    VALUES ('att_guest_1', NULL, 'asm_big_five', 'guest_sess_100', 'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES ('att_guest_1', NULL, 'asm_big_five', 'guest_sess_100', 'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
   `);
 
   const regResult = await authService.register({
@@ -321,6 +321,30 @@ async function runAuthTests() {
   const oauthRow = sqlite.prepare('SELECT * FROM oauth_accounts WHERE provider_user_id = ?').get(googleUser.id);
   assert.ok(oauthRow, 'OAuth account link should be registered');
   console.log(`✔ Google OAuth user created and verified: ${googleAuthResult.user?.email} (ID: ${oauthRow.user_id})`);
+
+  console.log('\n--- 8. Testing Frictionless Registration & Auto-Activation ---');
+  sqlite.exec("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('require_email_verification', 'false');");
+
+  const fastReg = await authService.register({
+    name: 'Fast User',
+    email: 'fast_user@example.com',
+    password: 'FastPassword123!'
+  });
+  assert.strictEqual(fastReg.success, true);
+  assert.strictEqual(fastReg.requiresEmailVerification, false);
+  assert.ok(fastReg.sessionToken, 'Frictionless registration returns session token immediately');
+  assert.strictEqual(fastReg.user?.status, 'active');
+
+  // Test pending user auto-activation upon login when verification is disabled
+  sqlite.exec("INSERT INTO users (id, email, password_hash, status, role) VALUES ('usr_pending_1', 'pending_user@example.com', '" + (await hashPassword('PendingPass123!')) + "', 'pending_verification', 'user');");
+  const pendingLogin = await authService.login({
+    email: 'pending_user@example.com',
+    password: 'PendingPass123!'
+  });
+  assert.strictEqual(pendingLogin.success, true);
+  assert.strictEqual(pendingLogin.user?.status, 'active');
+  assert.strictEqual(pendingLogin.user?.emailVerified, true);
+  console.log('✔ Frictionless registration & pending user auto-activation verified');
 
   console.log('\n========================================');
   console.log('🎉 ALL PHASE 2 AUTHENTICATION & USER TESTS PASSED!');

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import type { ApiResponse } from '@/types/api';
 import { getD1Database } from '@/lib/db/client';
 import { AuthService } from '@/services/auth.service';
+import { setSessionCookie } from '@/lib/auth/cookies';
 import { formatErrorResponse } from '@/lib/errors';
 import { validateSchema } from '@/lib/validation';
 import { z } from 'zod';
@@ -33,11 +34,17 @@ export const POST: APIRoute = async ({ request, cookies, locals, clientAddress }
       guestSessionId
     });
 
+    if (result.success && result.sessionToken) {
+      const isProduction = env?.APP_ENV === 'production' || request.url.startsWith('https://');
+      setSessionCookie(cookies, result.sessionToken, isProduction);
+    }
+
     const response: ApiResponse = {
       success: true,
       data: {
         message: result.message,
-        requiresEmailVerification: result.requiresEmailVerification
+        requiresEmailVerification: result.requiresEmailVerification,
+        user: result.user
       },
       meta: {
         requestId: locals.requestId,

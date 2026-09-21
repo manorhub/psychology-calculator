@@ -157,8 +157,8 @@ if (errorParam === 'oauth_denied') {
   </div>
 </PublicLayout>
 
-<script>
-  const form = document.getElementById('register-form') as HTMLFormElement | null;
+<script is:inline define:vars={{ redirectParam }}>
+  const form = document.getElementById('register-form');
   const errorAlert = document.getElementById('form-error-alert');
   const errorMessage = document.getElementById('form-error-message');
   const submitBtn = document.getElementById('submit-btn');
@@ -192,7 +192,7 @@ if (errorParam === 'oauth_denied') {
         body: JSON.stringify(payload)
       });
 
-      const data: any = await res.json();
+      const data = await res.json();
 
       if (!res.ok || !data.success) {
         if (errorMessage) {
@@ -203,8 +203,14 @@ if (errorParam === 'oauth_denied') {
         return;
       }
 
-      // Success -> Redirect to verify email landing
-      window.location.href = `/verify-email?email=${encodeURIComponent(String(payload.email))}&registered=true`;
+      // If email verification is explicitly required by platform configuration
+      if (data.data?.requiresEmailVerification) {
+        window.location.href = `/verify-email?email=${encodeURIComponent(String(payload.email))}&registered=true`;
+        return;
+      }
+
+      // Frictionless onboarding -> Redirect straight to dashboard or target assessment
+      window.location.href = redirectParam || '/dashboard';
     } catch {
       if (errorMessage) {
         errorMessage.textContent = 'A network error occurred. Please try again.';

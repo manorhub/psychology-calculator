@@ -109,7 +109,7 @@ const settings = await adminService.getAllSettings();
       </Card>
 
       <!-- User Registration & Credits -->
-      <Card title="User Onboarding & Free Credits" subtitle="Configure initial trial / launch credits for newly registered users">
+      <Card title="User Onboarding & Free Credits" subtitle="Configure initial trial / launch credits and verification rules for new users">
         <div class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <div>
@@ -130,6 +130,26 @@ const settings = await adminService.getAllSettings();
             <div class="p-3 bg-teal-50 rounded-xl border border-teal-200/80 text-[11px] text-teal-900 leading-relaxed">
               💡 <strong>Tip:</strong> While waiting for Lemon Squeezy payment approval, keep this set to <strong>10</strong> (or any desired amount) so users can test AI reports. Once live billing is active, you can set this to <strong>0</strong> to require purchases.
             </div>
+          </div>
+
+          <!-- Email Verification Toggle -->
+          <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200 mt-2">
+            <div>
+              <div class="text-xs font-bold text-slate-900">Require Email Verification Link Before Login</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">
+                When disabled (recommended), users can log in and explore assessments immediately upon registration without email deliverability blockers.
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="require_email_verification"
+                value="true"
+                checked={settings.require_email_verification === 'true'}
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+            </label>
           </div>
         </div>
       </Card>
@@ -252,6 +272,7 @@ const settings = await adminService.getAllSettings();
       default_currency: String(formData.get('default_currency') || 'USD'),
       timezone: String(formData.get('timezone') || 'UTC'),
       signup_bonus_credits: String(formData.get('signup_bonus_credits') || '10'),
+      require_email_verification: formData.get('require_email_verification') === 'true' ? 'true' : 'false',
       google_client_id: String(formData.get('google_client_id') || '').trim(),
       google_client_secret: String(formData.get('google_client_secret') || '').trim(),
       maintenance_mode: formData.get('maintenance_mode') === 'true' ? 'true' : 'false',
