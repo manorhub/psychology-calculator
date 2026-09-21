@@ -6,7 +6,7 @@ import { setSessionCookie } from '@/lib/auth/cookies';
 import { fetchFirst } from '@/lib/db/query';
 import { logger } from '@/lib/logger';
 
-export const GET: APIRoute = async ({ url, cookies, locals, clientAddress, request }) => {
+export const GET: APIRoute = async ({ url, cookies, locals, clientAddress, request, redirect }) => {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
@@ -18,19 +18,13 @@ export const GET: APIRoute = async ({ url, cookies, locals, clientAddress, reque
 
   if (error) {
     logger.warn('Google OAuth provider returned error', { error });
-    return new Response(null, {
-      status: 302,
-      headers: { Location: `/login?error=oauth_denied&redirect=${encodeURIComponent(returnRedirect)}` }
-    });
+    return redirect(`/login?error=oauth_denied&reason=${encodeURIComponent(error)}&redirect=${encodeURIComponent(returnRedirect)}`, 302);
   }
 
   // CSRF validation
   if (!state || !storedState || state !== storedState || !code) {
-    logger.warn('Google OAuth state mismatch / invalid state');
-    return new Response(null, {
-      status: 302,
-      headers: { Location: `/login?error=invalid_state&redirect=${encodeURIComponent(returnRedirect)}` }
-    });
+    logger.warn('Google OAuth state mismatch / invalid state', { hasState: !!state, hasStoredState: !!storedState, hasCode: !!code });
+    return redirect(`/login?error=invalid_state&redirect=${encodeURIComponent(returnRedirect)}`, 302);
   }
 
   try {
@@ -70,15 +64,10 @@ export const GET: APIRoute = async ({ url, cookies, locals, clientAddress, reque
       setSessionCookie(cookies, result.sessionToken, isProduction);
     }
 
-    return new Response(null, {
-      status: 302,
-      headers: { Location: returnRedirect }
-    });
+    return redirect(returnRedirect, 302);
   } catch (err) {
-    logger.error('Google OAuth callback error', undefined, err instanceof Error ? err : new Error(String(err)));
-    return new Response(null, {
-      status: 302,
-      headers: { Location: `/login?error=oauth_failed&redirect=${encodeURIComponent(returnRedirect)}` }
-    });
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.error('Google OAuth callback error', undefined, err instanceof Error ? err : new Error(errorMessage));
+    return redirect(`/login?error=oauth_failed&reason=${encodeURIComponent(errorMessage)}&redirect=${encodeURIComponent(returnRedirect)}`, 302);
   }
 };

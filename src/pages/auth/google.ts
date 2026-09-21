@@ -3,7 +3,7 @@ import { GoogleOAuthClient } from '@/lib/auth/google';
 import { getD1Database } from '@/lib/db/client';
 import { fetchFirst } from '@/lib/db/query';
 
-export const GET: APIRoute = async ({ url, cookies, locals }) => {
+export const GET: APIRoute = async ({ url, cookies, locals, redirect }) => {
   const origin = url.origin;
   const redirectUri = `${origin}/auth/callback`;
 
@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 
   if (!client.isConfigured()) {
     return new Response(
-      `<!DOCTYPE html><html lang="en"><head><title>Google OAuth Setup Required</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://cdn.tailwindcss.com"></head><body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans"><div class="max-w-md w-full bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-5 text-center"><div class="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold shadow-sm">⚠️</div><div class="space-y-1.5"><h2 class="text-xl font-black text-slate-900">Google OAuth Setup Required</h2><p class="text-xs text-slate-600 leading-relaxed">Google Authentication is ready on the frontend, but requires Google Cloud API keys in Cloudflare Worker configuration.</p></div><div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs text-slate-700 space-y-2"><p class="font-bold text-slate-900">Required Environment Secrets:</p><ul class="list-disc pl-4 space-y-1 font-mono text-[11px] text-teal-700"><li>GOOGLE_CLIENT_ID</li><li>GOOGLE_CLIENT_SECRET</li></ul><p class="text-[11px] text-slate-500 pt-1">Authorized redirect URI in Google Cloud Console:</p><code class="block bg-white p-2 rounded-xl border border-slate-200 font-mono text-[10px] break-all select-all">${origin}/auth/callback</code></div><div class="pt-2 flex flex-col gap-2"><a href="${returnUrl}" class="w-full py-3 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-colors">Return to Previous Page</a><a href="/login" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">Use Email / Password Login</a></div></div></body></html>`,
+      `<!DOCTYPE html><html lang="en"><head><title>Google OAuth Setup Required</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://cdn.tailwindcss.com"></head><body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans"><div class="max-w-md w-full bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-5 text-center"><div class="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold shadow-sm">⚠️</div><div class="space-y-1.5"><h2 class="text-xl font-black text-slate-900">Google OAuth Setup Required</h2><p class="text-xs text-slate-600 leading-relaxed">Google Authentication is ready on the frontend, but requires Google Cloud API keys in Cloudflare Worker configuration or Admin Settings.</p></div><div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs text-slate-700 space-y-2"><p class="font-bold text-slate-900">Required Environment Secrets:</p><ul class="list-disc pl-4 space-y-1 font-mono text-[11px] text-teal-700"><li>GOOGLE_CLIENT_ID</li><li>GOOGLE_CLIENT_SECRET</li></ul><p class="text-[11px] text-slate-500 pt-1">Authorized redirect URI in Google Cloud Console:</p><code class="block bg-white p-2 rounded-xl border border-slate-200 font-mono text-[10px] break-all select-all">${origin}/auth/callback</code></div><div class="pt-2 flex flex-col gap-2"><a href="${returnUrl}" class="w-full py-3 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-colors">Return to Previous Page</a><a href="/login" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">Use Email / Password Login</a></div></div></body></html>`,
       { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
   }
@@ -53,8 +53,5 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     maxAge: 600 // 10 minutes
   });
 
-  return new Response(null, {
-    status: 302,
-    headers: { Location: authUrl }
-  });
+  return redirect(authUrl, 302);
 };

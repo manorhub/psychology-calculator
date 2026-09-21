@@ -11,6 +11,7 @@ if (Astro.locals.user) {
 }
 
 const errorParam = Astro.url.searchParams.get('error');
+const reasonParam = Astro.url.searchParams.get('reason');
 const verifiedParam = Astro.url.searchParams.get('verified');
 const redirectParam = Astro.url.searchParams.get('redirect') || '/dashboard';
 
@@ -21,13 +22,15 @@ if (verifiedParam === 'true') {
   bannerMessage = 'Your email has been verified successfully! You can now log in.';
   bannerVariant = 'success';
 } else if (errorParam === 'oauth_denied') {
-  bannerMessage = 'Google sign-in was cancelled. Please try again.';
+  bannerMessage = reasonParam ? `Google sign-in was cancelled (${reasonParam}). Please try again.` : 'Google sign-in was cancelled. Please try again.';
   bannerVariant = 'danger';
 } else if (errorParam === 'invalid_state') {
-  bannerMessage = 'Authentication session expired. Please try signing in again.';
+  bannerMessage = 'Authentication session expired or security state mismatch. Please try signing in again.';
   bannerVariant = 'danger';
 } else if (errorParam === 'oauth_failed') {
-  bannerMessage = 'Could not authenticate with Google. Please try email login.';
+  bannerMessage = reasonParam
+    ? `Google authentication failed: ${reasonParam}`
+    : 'Could not authenticate with Google. Please try email login or check credentials.';
   bannerVariant = 'danger';
 }
 ---

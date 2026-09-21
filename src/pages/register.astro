@@ -9,7 +9,25 @@ if (Astro.locals.user) {
   return Astro.redirect('/dashboard');
 }
 
+const errorParam = Astro.url.searchParams.get('error');
+const reasonParam = Astro.url.searchParams.get('reason');
 const redirectParam = Astro.url.searchParams.get('redirect') || '';
+
+let bannerMessage = '';
+let bannerVariant: 'info' | 'success' | 'danger' = 'info';
+
+if (errorParam === 'oauth_denied') {
+  bannerMessage = reasonParam ? `Google sign-up was cancelled (${reasonParam}). Please try again.` : 'Google sign-up was cancelled. Please try again.';
+  bannerVariant = 'danger';
+} else if (errorParam === 'invalid_state') {
+  bannerMessage = 'Authentication session expired or security state mismatch. Please try signing up again.';
+  bannerVariant = 'danger';
+} else if (errorParam === 'oauth_failed') {
+  bannerMessage = reasonParam
+    ? `Google authentication failed: ${reasonParam}`
+    : 'Could not authenticate with Google. Please use email registration or check credentials.';
+  bannerVariant = 'danger';
+}
 ---
 
 <PublicLayout title="Create Account" description="Join MindMetrics for evidence-based psychometric insights">
@@ -26,6 +44,12 @@ const redirectParam = Astro.url.searchParams.get('redirect') || '';
           Begin your journey of structured self-discovery
         </p>
       </div>
+
+      {bannerMessage && (
+        <Alert variant={bannerVariant} title="Notice">
+          {bannerMessage}
+        </Alert>
+      )}
 
       <div id="form-error-alert" class="hidden">
         <Alert variant="danger" title="Registration Error">

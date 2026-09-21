@@ -134,6 +134,47 @@ const settings = await adminService.getAllSettings();
         </div>
       </Card>
 
+      <!-- Google OAuth & Social Authentication -->
+      <Card title="Google OAuth Authentication" subtitle="Configure Google Cloud OAuth 2.0 credentials for 1-click Sign In & Sign Up">
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              id="google_client_id"
+              name="google_client_id"
+              label="Google Client ID"
+              placeholder="e.g. 551268181794-xxx.apps.googleusercontent.com"
+              value={settings.google_client_id || ''}
+            />
+            <Input
+              id="google_client_secret"
+              name="google_client_secret"
+              type="password"
+              label="Google Client Secret"
+              placeholder="••••••••••••••••"
+              value={settings.google_client_secret || ''}
+            />
+          </div>
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs text-slate-700">
+            <p class="font-bold text-slate-900">Google Cloud Console Checklist:</p>
+            <ul class="list-disc pl-4 space-y-1 text-slate-600">
+              <li><strong>OAuth Consent Screen:</strong> Make sure Publishing Status is set to <strong>"In production"</strong> (or add your test email to <em>Test Users</em>).</li>
+              <li><strong>Authorized Redirect URIs</strong> (Must be exact in Google Cloud Console):
+                <div class="flex flex-col gap-1 mt-1 font-mono text-[11px] text-teal-700 select-all">
+                  <code>https://www.psychologycalculator.com/auth/callback</code>
+                  <code>https://psychologycalculator.com/auth/callback</code>
+                </div>
+              </li>
+              <li><strong>Authorized JavaScript Origins:</strong>
+                <div class="flex flex-col gap-1 mt-1 font-mono text-[11px] text-teal-700 select-all">
+                  <code>https://www.psychologycalculator.com</code>
+                  <code>https://psychologycalculator.com</code>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </Card>
+
       <!-- Operational State & Maintenance Mode -->
       <Card title="Site Operations & Announcements" subtitle="Control maintenance window and public notices">
         <div class="space-y-4">
@@ -211,6 +252,8 @@ const settings = await adminService.getAllSettings();
       default_currency: String(formData.get('default_currency') || 'USD'),
       timezone: String(formData.get('timezone') || 'UTC'),
       signup_bonus_credits: String(formData.get('signup_bonus_credits') || '10'),
+      google_client_id: String(formData.get('google_client_id') || '').trim(),
+      google_client_secret: String(formData.get('google_client_secret') || '').trim(),
       maintenance_mode: formData.get('maintenance_mode') === 'true' ? 'true' : 'false',
       announcement_enabled: formData.get('announcement_enabled') === 'true' ? 'true' : 'false',
       announcement_text: String(formData.get('announcement_text') || '')
