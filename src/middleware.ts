@@ -1,8 +1,9 @@
-﻿import { defineMiddleware } from 'astro:middleware';
+import { defineMiddleware } from 'astro:middleware';
 import { AuthService } from '@/services/auth.service';
 import { RedirectService } from '@/services/seo/redirect.service';
 import { getD1Database } from '@/lib/db/client';
 import { getSecurityHeaders } from '@/lib/security';
+import { getSessionCookie } from '@/lib/auth/cookies';
 import { logger } from '@/lib/logger';
 import {
   isValidLocale,
@@ -23,7 +24,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const sessionKv = env?.SESSION;
 
   const authService = new AuthService(db, sessionKv);
-  const sessionToken = context.cookies.get('session_token')?.value;
+  const sessionToken = getSessionCookie(context.cookies);
 
   let currentUser = null;
   let authContext = {
@@ -33,13 +34,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
   };
 
   if (sessionToken) {
-    currentUser = await authService.validateSession(sessionToken);
-    if (currentUser) {
-      authContext = {
-        isAuthenticated: true,
-        isAdmin: currentUser.role === 'admin',
-        user: currentUser
-      };
+    try {
+      currentUser = await authService.validateSession(sessionToken);
+      if (currentUser) {
+        authContext = {
+          isAuthenticated: true,
+          isAdmin: currentUser.role === 'admin',
+          user: currentUser
+        };
+      }
+    } catch (err) {
+      logger.error('Session validation error in middleware', undefined, err instanceof Error ? err : new Error(String(err)));
     }
   }
 

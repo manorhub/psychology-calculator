@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, cookies, locals, clientAddress }
     });
 
     if (result.success && result.sessionToken) {
-      const isProduction = env?.APP_ENV === 'production';
+      const isProduction = env?.APP_ENV === 'production' || request.url.startsWith('https://');
       setSessionCookie(cookies, result.sessionToken, isProduction);
     }
 

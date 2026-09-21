@@ -15,6 +15,7 @@ import {
 } from '@/lib/security';
 import {
   createSession,
+  validateSessionToken,
   destroySession,
   destroyAllUserSessions
 } from '@/lib/auth/session';
@@ -832,6 +833,20 @@ export class AuthService extends BaseService {
   /**
    * Retrieves the configured signup bonus credits for new users from site_settings (defaults to 10)
    */
+  /**
+   * Validates a session token and returns active User or null
+   */
+  public async validateSession(sessionToken: string): Promise<User | null> {
+    if (!this.db || !sessionToken) return null;
+    try {
+      const result = await validateSessionToken(this.db, sessionToken);
+      return result?.user || null;
+    } catch (err) {
+      this.logger.error('Error validating session token in AuthService', undefined, err instanceof Error ? err : new Error(String(err)));
+      return null;
+    }
+  }
+
   public async getSignupBonusCredits(): Promise<number> {
     if (!this.db) return 10;
     try {
